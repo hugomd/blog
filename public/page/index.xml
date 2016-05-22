@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pages on Hugo&#39;s Blog</title>
+    <link>https://blog.hugo.sx/page/</link>
+    <description>Recent content in Pages on Hugo&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 20 Oct 2013 12:00:00 +1100</lastBuildDate>
+    <atom:link href="https://blog.hugo.sx/page/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>About</title>
+      <link>https://blog.hugo.sx/page/about/</link>
+      <pubDate>Sun, 20 Oct 2013 12:00:00 +1100</pubDate>
+      
+      <guid>https://blog.hugo.sx/page/about/</guid>
+      <description>
+
+&lt;h4 id=&#34;about-me:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;About Me&lt;/h4&gt;
+
+&lt;p&gt;I&amp;rsquo;m Hugo M&amp;uuml;ller-Downing, I live in Melbourne, Australia.&lt;br /&gt;
+I&amp;rsquo;m interested in web development, APIs, Python, NodeJS, etc.&lt;br /&gt;
+I&amp;rsquo;m probably not great at writing blog posts but I&amp;rsquo;m getting there.&lt;/p&gt;
+
+&lt;h4 id=&#34;about-this-site:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;About this site&lt;/h4&gt;
+
+&lt;p&gt;This site runs on a &lt;a href=&#34;https://www.digitalocean.com/?refcode=8a96d5d50667&#34;&gt;DigitalOcean&lt;/a&gt; droplet in Singapore, powered by &lt;a href=&#34;http://gohugo.io/&#34;&gt;GoHugo&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

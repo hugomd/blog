@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Making a Toggle for Screen Recording in Android 4.4 | Hugo&#39;s Blog
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="https://blog.hugo.sx/post/making-a-toggle-for-screen-recording-in-android-4-4/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="https://blog.hugo.sx/index.xml" rel="alternate" type="application/rss+xml" title="Hugo&#39;s Blog" />
+  <link href="https://blog.hugo.sx/index.xml" rel="feed" type="application/rss+xml" title="Hugo&#39;s Blog" />
+
+  
+  <script type="text/javascript">var switchTo5x=true;</script>
+  <script type="text/javascript" src="//ws.sharethis.com/button/buttons.js"></script>
+  <script type="text/javascript">stLight.options({publisher: "2b9fffc6-b3fe-4988-a0ef-4f9dcce98eaa", doNotHash: true, doNotCopy: true, hashAddressBar: false});</script>
+
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="https://blog.hugo.sx/">Hugo&#39;s Blog</a></h1>
+        <h2>I write stuff sometimes</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="https://hugo.sx/" target="">Homepage</a></li>
+          <li><a href="/page/about" target="">About</a></li>
+          <li><a href="http://twitter.com/hugojmd" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/hugomd" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Making a Toggle for Screen Recording in Android 4.4</h1>
+      <div class="meta">
+        Nov 2, 2013 &nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>Last night I made a blog post on how to screen record. This morning, I decided to make toggles with Tasker so that I could do it all from my phone easily, without a computer.</p>
+
+<ol>
+<li>Install <a href="https://play.google.com/store/apps/details?id=net.dinglisch.android.taskerm">Tasker</a>.<br /></li>
+<li>Install <a href="https://play.google.com/store/apps/details?id=stericson.busybox">BusyBox</a>.<br /></li>
+
+<li><p>Copy <a href="http://i.hugo.sx/UauN/download/screen.sh">this file</a> to /sdcard/ with ADB;</p>
+
+<pre><code>./adb push screen.sh /sdcard/screen.sh
+</code></pre></li>
+
+<li><p>Next you can use <code>./adb shell</code> to get into your phone&rsquo;s terminal.</p></li>
+
+<li><p>Type <code>su</code>, a super user prompt should appear on your phone, grant permissions.</p></li>
+
+<li><p>Type <code>cd /sdcard/</code> followed by <code>mkdir screens</code> and then <code>chmod 777 screen.sh</code> (not that I used 777 because it&rsquo;s on my phone and no one else has access, it&rsquo;s not normally a good idea).</p></li>
+
+<li><p>Now open up Tasker, go to the Tasks tab, hit the + button at the bottom right, create a &lsquo;Start&rsquo; task. Tap the &lsquo;Start&rsquo; task, then hit the + down the bottom, then Script and then Run Shell.</p></li>
+
+<li><p>Toggle &lsquo;Use Root&rsquo; and set this command: <code>sh /sdcard/screen.sh</code></p></li>
+
+<li><p>Now create another task with the same parameters, with the name &lsquo;End&rsquo;.</p></li>
+
+<li><p>Set this shell command: <code>kill -2 $(pidof screenrecord)</code></p></li>
+
+<li><p>Now you can go to your homescreen, create a new Tasker wiget, select Start and End. (Note: you&rsquo;ll have to set an application icon for each of the tasks, this can be done by editing the task and tapping the button on the bottom right).</p></li>
+
+<li><p>Your screen recordings will be saved under /sdcard/screens with the filename screen_TIMESTAMP.mp4 (where timestamp is a simple <code>date +%s</code> command). You can now upload them over USB or via something like Dropbox.</p></li>
+</ol>
+
+<p>I took the liberty of uploading an example video.
+<iframe width="420" height="315" src="//www.youtube.com/embed/abc-iEBWHHY" frameborder="0" allowfullscreen></iframe></p>
+
+      
+      
+      
+    </article>
+    
+
+
+<script type="text/javascript">
+     
+    var disqus_shortname = '';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="https://blog.hugo.sx/post/android-kitkat-native-screen-recording/" rel="prev">Android KitKat Native Screen Recording</a></span>
+    
+    
+      <span class="next"><a href="https://blog.hugo.sx/post/the-pirate-bay-perpetual-ip-address/" rel="next">The Pirate Bay Perpetual IP Address</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      
+      Copyright Hugo Muller-Downing 2016.
+    </div>
+  </footer>
+
+
+</div>
+
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+</body>
+</html>
+

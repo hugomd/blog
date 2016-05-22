@@ -1,0 +1,12 @@
+baseurl = "https://blog.hugo.sx/"
+languageCode = "en-us"
+title = "Hugo's Blog"
+
+[Params]
+subtitle = "I write stuff sometimes"
+github = "https://github.com/hugomd"
+copyright = "Copyright Hugo Muller-Downing 2016."
+disqusShortname  = "hugojmdsblog"
+homepage = "https://hugo.sx/"
+twitter = "http://twitter.com/hugojmd"
+about = "/page/about"
