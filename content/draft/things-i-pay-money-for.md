@@ -12,16 +12,57 @@ spend.. So here it is...
 
 ## Monthly Expenditures
 ### Google Play Music & YouTube Red
+I pay $5.99 AUD per month for Google Play Music, now inclusive of YouTube Red, 
+as I paid for several months in advance when they went on sale quite recently 
+(as of 28/05/2016), but I'll be going back to $9.99 AUD a month in August.
+
+While I can't say I listen to a _lot_ of music, it's nice to be able to listen 
+to pretty much anything thing I want whenever I want, and it's definitely 
+worth the cost. I've tried a few other streaming services but have always 
+ended up coming back to GPM because 1) it has all of my music already and 2) I 
+can upload any music that _isn't_ already there, something that many, if not 
+all, other streaming services lack. 
+
 ### Digital Ocean
+I pay $10.00 USD per month for two DigitalOcean droplets, running around 10 
+fairly small websites. It's cheap, and I like the freedom of taking snapshots 
+and backups, and all that good stuff that comes with DigitalOcean. In fact, 
+this blog is hosted on one of the servers. 
+
+While $10.00 USD isn't particularly much for servers, it does add up, and I've 
+been planning to migrate from DO to some Docker containers running on my 
+Online.net server (next in this list).
+
 ### Online.net
+I pay $15.99 EUR for a fairly [beefy 
+server](https://www.online.net/en/dedicated-server/dedibox-xc) which I 
+currently use to host a number of Docker containers, including a [GitLab 
+CE](https://about.gitlab.com) instance, a number of [GitLab CI 
+runners](https://about.gitlab.com/gitlab-ci/) and a rtorrent/rutorrent.
+
+This server was my first foray into the world of Docker, and I'm hoping to 
+dockerize  most of my stuff and move it there.
+
 ### Amaysim
+Most people have phone plans. I'm one of those people. I pay $45.00 AUD per 
+month for 7 GB of data, unlimited calls and texts, and some access to 
+international call/text subject to higher rates (which I don't use). 
+
+I find I rarely use up more than 5 GB each month, but it's nice knowing I have 
+the extra data just in case.
+
+### Netflix
+I currently have a subscription, which I'm paying $11.99 AUD per month for, 
+but I'm planning to cancel because I don't find myself using it _that_ often 
+(blasphemous, I know!).
+
+### Animelab
+### Coffee
 ### Apps
 ### Philanthropy
 - Matt Gemmel
+
 ### Amazon Web Services
-### Netflix
-### Animelab
-### Coffee
 
 ## Yearly Expenditures
 ### Domain Names
