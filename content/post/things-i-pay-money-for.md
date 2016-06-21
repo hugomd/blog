@@ -1,6 +1,5 @@
 +++
 date = "2016-05-22T17:16:40+10:00"
-draft = false
 title = "Things I actually pay money for"
 tags = ["spending"]
 +++
