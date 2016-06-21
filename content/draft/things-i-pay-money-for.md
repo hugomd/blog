@@ -1,16 +1,14 @@
-		# Nothing here
-		# Nothing here
 +++
 date = "2016-05-22T17:16:40+10:00"
-draft = true
+draft = false
 title = "Things I actually pay money for"
-
+tags = ["spending"]
 +++
 
 Surprisingly, I spend a lot of money on subscriptions every year.  
 Unsurprisingly, I haven't tallied how much I actually spend, partly because I'm 
 a little lazy and partly because I'm scared of finding out exactly how much I 
-spend.. So here it is...
+spend.. So here it is.
 
 ## Monthly Expenditures
 ### [Google Play Music & YouTube Red](https://music.google.com/)
@@ -71,14 +69,42 @@ season. Animelab is the easiest way for me to watch them, is super fast and has
 an amazing user interface and keeps up to date with simulcasts. This runs me a 
 neat $6.99 AUD per month.
 
-### Coffee
+### Coffee ☕
+I'm not _exactly_ sure how much I spend on coffee each month, but if I had to 
+guess I'd say around $15.00 AUD, which is quite a bit. I tend to enjoy coffees 
+in the morning, and make them myself most of the time.
+
 ### Apps
-### Philanthropy
-- Matt Gemmel
+I tend not to keep track of apps, but if it's less than a coffee ($4.00 AUD) 
+and it offers something unique and worthwhile, I normally end up buying it.  
+Thankfully, if I do ever regret a purchase, I can get a full refund.
+
+### Other
+I pay a tiny amount each month for the privilege of reading [Matt 
+Gemmell](http://mattgemmell.com)'s weekly newsletters. I'd say it's worth it, I 
+find his reading style quite captivating.
 
 ### Amazon Web Services
+I use Amazon S3 to store screenshots and various other files, and Glacier to 
+store my [Arq](https://www.arqbackup.com) backups.  
+
+I'm also experimenting with an EC2 instance at the moment, which runs an API 
+server I'm working on.
+
+Thanks to [Amazon's free tier](https://aws.amazon.com/free/) and some free 
+credit I received, this doesn't cost me anything.
 
 ## Yearly Expenditures
 ### Domain Names
-### SSL Certificates
+I own 7 domains at the moment, only some of which are mine. My personal domains 
+run me around $94.00 AUD a year. A lot of these are impulse purchases ([which 
+is 
+okay](https://medium.com/life-learning/the-case-for-buying-domain-names-compulsively-c5e414a9951e#.hj5d93d6f)), 
+with ideas behind them, or are on sale. Of course, I don't follow through with 
+a lot of these ideas, so I don't renew many of them.
 
+### SSL Certificates
+Now free thanks to [Let's Encrypt](https://letsencrypt.org)!
+
+## Total Expenditure
+Big numbers are scary, so I'm not going to add everything up.
