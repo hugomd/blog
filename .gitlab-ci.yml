@@ -1,6 +1,6 @@
 image: ubuntu
 before_script:
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client --force-yes )'
+  - 'which ssh-agent || ( apt-get update --force-yes && apt-get install openssh-client --force-yes )'
   - eval $(ssh-agent -s)
   - ssh-add <(echo "$SSH_PRIVATE_KEY")
   - mkdir -p ~/.ssh
