@@ -4,7 +4,7 @@ title = "Things I actually pay money for"
 tags = ["spending"]
 +++
 
-Surprisingly, I spend a lot of money on subscriptions every year.  
+Surprisingly, I spend a lot of money on subscriptions every year. 
 Unsurprisingly, I haven't tallied how much I actually spend, partly because I'm 
 a little lazy and partly because I'm scared of finding out exactly how much I 
 spend.. So here it is.
