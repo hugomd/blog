@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Story on Hugo&#39;s Blog</title>
+    <link>https://blog.hugo.sx/tags/story/</link>
+    <description>Recent content in Story on Hugo&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 17 Oct 2015 23:54:18 +1100</lastBuildDate>
+    <atom:link href="https://blog.hugo.sx/tags/story/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Blocking</title>
+      <link>https://blog.hugo.sx/post/blocking/</link>
+      <pubDate>Sat, 17 Oct 2015 23:54:18 +1100</pubDate>
+      
+      <guid>https://blog.hugo.sx/post/blocking/</guid>
+      <description>&lt;p&gt;I always find writing like walking up an endless flight of stairs and, as you reach the thousandth stair, using every ounce of energy to pull at your legs to move up just one more stair. Obviously I&amp;rsquo;m exaggerating, or using a bad metaphor, but what I mean is I have a hard time writing. I don&amp;rsquo;t think I&amp;rsquo;m &lt;em&gt;bad&lt;/em&gt; at writing; I was a surprisingly good English student, I just .. struggle.&lt;/p&gt;
+
+&lt;p&gt;The issue I&amp;rsquo;ve always had has been blocking. I&amp;rsquo;m not sure if that&amp;rsquo;s the correct term for it but I end up hitting a wall, or a series of taller and taller hurdles. The first one, I jump over easily and the next, and the next, and so on until.. I&amp;rsquo;ll be in the middle of a sentence and I&amp;rsquo;ll just .. &lt;em&gt;backspace&lt;/em&gt; &lt;em&gt;backspace&lt;/em&gt; .. I&amp;rsquo;ll delete words, or I&amp;rsquo;ll find myself looking for the perfect word which I&amp;rsquo;ll never end up finding.&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;ll stop my train of thought mid sentence, and maybe even loose it in the process, and think of the perfect next word, mostly looking for synonyms. Now, I could just use a thesaurus but that probably wouldn&amp;rsquo;t help.&lt;/p&gt;
+
+&lt;p&gt;Why am I writing this blog post? Well, I hope that it might help me figure things out, work out why I always seem to cut myself off. I mean, all of that creative potential just gets botched halfway through. It&amp;rsquo;s also nearly midnight and I can&amp;rsquo;t sleep.&lt;/p&gt;
+
+&lt;p&gt;Bye.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>How I bypassed my school&#39;s proxy</title>
+      <link>https://blog.hugo.sx/post/how-i-bypassed-my-schools-proxy/</link>
+      <pubDate>Tue, 11 Feb 2014 11:18:56 +1100</pubDate>
+      
+      <guid>https://blog.hugo.sx/post/how-i-bypassed-my-schools-proxy/</guid>
+      <description>&lt;p&gt;In my final year of schooling, I worked out how I could bypass my school&amp;rsquo;s proxy. A shame that I discovered it so late, but hopefully those reading this may be able to get a bit more use out of it than I did (only a few months!).&lt;/p&gt;
+
+&lt;p&gt;This idea/hack will really depend on your school&amp;rsquo;s proxy system but it should, theoretically, work on most networks (don&amp;rsquo;t quote me on this). My school happened to be using &lt;a href=&#34;https://www.fortiguard.com/&#34;&gt;Fortiguard&lt;/a&gt;, which tended to block the usual things like Facebook, YouTube, etc.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Requirements&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;A fast internet connection at home (1 Mbps up, at least).&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;A fast internet connection at school, if it has a high down speed, it&amp;rsquo;ll increase the speed with which web pages load through the tunnel we&amp;rsquo;ll be setting up.&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;Access to a Linux system at home. This could be running Linux on an old laptop at home or, in my case, having a &lt;a href=&#34;http://raspberrypi.org/&#34;&gt;Raspberry Pi&lt;/a&gt;.&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;Ability to open specific ports through your ISP.&lt;br /&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;Let&amp;rsquo;s do this.&lt;/strong&gt;&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Open a port through your ISP and then in your router. This usually involves logging into your ISP&amp;rsquo;s administration website and opening ports. I was only able to open port 443, 22, and a few others. For this hack, ideally you&amp;rsquo;ll want to open port 443, that way your school won&amp;rsquo;t be able to block you. After you&amp;rsquo;ve done that, you should be able to navigate to your WiFi router at &lt;a href=&#34;http://192.168.1.1/&#34;&gt;http://192.168.1.1/&lt;/a&gt;, you can find out what the URL is &lt;a href=&#34;http://portforward.com/default_username_password/&#34;&gt;here&lt;/a&gt;. Forward the port you opened through your ISP, on your local network, for the Linux server/computer you&amp;rsquo;ll be connecting to. You&amp;rsquo;ll also want to &lt;a href=&#34;http://www.canyouseeme.org/&#34;&gt;check whether the port is open&lt;/a&gt;.&lt;br /&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Once you&amp;rsquo;ve completed those relatively easy steps, we can move onto the fun part. When you&amp;rsquo;re connected to your school network, you can create an SSH tunnel to your server at home:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ssh -p 443 -ND 8080 root@YOURIP
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In the above code, 443 is the port you forwarded and 8080 is the one you&amp;rsquo;ll be routing local traffic through. &amp;lsquo;YOURIP&amp;rsquo; is just your computers IP (not the local one).&lt;/p&gt;
+
+&lt;p&gt;I&amp;rsquo;ll be updating this blog post with further information on how to route local traffic through the tunnel on Mac OS X, Linux and Windows.&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    Tutorial: Roll your own screenshot service with S3 and Dropshare/ShareX | Hugo&#39;s Blog
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="https://blog.hugo.sx/content/roll-your-own-screenshot-service-with-s3/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="https://blog.hugo.sx/index.xml" rel="alternate" type="application/rss+xml" title="Hugo&#39;s Blog" />
+  <link href="https://blog.hugo.sx/index.xml" rel="feed" type="application/rss+xml" title="Hugo&#39;s Blog" />
+
+  
+  <script type="text/javascript">var switchTo5x=true;</script>
+  <script type="text/javascript" src="//ws.sharethis.com/button/buttons.js"></script>
+  <script type="text/javascript">stLight.options({publisher: "2b9fffc6-b3fe-4988-a0ef-4f9dcce98eaa", doNotHash: true, doNotCopy: true, hashAddressBar: false});</script>
+
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="https://blog.hugo.sx/">Hugo&#39;s Blog</a></h1>
+        <h2>I write stuff sometimes</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="https://hugo.sx/" target="">Homepage</a></li>
+          <li><a href="/page/about" target="">About</a></li>
+          <li><a href="http://twitter.com/hugojmd" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/hugomd" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>Tutorial: Roll your own screenshot service with S3 and Dropshare/ShareX</h1>
+      <div class="meta">
+        Oct 27, 2015 &nbsp;
+        
+      </div>
+    </div>
+    <article>
+      
+
+<h3 id="what-we-re-going-to-be-doing:1c427c2c77aa13c2603954485d4223c6">What we&rsquo;re going to be doing</h3>
+
+<ol>
+<li>Setting up a subdomain</li>
+<li>Setting up Amazon S3</li>
+<li>Setting up:
+
+<ol>
+<li>Preliminary Setup</li>
+<li>ShareX (Windows)</li>
+<li>DropShare (Mac)</li>
+</ol></li>
+</ol>
+
+<h3 id="setting-up-amazon-s3:1c427c2c77aa13c2603954485d4223c6">Setting up Amazon S3</h3>
+
+<p><strong>If you already have an S3 Bucket created/setup, skip this section.</strong></p>
+
+<ol>
+<li>Login to to your <a href="https://aws.amazon.com/console/">AWS Management Console</a>.</li>
+<li>Go to Amazon S3.<br />
+<a href="http://i.hugo.sx/ss/044wk.png"><img src="https://i.hugo.sx/ss/044wk.png" alt="" /></a></li>
+<li>Create a new Bucket and take a note of the bucket name.</li>
+
+<li><p>Open bucket properties (in the top right) and add a <a href="http://docs.aws.amazon.com/AmazonS3/latest/dev/example-bucket-policies.html">bucket policy</a>:</p>
+
+<pre><code>{
+  &quot;Version&quot;:&quot;2012-10-17&quot;,
+  &quot;Statement&quot;:[
+    {
+      &quot;Sid&quot;:&quot;AddPerm&quot;,
+      &quot;Effect&quot;:&quot;Allow&quot;,
+      &quot;Principal&quot;: &quot;*&quot;,
+      &quot;Action&quot;:[&quot;s3:GetObject&quot;],
+      &quot;Resource&quot;:[&quot;arn:aws:s3:::YOUR-BUCKET-NAME-HERE/*&quot;]
+    }
+  ]
+}   
+</code></pre></li>
+
+<li><p>This bucket policy will make all of your uploads public. Now you can move on to setting up your subdomain.</p></li>
+</ol>
+
+<h3 id="setting-up-a-subdomain:1c427c2c77aa13c2603954485d4223c6">Setting up a subdomain</h3>
+
+<ol>
+<li>Login to your domain registrar, I use <a href="http://gandi.net/">Gandi</a>.</li>
+<li>Navigate to your equivalent &ldquo;My Account&rdquo; page.</li>
+<li>On Gandi, you have to click on your domain, and on the following page click &ldquo;Edit the Zone&rdquo;.</li>
+<li>Create a new zone.</li>
+<li>Create a CNAME record:
+
+<ol>
+<li>Set the TTL to default.</li>
+<li>Set the name to the subdomain you want, for instance <code>i</code>, in my case, for <code>i.hugo.sx</code></li>
+<li>Set the value to <code>your-bucket-name.your-region.amazonaws.com.</code>, for instance, <code>my-bucket.s3-ap-southeast-2.amazonaws.com.</code>
+<a href="http://i.hugo.sx/ss/UzDR6.png"><img src="https://i.hugo.sx/ss/UzDR6.png" alt="" /></a></li>
+</ol></li>
+<li>Hit save. You&rsquo;ll have to wait somewhere in the range of 24 hours for the DNS populate.</li>
+</ol>
+
+<h3 id="uploading-to-amazon-s3:1c427c2c77aa13c2603954485d4223c6">Uploading to Amazon S3</h3>
+
+<h4 id="preliminary-setup:1c427c2c77aa13c2603954485d4223c6">Preliminary setup</h4>
+
+<ol>
+<li>Go to your <a href="https://console.aws.amazon.com/">AWS Console</a>, click on your name in the top right and then <em>Security Credentials</em>.</li>
+<li>You should be prompted to use <em>IAM users</em>, click on <em>IAM users</em>.</li>
+<li>Create a new user and give it a relevant name, e.g. dropshare-mac or sharex-windows, and hit enter.</li>
+<li>Copy the <em>Access Key ID</em> and <em>Secret Access Key</em> somewhere, you&rsquo;ll need them for the next step.</li>
+</ol>
+
+<h4 id="dropshare-mac:1c427c2c77aa13c2603954485d4223c6">Dropshare (Mac)</h4>
+
+<p><a href="https://getdropsha.re/">Dropshare</a> costs 20.00 USD, which is quite reasonable for what it does. However, if you&rsquo;re looking for something slightly cheaper and with arguably more features, check out <a href="https://aptonic.com/">Dropzone 3</a>.</p>
+
+<ol>
+<li>Once you&rsquo;ve downloaded Dropshare, open up the preferences and create a new Amazon S3 connection:<br /></li>
+<li>Fill out the required fields, most a pretty self explanatory.</li>
+<li>When filling out the custom domain, don&rsquo;t prefix it with <code>http://</code> and don&rsquo;t add <code>/</code> as a suffix.</li>
+<li>If you want to upload to a subfolder, you&rsquo;ll want to add that in with the bucket name.</li>
+<li>Enjoy!
+<a href="http://i.hugo.sx/ss/aFAD7.gif"><img src="https://i.hugo.sx/ss/aFAD7.gif" alt="" /></a></li>
+</ol>
+
+<h4 id="sharex-windows:1c427c2c77aa13c2603954485d4223c6">ShareX (Windows)</h4>
+
+<ol>
+<li><a href="http://getsharex.com/">Download ShareX</a>.</li>
+<li>Open up <em>Destinations</em> from the list on the side.</li>
+<li>Click on <em>Amazon S3</em> under <em>Image Upload</em>.</li>
+<li>Enter the<em>Access Key</em> and <em>Secret Key</em>, you should end up with something like this:  <a href="http://i.hugo.sx/ss/ZwutV.png"><img src="https://i.hugo.sx/ss/ZwutV.png" alt="" /></a></li>
+<li>Now set Amazon S3 as your upload destination:  <a href="http://i.hugo.sx/ss/ZmG4G.jpg"><img src="https://i.hugo.sx/ss/ZmG4G.jpg" alt="" /></a></li>
+</ol>
+
+<p>Questions? Comments? <a href="http://twitter.com/hugojmd">Tweet me</a>, or <a href="http://hugo.sx">email me</a>.</p>
+
+      
+      
+      
+    </article>
+    
+
+
+<script type="text/javascript">
+     
+    var disqus_shortname = '';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="https://blog.hugo.sx/content/blocking/" rel="prev">Blocking</a></span>
+    
+    
+      <span class="next"><a href="https://blog.hugo.sx/draft/things-i-pay-money-for/" rel="next">Things I actually pay money for</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      
+      Copyright Hugo Muller-Downing 2016.
+    </div>
+  </footer>
+
+
+</div>
+
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+</body>
+</html>
+

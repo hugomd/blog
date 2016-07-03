@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    How I bypassed my school&#39;s proxy | Hugo&#39;s Blog
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="https://blog.hugo.sx/content/how-i-bypassed-my-schools-proxy/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="https://blog.hugo.sx/index.xml" rel="alternate" type="application/rss+xml" title="Hugo&#39;s Blog" />
+  <link href="https://blog.hugo.sx/index.xml" rel="feed" type="application/rss+xml" title="Hugo&#39;s Blog" />
+
+  
+  <script type="text/javascript">var switchTo5x=true;</script>
+  <script type="text/javascript" src="//ws.sharethis.com/button/buttons.js"></script>
+  <script type="text/javascript">stLight.options({publisher: "2b9fffc6-b3fe-4988-a0ef-4f9dcce98eaa", doNotHash: true, doNotCopy: true, hashAddressBar: false});</script>
+
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="https://blog.hugo.sx/">Hugo&#39;s Blog</a></h1>
+        <h2>I write stuff sometimes</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="https://hugo.sx/" target="">Homepage</a></li>
+          <li><a href="/page/about" target="">About</a></li>
+          <li><a href="http://twitter.com/hugojmd" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/hugomd" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>How I bypassed my school&#39;s proxy</h1>
+      <div class="meta">
+        Feb 11, 2014 &nbsp;
+        
+          #<a href="/tags/story">story</a>&nbsp;
+        
+          #<a href="/tags/writing">writing</a>&nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>In my final year of schooling, I worked out how I could bypass my school&rsquo;s proxy. A shame that I discovered it so late, but hopefully those reading this may be able to get a bit more use out of it than I did (only a few months!).</p>
+
+<p>This idea/hack will really depend on your school&rsquo;s proxy system but it should, theoretically, work on most networks (don&rsquo;t quote me on this). My school happened to be using <a href="https://www.fortiguard.com/">Fortiguard</a>, which tended to block the usual things like Facebook, YouTube, etc.</p>
+
+<p><strong>Requirements</strong></p>
+
+<ul>
+<li>A fast internet connection at home (1 Mbps up, at least).<br /></li>
+<li>A fast internet connection at school, if it has a high down speed, it&rsquo;ll increase the speed with which web pages load through the tunnel we&rsquo;ll be setting up.<br /></li>
+<li>Access to a Linux system at home. This could be running Linux on an old laptop at home or, in my case, having a <a href="http://raspberrypi.org/">Raspberry Pi</a>.<br /></li>
+<li>Ability to open specific ports through your ISP.<br /></li>
+</ul>
+
+<p><strong>Let&rsquo;s do this.</strong></p>
+
+<ol>
+<li>Open a port through your ISP and then in your router. This usually involves logging into your ISP&rsquo;s administration website and opening ports. I was only able to open port 443, 22, and a few others. For this hack, ideally you&rsquo;ll want to open port 443, that way your school won&rsquo;t be able to block you. After you&rsquo;ve done that, you should be able to navigate to your WiFi router at <a href="http://192.168.1.1/">http://192.168.1.1/</a>, you can find out what the URL is <a href="http://portforward.com/default_username_password/">here</a>. Forward the port you opened through your ISP, on your local network, for the Linux server/computer you&rsquo;ll be connecting to. You&rsquo;ll also want to <a href="http://www.canyouseeme.org/">check whether the port is open</a>.<br /></li>
+
+<li><p>Once you&rsquo;ve completed those relatively easy steps, we can move onto the fun part. When you&rsquo;re connected to your school network, you can create an SSH tunnel to your server at home:</p>
+
+<pre><code>ssh -p 443 -ND 8080 root@YOURIP
+</code></pre>
+
+<p>In the above code, 443 is the port you forwarded and 8080 is the one you&rsquo;ll be routing local traffic through. &lsquo;YOURIP&rsquo; is just your computers IP (not the local one).</p>
+
+<p>I&rsquo;ll be updating this blog post with further information on how to route local traffic through the tunnel on Mac OS X, Linux and Windows.</p></li>
+</ol>
+
+      
+      
+      
+    </article>
+    
+
+
+<script type="text/javascript">
+     
+    var disqus_shortname = '';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="https://blog.hugo.sx/content/im-an-idiot/" rel="prev">I&#39;m an Idiot</a></span>
+    
+    
+      <span class="next"><a href="https://blog.hugo.sx/content/the-perfect-weechat-setup-2/" rel="next">The Perfect Weechat Setup</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      
+      Copyright Hugo Muller-Downing 2016.
+    </div>
+  </footer>
+
+
+</div>
+
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+</body>
+</html>
+

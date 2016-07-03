@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  
+  <meta charset="UTF-8">
+  <title>
+    I&#39;m an Idiot | Hugo&#39;s Blog
+  </title>
+
+
+  
+  <meta name="viewport" content="width=device-width,user-scalable=no,maximum-scale=1,initial-scale=1">
+
+  
+  <link rel="canonical" href="https://blog.hugo.sx/content/im-an-idiot/"/>
+
+  
+  <link rel="stylesheet" href="/css/sanitize.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/highlight_monokai.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/custom.css">
+  
+  
+  <link href="https://blog.hugo.sx/index.xml" rel="alternate" type="application/rss+xml" title="Hugo&#39;s Blog" />
+  <link href="https://blog.hugo.sx/index.xml" rel="feed" type="application/rss+xml" title="Hugo&#39;s Blog" />
+
+  
+  <script type="text/javascript">var switchTo5x=true;</script>
+  <script type="text/javascript" src="//ws.sharethis.com/button/buttons.js"></script>
+  <script type="text/javascript">stLight.options({publisher: "2b9fffc6-b3fe-4988-a0ef-4f9dcce98eaa", doNotHash: true, doNotCopy: true, hashAddressBar: false});</script>
+
+
+</head>
+
+
+
+<body>
+<div class="container">
+
+  
+  <header role="banner">
+    <div class="row gutters">
+      <div id="site-title" class="col span_6">
+        <h1><a href="https://blog.hugo.sx/">Hugo&#39;s Blog</a></h1>
+        <h2>I write stuff sometimes</h2>
+      </div>
+      <div id="social" class="col span_6">
+        <ul>
+          <li><a href="https://hugo.sx/" target="">Homepage</a></li>
+          <li><a href="/page/about" target="">About</a></li>
+          <li><a href="http://twitter.com/hugojmd" target="_blank">Twitter</a></li>
+          
+          <li><a href="https://github.com/hugomd" target="_blank">GitHub</a></li>
+          
+        </ul>
+      </div>
+    </div>
+  </header>
+
+
+  
+  <main id="single" role="main">
+    <div class="article-header">
+      <h1>I&#39;m an Idiot</h1>
+      <div class="meta">
+        Jan 20, 2014 &nbsp;
+        
+      </div>
+    </div>
+    <article>
+      <p>I&rsquo;ve been working on a pretty big project on Github with a couple of developers. It has a lot of potential and requires a lot of work.</p>
+
+<p>We happen to be using a <a href="http://en.wikipedia.org/wiki/Content_delivery_network">Content Delivery Network</a> (CDN), because we&rsquo;re hosting files.</p>
+
+<p>I thought I would be smart, and route all traffic via the server before routing to the CDN. This would then allow me to restrict access to the files so that they could only be accessed by specific referers (specific IP addresses or websites). Sounds great, right? <strong>Wrong.</strong> By doing this, the CDN would be rendered useless because all traffic would go through the main server, then the CDN, rather than straight to the CDN.</p>
+
+<p>I&rsquo;m an idiot.</p>
+
+      
+      
+      
+    </article>
+    
+
+
+<script type="text/javascript">
+     
+    var disqus_shortname = '';
+
+     
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+  </main>
+  
+  <nav class="pagination">
+    
+      <span class="previous">&larr; <a href="https://blog.hugo.sx/content/the-pirate-bay-perpetual-ip-address/" rel="prev">The Pirate Bay Perpetual IP Address</a></span>
+    
+    
+      <span class="next"><a href="https://blog.hugo.sx/content/how-i-bypassed-my-schools-proxy/" rel="next">How I bypassed my school&#39;s proxy</a> &rarr;</span>
+    
+  </nav>
+
+
+  
+  <footer role="contentinfo">
+    <div style="text-align:center;">
+      
+      Copyright Hugo Muller-Downing 2016.
+    </div>
+  </footer>
+
+
+</div>
+
+<script src="/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+</body>
+</html>
+
