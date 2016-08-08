@@ -140,7 +140,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
     </item>
     
     <item>
-      <title>Tutorial: Roll your own screenshot service with S3 and Dropshare/ShareX</title>
+      <title>Easy file sharing with S3 and Dropshare/ShareX</title>
       <link>https://blog.hugo.sx/post/roll-your-own-screenshot-service-with-s3/</link>
       <pubDate>Tue, 27 Oct 2015 15:35:21 +1100</pubDate>
       
@@ -338,91 +338,6 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;p&gt;I can safely say that now I&amp;rsquo;m all set up, going &lt;em&gt;fast&lt;/em&gt; with FastMail and have rules sending emails into their proper folders, I feel less stressed and more in control.&lt;/p&gt;
 
 &lt;p&gt;We tend to underestimate how email affects our lives.&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Droplr vs. CloudApp</title>
-      <link>https://blog.hugo.sx/post/droplr-vs-cloudapp/</link>
-      <pubDate>Mon, 14 Sep 2015 19:48:43 +1000</pubDate>
-      
-      <guid>https://blog.hugo.sx/post/droplr-vs-cloudapp/</guid>
-      <description>&lt;p&gt;Side-by-side comparison (for the Mac App), completely subjective:&lt;/p&gt;
-
-&lt;table&gt;
-    &lt;tr&gt;
-        &lt;th&gt;Features&lt;/th&gt;
-        &lt;th&gt;Droplr&lt;/th&gt;
-        &lt;th&gt;CloudApp&lt;/th&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Upload anything&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Compose note&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-        &lt;td&gt;No&lt;/td&gt;
-    &lt;/tr&gt;
-
-    &lt;tr&gt;
-        &lt;td&gt;Webm Support&lt;/td&gt;
-        &lt;td&gt;No&lt;/td&gt;
-    &lt;td&gt;No&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;HTML5 video player&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-        &lt;td&gt;No&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Hotkeys to View&lt;/td&gt;
-        &lt;td&gt;No&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Drop upload limit&lt;/td&gt;
-        &lt;td&gt;2 GB&lt;/td&gt;
-        &lt;td&gt;500 MB (lowest tier)&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Analytics&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;HD Screencasts&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;td&gt;Yes&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Beautiful Web Interface&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;td&gt;Kinda&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Screenshot Annotation&lt;/td&gt;
-        &lt;td&gt;Yes (native)&lt;/td&gt;
-        &lt;td&gt;Yes (web)&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Drop search&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-        &lt;td&gt;No&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;URL shortening&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Browser Plugins&lt;/td&gt;
-        &lt;td&gt;Yes&lt;/td&gt;
-    &lt;td&gt;Yes&lt;/td&gt;
-    &lt;/tr&gt;
-&lt;/table&gt;
-    
 </description>
     </item>
     

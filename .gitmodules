@@ -1,3 +1,6 @@
 [submodule "themes/angels-ladder"] 
 	  path = themes/angels-ladder 
 	    url = https://github.com/tanksuzuki/angels-ladder.git/
+[submodule "themes/hugo-cactus-theme"]
+	path = themes/hugo-cactus-theme
+	url = https://hugomd@github.com/digitalcraftsman/hugo-cactus-theme

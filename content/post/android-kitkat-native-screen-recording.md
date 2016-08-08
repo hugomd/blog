@@ -2,6 +2,7 @@
 date = "2013-11-01T22:16:59+11:00"
 draft = false
 title = "Android KitKat Native Screen Recording"
+description = "A short howto"
 slug = "android-kitkat-native-screen-recording"
 aliases = [
 	"android-kitkat-native-screen-recording"

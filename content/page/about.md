@@ -3,6 +3,7 @@ date = "2013-10-20T12:00:00+11:00"
 draft = false
 title = "About"
 slug = "about"
+hidden = true
 aliases = [
 	"about"
 ]
