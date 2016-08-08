@@ -22,9 +22,9 @@ Unsurprisingly, I haven&amp;rsquo;t tallied how much I actually spend, partly be
 a little lazy and partly because I&amp;rsquo;m scared of finding out exactly how much I
 spend.. So here it is.&lt;/p&gt;
 
-&lt;h2 id=&#34;monthly-expenditures:730485569bb86e09307c44658da9801b&#34;&gt;Monthly Expenditures&lt;/h2&gt;
+&lt;h2 id=&#34;monthly-expenditures&#34;&gt;Monthly Expenditures&lt;/h2&gt;
 
-&lt;h3 id=&#34;google-play-music-youtube-red-https-music-google-com:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://music.google.com/&#34;&gt;Google Play Music &amp;amp; YouTube Red&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;google-play-music-youtube-red-https-music-google-com&#34;&gt;&lt;a href=&#34;https://music.google.com/&#34;&gt;Google Play Music &amp;amp; YouTube Red&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;I pay $5.99 AUD per month for Google Play Music, now inclusive of YouTube Red,
 as I paid for several months in advance when they went on sale quite recently
@@ -37,7 +37,7 @@ ended up coming back to GPM because 1) it has all of my music already and 2) I
 can upload any music that &lt;em&gt;isn&amp;rsquo;t&lt;/em&gt; already there, something that many, if not
 all, other streaming services lack.&lt;/p&gt;
 
-&lt;h3 id=&#34;apple-music-https-www-apple-com-music:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://www.apple.com/music/&#34;&gt;Apple Music&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;apple-music-https-www-apple-com-music&#34;&gt;&lt;a href=&#34;https://www.apple.com/music/&#34;&gt;Apple Music&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;m transitioning to Apple Music, still on their 3 month trial, but will end up
 paying $5.99 thanks to their student discount. I&amp;rsquo;m still not sure that I&amp;rsquo;ll be
@@ -45,7 +45,7 @@ going through with the switch from Google Music, it really depends on the
 upcoming changes &lt;a href=&#34;http://www.theverge.com/2016/6/13/11903956/apple-music-update-itunes-redesign-announced-wwdc-2016&#34;&gt;announced at
 WWDC&lt;/a&gt;.&lt;/p&gt;
 
-&lt;h3 id=&#34;digital-ocean-https-digitalocean-com:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://digitalocean.com/&#34;&gt;Digital Ocean&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;digital-ocean-https-digitalocean-com&#34;&gt;&lt;a href=&#34;https://digitalocean.com/&#34;&gt;Digital Ocean&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;I pay $10.00 USD per month for two DigitalOcean droplets, running around 10
 fairly small websites. It&amp;rsquo;s cheap, and I like the freedom of taking snapshots
@@ -56,7 +56,7 @@ this blog is hosted on one of the servers.&lt;/p&gt;
 been planning to migrate from DO to some Docker containers running on my
 Online.net server (next in this list).&lt;/p&gt;
 
-&lt;h3 id=&#34;online-net-https-www-online-net-en:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://www.online.net/en&#34;&gt;Online.net&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;online-net-https-www-online-net-en&#34;&gt;&lt;a href=&#34;https://www.online.net/en&#34;&gt;Online.net&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;I pay €15.99 EUR for a fairly &lt;a href=&#34;https://www.online.net/en/dedicated-server/dedibox-xc&#34;&gt;beefy
 server&lt;/a&gt; which I
@@ -67,7 +67,7 @@ runners&lt;/a&gt; and a rtorrent/rutorrent.&lt;/p&gt;
 &lt;p&gt;This server was my first foray into the world of Docker, and I&amp;rsquo;m hoping to
 dockerize  most of my stuff and move it there.&lt;/p&gt;
 
-&lt;h3 id=&#34;amaysim-https-www-amaysim-com-au:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://www.amaysim.com.au/&#34;&gt;Amaysim&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;amaysim-https-www-amaysim-com-au&#34;&gt;&lt;a href=&#34;https://www.amaysim.com.au/&#34;&gt;Amaysim&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;Most people have phone plans. I&amp;rsquo;m one of those people. I pay $39.90 AUD per
 month for 7 GB of data, unlimited calls and texts, and some access to
@@ -76,38 +76,38 @@ international call/text subject to higher rates (which I don&amp;rsquo;t use).&l
 &lt;p&gt;I find I rarely use up more than 5 GB each month, but it&amp;rsquo;s nice knowing I have
 the extra data just in case.&lt;/p&gt;
 
-&lt;h3 id=&#34;netflix-https-netflix-com:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://netflix.com/&#34;&gt;Netflix&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;netflix-https-netflix-com&#34;&gt;&lt;a href=&#34;https://netflix.com/&#34;&gt;Netflix&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;I currently have a subscription, which I&amp;rsquo;m paying $11.99 AUD per month for,
 but I&amp;rsquo;m planning to cancel because I don&amp;rsquo;t find myself using it &lt;em&gt;that&lt;/em&gt; often
 (blasphemous, I know!).&lt;/p&gt;
 
-&lt;h3 id=&#34;animelab-https-animelab-com:730485569bb86e09307c44658da9801b&#34;&gt;&lt;a href=&#34;https://animelab.com/&#34;&gt;Animelab&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id=&#34;animelab-https-animelab-com&#34;&gt;&lt;a href=&#34;https://animelab.com/&#34;&gt;Animelab&lt;/a&gt;&lt;/h3&gt;
 
 &lt;p&gt;I thoroughly enjoy anime, and I find that I keep coming back for more each
 season. Animelab is the easiest way for me to watch them, is super fast and has
 an amazing user interface and keeps up to date with simulcasts. This runs me a
 neat $6.99 AUD per month.&lt;/p&gt;
 
-&lt;h3 id=&#34;coffee:730485569bb86e09307c44658da9801b&#34;&gt;Coffee ☕&lt;/h3&gt;
+&lt;h3 id=&#34;coffee&#34;&gt;Coffee ☕&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;m not &lt;em&gt;exactly&lt;/em&gt; sure how much I spend on coffee each month, but if I had to
 guess I&amp;rsquo;d say around $15.00 AUD, which is quite a bit. I tend to enjoy coffees
 in the morning, and make them myself most of the time.&lt;/p&gt;
 
-&lt;h3 id=&#34;apps:730485569bb86e09307c44658da9801b&#34;&gt;Apps&lt;/h3&gt;
+&lt;h3 id=&#34;apps&#34;&gt;Apps&lt;/h3&gt;
 
 &lt;p&gt;I tend not to keep track of apps, but if it&amp;rsquo;s less than a coffee ($4.00 AUD)
 and it offers something unique and worthwhile, I normally end up buying it.&lt;br /&gt;
 Thankfully, if I do ever regret a purchase, I can get a full refund.&lt;/p&gt;
 
-&lt;h3 id=&#34;other:730485569bb86e09307c44658da9801b&#34;&gt;Other&lt;/h3&gt;
+&lt;h3 id=&#34;other&#34;&gt;Other&lt;/h3&gt;
 
 &lt;p&gt;I pay a tiny amount each month for the privilege of reading &lt;a href=&#34;http://mattgemmell.com&#34;&gt;Matt
 Gemmell&lt;/a&gt;&amp;rsquo;s weekly newsletters. I&amp;rsquo;d say it&amp;rsquo;s worth it, I
 find his reading style quite captivating.&lt;/p&gt;
 
-&lt;h3 id=&#34;amazon-web-services:730485569bb86e09307c44658da9801b&#34;&gt;Amazon Web Services&lt;/h3&gt;
+&lt;h3 id=&#34;amazon-web-services&#34;&gt;Amazon Web Services&lt;/h3&gt;
 
 &lt;p&gt;I use Amazon S3 to store screenshots and various other files, and Glacier to
 store my &lt;a href=&#34;https://www.arqbackup.com&#34;&gt;Arq&lt;/a&gt; backups.&lt;/p&gt;
@@ -118,9 +118,9 @@ server I&amp;rsquo;m working on.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;a href=&#34;https://aws.amazon.com/free/&#34;&gt;Amazon&amp;rsquo;s free tier&lt;/a&gt; and some free
 credit I received, this doesn&amp;rsquo;t cost me anything.&lt;/p&gt;
 
-&lt;h2 id=&#34;yearly-expenditures:730485569bb86e09307c44658da9801b&#34;&gt;Yearly Expenditures&lt;/h2&gt;
+&lt;h2 id=&#34;yearly-expenditures&#34;&gt;Yearly Expenditures&lt;/h2&gt;
 
-&lt;h3 id=&#34;domain-names:730485569bb86e09307c44658da9801b&#34;&gt;Domain Names&lt;/h3&gt;
+&lt;h3 id=&#34;domain-names&#34;&gt;Domain Names&lt;/h3&gt;
 
 &lt;p&gt;I own 7 domains at the moment, only some of which are mine. My personal domains
 run me around $94.00 AUD a year. A lot of these are impulse purchases (&lt;a href=&#34;https://medium.com/life-learning/the-case-for-buying-domain-names-compulsively-c5e414a9951e#.hj5d93d6f&#34;&gt;which
@@ -129,11 +129,11 @@ okay&lt;/a&gt;),
 with ideas behind them, or are on sale. Of course, I don&amp;rsquo;t follow through with
 a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 
-&lt;h3 id=&#34;ssl-certificates:730485569bb86e09307c44658da9801b&#34;&gt;SSL Certificates&lt;/h3&gt;
+&lt;h3 id=&#34;ssl-certificates&#34;&gt;SSL Certificates&lt;/h3&gt;
 
 &lt;p&gt;Now free thanks to &lt;a href=&#34;https://letsencrypt.org&#34;&gt;Let&amp;rsquo;s Encrypt&lt;/a&gt;!&lt;/p&gt;
 
-&lt;h2 id=&#34;total-expenditure:730485569bb86e09307c44658da9801b&#34;&gt;Total Expenditure&lt;/h2&gt;
+&lt;h2 id=&#34;total-expenditure&#34;&gt;Total Expenditure&lt;/h2&gt;
 
 &lt;p&gt;Big numbers are scary, so I&amp;rsquo;m not going to add everything up.&lt;/p&gt;
 </description>
@@ -147,7 +147,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
       <guid>https://blog.hugo.sx/post/roll-your-own-screenshot-service-with-s3/</guid>
       <description>
 
-&lt;h3 id=&#34;what-we-re-going-to-be-doing:1c427c2c77aa13c2603954485d4223c6&#34;&gt;What we&amp;rsquo;re going to be doing&lt;/h3&gt;
+&lt;h3 id=&#34;what-we-re-going-to-be-doing&#34;&gt;What we&amp;rsquo;re going to be doing&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;Setting up a subdomain&lt;/li&gt;
@@ -161,7 +161,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;/ol&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;setting-up-amazon-s3:1c427c2c77aa13c2603954485d4223c6&#34;&gt;Setting up Amazon S3&lt;/h3&gt;
+&lt;h3 id=&#34;setting-up-amazon-s3&#34;&gt;Setting up Amazon S3&lt;/h3&gt;
 
 &lt;p&gt;&lt;strong&gt;If you already have an S3 Bucket created/setup, skip this section.&lt;/strong&gt;&lt;/p&gt;
 
@@ -190,7 +190,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;li&gt;&lt;p&gt;This bucket policy will make all of your uploads public. Now you can move on to setting up your subdomain.&lt;/p&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;setting-up-a-subdomain:1c427c2c77aa13c2603954485d4223c6&#34;&gt;Setting up a subdomain&lt;/h3&gt;
+&lt;h3 id=&#34;setting-up-a-subdomain&#34;&gt;Setting up a subdomain&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;Login to your domain registrar, I use &lt;a href=&#34;http://gandi.net/&#34;&gt;Gandi&lt;/a&gt;.&lt;/li&gt;
@@ -208,9 +208,9 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;li&gt;Hit save. You&amp;rsquo;ll have to wait somewhere in the range of 24 hours for the DNS populate.&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;uploading-to-amazon-s3:1c427c2c77aa13c2603954485d4223c6&#34;&gt;Uploading to Amazon S3&lt;/h3&gt;
+&lt;h3 id=&#34;uploading-to-amazon-s3&#34;&gt;Uploading to Amazon S3&lt;/h3&gt;
 
-&lt;h4 id=&#34;preliminary-setup:1c427c2c77aa13c2603954485d4223c6&#34;&gt;Preliminary setup&lt;/h4&gt;
+&lt;h4 id=&#34;preliminary-setup&#34;&gt;Preliminary setup&lt;/h4&gt;
 
 &lt;ol&gt;
 &lt;li&gt;Go to your &lt;a href=&#34;https://console.aws.amazon.com/&#34;&gt;AWS Console&lt;/a&gt;, click on your name in the top right and then &lt;em&gt;Security Credentials&lt;/em&gt;.&lt;/li&gt;
@@ -219,7 +219,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;li&gt;Copy the &lt;em&gt;Access Key ID&lt;/em&gt; and &lt;em&gt;Secret Access Key&lt;/em&gt; somewhere, you&amp;rsquo;ll need them for the next step.&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h4 id=&#34;dropshare-mac:1c427c2c77aa13c2603954485d4223c6&#34;&gt;Dropshare (Mac)&lt;/h4&gt;
+&lt;h4 id=&#34;dropshare-mac&#34;&gt;Dropshare (Mac)&lt;/h4&gt;
 
 &lt;p&gt;&lt;a href=&#34;https://getdropsha.re/&#34;&gt;Dropshare&lt;/a&gt; costs 20.00 USD, which is quite reasonable for what it does. However, if you&amp;rsquo;re looking for something slightly cheaper and with arguably more features, check out &lt;a href=&#34;https://aptonic.com/&#34;&gt;Dropzone 3&lt;/a&gt;.&lt;/p&gt;
 
@@ -232,7 +232,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;a href=&#34;http://i.hugo.sx/ss/aFAD7.gif&#34;&gt;&lt;img src=&#34;https://i.hugo.sx/ss/aFAD7.gif&#34; alt=&#34;&#34; /&gt;&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h4 id=&#34;sharex-windows:1c427c2c77aa13c2603954485d4223c6&#34;&gt;ShareX (Windows)&lt;/h4&gt;
+&lt;h4 id=&#34;sharex-windows&#34;&gt;ShareX (Windows)&lt;/h4&gt;
 
 &lt;ol&gt;
 &lt;li&gt;&lt;a href=&#34;http://getsharex.com/&#34;&gt;Download ShareX&lt;/a&gt;.&lt;/li&gt;
@@ -272,13 +272,13 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
       <guid>https://blog.hugo.sx/post/monash-ninja/</guid>
       <description>
 
-&lt;h3 id=&#34;what-is-monash-ninja:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;What is Monash Ninja?&lt;/h3&gt;
+&lt;h3 id=&#34;what-is-monash-ninja&#34;&gt;What is Monash Ninja?&lt;/h3&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://monash.ninja&#34;&gt;Monash Ninja&lt;/a&gt; was week-long treasure-hunt-like event (14 Sept. to 21 Sept. 2015) run by &lt;a href=&#34;http://wired.org.au/&#34;&gt;Wired Monash&lt;/a&gt;. The concept and code was created by &lt;a href=&#34;http://hugo.sx/&#34;&gt;me&lt;/a&gt; (then Vice President) and the design for the website was created by &lt;a href=&#34;http://terencehuynh.com/&#34;&gt;Terence&lt;/a&gt; (then Secretary).&lt;/p&gt;
 
 &lt;p&gt;I purchased the &lt;em&gt;monash.ninja&lt;/em&gt; domain in April 2015 on a whim and then decided to come up with an idea for it. I had been thinking it would be fun for Wired to run a treasure hunt but thought it would be difficult to find participants as treasure hunts require effort for the hunters, but also for the organisers. This lead me to the idea of putting up (read: hiding) codes around campus (with help from Terence) that could then be entered on a website. Easy participation, a &amp;ldquo;keep your eyes peeled&amp;rdquo; approach, rather than actively looking for clues, and fairly easy implementation and organisation.&lt;/p&gt;
 
-&lt;h3 id=&#34;design-and-implementation:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;Design and Implementation&lt;/h3&gt;
+&lt;h3 id=&#34;design-and-implementation&#34;&gt;Design and Implementation&lt;/h3&gt;
 
 &lt;p&gt;Monash Ninja consists of a simple HTML + JQuery/Ajax + CSS frontend with a &lt;a href=&#34;http://flask.pocoo.org&#34;&gt;Flask&lt;/a&gt; + MySQL backend.&lt;/p&gt;
 
@@ -305,7 +305,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 - 4x Google Cardboard ($20 ea.)&lt;br /&gt;
 - 10x iTunes Gift Vouchers ($30 ea.)&lt;/p&gt;
 
-&lt;h3 id=&#34;end-result:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;End Result&lt;/h3&gt;
+&lt;h3 id=&#34;end-result&#34;&gt;End Result&lt;/h3&gt;
 
 &lt;p&gt;By the end of the week 26 of the 30 codes had been found and validated, of which around 2 were ripped down, presumably by university staff. To remedy this, we hid these two in the source code of wired.org.au and monash.ninja. Most of the prizes were collected on the following Monday after the event. Some participants were unable to collect their prizes and scheduled alternative times, while others did not respond.&lt;/p&gt;
 
@@ -313,13 +313,13 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 
 &lt;p&gt;I&amp;rsquo;d like to thank Terence for putting up with my stupid questions, helping me distribute and hide the codes, give out the prizes and for allowing me to sticky tape a ninja code to his back for the duration of the club&amp;rsquo;s Annual General Meeting (AGM).&lt;/p&gt;
 
-&lt;h3 id=&#34;what-would-i-do-next-time:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;What would I do next time?&lt;/h3&gt;
+&lt;h3 id=&#34;what-would-i-do-next-time&#34;&gt;What would I do next time?&lt;/h3&gt;
 
 &lt;p&gt;Find an easier way to keep track of people. Specifically, taking emails, or using Facebook login, instead of just a student ID and code - it would have made it a little easier to notify people they&amp;rsquo;d received a prize.&lt;/p&gt;
 
 &lt;p&gt;Store more information on the database: whether prizes have been given out, website feedback, and general statistics such as how many codes validated each day.&lt;/p&gt;
 
-&lt;h3 id=&#34;when-will-monash-ninja-return:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;When will Monash Ninja return?&lt;/h3&gt;
+&lt;h3 id=&#34;when-will-monash-ninja-return&#34;&gt;When will Monash Ninja return?&lt;/h3&gt;
 
 &lt;p&gt;Hopefully next year! &lt;sup&gt;&lt;sup&gt;Maybe during O-week?? (hint hint)&lt;/sup&gt;&lt;/sup&gt;&lt;/p&gt;
 </description>
@@ -468,12 +468,12 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
       <guid>https://blog.hugo.sx/post/the-perfect-weechat-setup-2/</guid>
       <description>
 
-&lt;h3 id=&#34;update-13-08-15:70a01d90505be501afd05275e05825cf&#34;&gt;Update 13/08/15&lt;/h3&gt;
+&lt;h3 id=&#34;update-13-08-15&#34;&gt;Update 13/08/15&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;ve been getting a few emails asking for my configuration files so I&amp;rsquo;ve uploaded them: &lt;a href=&#34;http://s3.hugo.sx/files/weechat/13-07-15/weechat.conf&#34;&gt;weechat.conf&lt;/a&gt;, irc.conf (temporarily unavailable). &amp;ldquo;weechat.conf&amp;rdquo; contains general configurations for looks but &amp;ldquo;irc.conf&amp;rdquo; contains a setting that lets you create indented channels, under their respective server:&lt;br /&gt;
 &lt;img src=&#34;http://s3.hugo.sx/ss/qaUj7.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h3 id=&#34;what-we-ll-be-doing:70a01d90505be501afd05275e05825cf&#34;&gt;What we&amp;rsquo;ll be doing&lt;/h3&gt;
+&lt;h3 id=&#34;what-we-ll-be-doing&#34;&gt;What we&amp;rsquo;ll be doing&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;Important things to know&lt;/li&gt;
@@ -483,11 +483,11 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 &lt;li&gt;Setting up &lt;a href=&#34;http://wiki.znc.in/ZNC&#34;&gt;ZNC&lt;/a&gt; which lets you stay connected to IRC indefinitely.&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;prior-knowledge:70a01d90505be501afd05275e05825cf&#34;&gt;Prior knowledge&lt;/h3&gt;
+&lt;h3 id=&#34;prior-knowledge&#34;&gt;Prior knowledge&lt;/h3&gt;
 
 &lt;p&gt;Before we get started, it&amp;rsquo;s vital that you have some command line experience, whether it&amp;rsquo;s a little bash here and there or programming. I say this not to dissuade you from installing weechat but because if you don&amp;rsquo;t like CLI (Command Line Interface), you&amp;rsquo;d be far more comfortable using a GUI (Graphic User Interface).&lt;/p&gt;
 
-&lt;h5 id=&#34;weechat-irc-terminology:70a01d90505be501afd05275e05825cf&#34;&gt;Weechat/IRC terminology&lt;/h5&gt;
+&lt;h5 id=&#34;weechat-irc-terminology&#34;&gt;Weechat/IRC terminology&lt;/h5&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;buffers&lt;/code&gt; are essentially &amp;lsquo;windows&amp;rsquo; in which messages/chats/settings options are shown. You can generally switch between these using &lt;code&gt;meta-[1 .. 9]&lt;/code&gt;. The first buffer, labelled 1, contains connected server buffers by default, that&amp;rsquo;s the servers you&amp;rsquo;re connected to. You can switch between these servers using &lt;code&gt;Ctrl+X&lt;/code&gt;, that&amp;rsquo;s &lt;em&gt;not&lt;/em&gt; the same as switching between buffers.&lt;/li&gt;
@@ -499,7 +499,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 
 &lt;p&gt;Keeping these points in mind, we can begin our install and setup.&lt;/p&gt;
 
-&lt;h3 id=&#34;install:70a01d90505be501afd05275e05825cf&#34;&gt;Install&lt;/h3&gt;
+&lt;h3 id=&#34;install&#34;&gt;Install&lt;/h3&gt;
 
 &lt;p&gt;Head over to &lt;a href=&#34;http://weechat.org/&#34;&gt;weechat.org&lt;/a&gt; and download it from source or just use the repositories available on most linux distros:&lt;/p&gt;
 
@@ -518,7 +518,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 
 &lt;p&gt;On Windows, you can use &lt;a href=&#34;http://www.cygwin.com/&#34;&gt;Cygwin&lt;/a&gt;, although I haven&amp;rsquo;t personally experiemented with it.&lt;/p&gt;
 
-&lt;h3 id=&#34;plugins:70a01d90505be501afd05275e05825cf&#34;&gt;Plugins&lt;/h3&gt;
+&lt;h3 id=&#34;plugins&#34;&gt;Plugins&lt;/h3&gt;
 
 &lt;p&gt;Now onto one of my favourite parts about weechat. The plugins. Weechat has a whole range of plugins for just about everything you can and can&amp;rsquo;t think of. Most of the scripts are available &lt;a href=&#34;http://weechat.org/scripts/&#34;&gt;here&lt;/a&gt; and those that aren&amp;rsquo;t are likely on Github.&lt;/p&gt;
 
@@ -572,7 +572,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 
 &lt;p&gt;Typing &lt;code&gt;/script&lt;/code&gt; will give you a list of available plugins to install - you can then use the arrow keys to navigate through the list and then type &lt;code&gt;i&lt;/code&gt; followed by the enter key to install the selected plugin.&lt;/p&gt;
 
-&lt;h3 id=&#34;making-it-look-pretty:70a01d90505be501afd05275e05825cf&#34;&gt;Making it look pretty&lt;/h3&gt;
+&lt;h3 id=&#34;making-it-look-pretty&#34;&gt;Making it look pretty&lt;/h3&gt;
 
 &lt;p&gt;There&amp;rsquo;s a lot you can do to weechat to make it look the way you want but I personally love the amount of colour-related customisation  available. I explained how the settings worked in &lt;em&gt;Weechat/IRC terminology&lt;/em&gt; section and while you can choose to use &lt;code&gt;/set weechat.*&lt;/code&gt; to find all of the settings, it&amp;rsquo;s significantly easier to use the iset plugin.&lt;/p&gt;
 
@@ -613,7 +613,7 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
 /set weechat.look.read_marker none
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;setting-up-znc:70a01d90505be501afd05275e05825cf&#34;&gt;Setting up ZNC&lt;/h3&gt;
+&lt;h3 id=&#34;setting-up-znc&#34;&gt;Setting up ZNC&lt;/h3&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://znc.in/&#34;&gt;ZNC&lt;/a&gt; is what&amp;rsquo;s called an IRC bouncer and is particularly useful if you want to remain connected to an IRC server all the time. It&amp;rsquo;s nice to be able to connect to a server and have some &amp;lsquo;history&amp;rsquo; of the channel; you can see what people have been discussing and then add to the conversation immediately. It also allows other users to leave you a message.&lt;/p&gt;
 
@@ -824,13 +824,13 @@ Make sure you&amp;rsquo;ve applied &lt;a href=&#34;http://download.chainfire.eu/
       <guid>https://blog.hugo.sx/page/about/</guid>
       <description>
 
-&lt;h4 id=&#34;about-me:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;About Me&lt;/h4&gt;
+&lt;h4 id=&#34;about-me&#34;&gt;About Me&lt;/h4&gt;
 
 &lt;p&gt;I&amp;rsquo;m Hugo M&amp;uuml;ller-Downing, I live in Melbourne, Australia.&lt;br /&gt;
 I&amp;rsquo;m interested in web development, APIs, Python, NodeJS, etc.&lt;br /&gt;
 I&amp;rsquo;m probably not great at writing blog posts but I&amp;rsquo;m getting there.&lt;/p&gt;
 
-&lt;h4 id=&#34;about-this-site:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;About this site&lt;/h4&gt;
+&lt;h4 id=&#34;about-this-site&#34;&gt;About this site&lt;/h4&gt;
 
 &lt;p&gt;This site runs on a &lt;a href=&#34;https://www.digitalocean.com/?refcode=8a96d5d50667&#34;&gt;DigitalOcean&lt;/a&gt; droplet in Singapore, powered by &lt;a href=&#34;http://gohugo.io/&#34;&gt;GoHugo&lt;/a&gt;.&lt;/p&gt;
 </description>

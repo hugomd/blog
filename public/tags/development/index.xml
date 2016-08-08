@@ -17,13 +17,13 @@
       <guid>https://blog.hugo.sx/post/monash-ninja/</guid>
       <description>
 
-&lt;h3 id=&#34;what-is-monash-ninja:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;What is Monash Ninja?&lt;/h3&gt;
+&lt;h3 id=&#34;what-is-monash-ninja&#34;&gt;What is Monash Ninja?&lt;/h3&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://monash.ninja&#34;&gt;Monash Ninja&lt;/a&gt; was week-long treasure-hunt-like event (14 Sept. to 21 Sept. 2015) run by &lt;a href=&#34;http://wired.org.au/&#34;&gt;Wired Monash&lt;/a&gt;. The concept and code was created by &lt;a href=&#34;http://hugo.sx/&#34;&gt;me&lt;/a&gt; (then Vice President) and the design for the website was created by &lt;a href=&#34;http://terencehuynh.com/&#34;&gt;Terence&lt;/a&gt; (then Secretary).&lt;/p&gt;
 
 &lt;p&gt;I purchased the &lt;em&gt;monash.ninja&lt;/em&gt; domain in April 2015 on a whim and then decided to come up with an idea for it. I had been thinking it would be fun for Wired to run a treasure hunt but thought it would be difficult to find participants as treasure hunts require effort for the hunters, but also for the organisers. This lead me to the idea of putting up (read: hiding) codes around campus (with help from Terence) that could then be entered on a website. Easy participation, a &amp;ldquo;keep your eyes peeled&amp;rdquo; approach, rather than actively looking for clues, and fairly easy implementation and organisation.&lt;/p&gt;
 
-&lt;h3 id=&#34;design-and-implementation:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;Design and Implementation&lt;/h3&gt;
+&lt;h3 id=&#34;design-and-implementation&#34;&gt;Design and Implementation&lt;/h3&gt;
 
 &lt;p&gt;Monash Ninja consists of a simple HTML + JQuery/Ajax + CSS frontend with a &lt;a href=&#34;http://flask.pocoo.org&#34;&gt;Flask&lt;/a&gt; + MySQL backend.&lt;/p&gt;
 
@@ -50,7 +50,7 @@
 - 4x Google Cardboard ($20 ea.)&lt;br /&gt;
 - 10x iTunes Gift Vouchers ($30 ea.)&lt;/p&gt;
 
-&lt;h3 id=&#34;end-result:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;End Result&lt;/h3&gt;
+&lt;h3 id=&#34;end-result&#34;&gt;End Result&lt;/h3&gt;
 
 &lt;p&gt;By the end of the week 26 of the 30 codes had been found and validated, of which around 2 were ripped down, presumably by university staff. To remedy this, we hid these two in the source code of wired.org.au and monash.ninja. Most of the prizes were collected on the following Monday after the event. Some participants were unable to collect their prizes and scheduled alternative times, while others did not respond.&lt;/p&gt;
 
@@ -58,13 +58,13 @@
 
 &lt;p&gt;I&amp;rsquo;d like to thank Terence for putting up with my stupid questions, helping me distribute and hide the codes, give out the prizes and for allowing me to sticky tape a ninja code to his back for the duration of the club&amp;rsquo;s Annual General Meeting (AGM).&lt;/p&gt;
 
-&lt;h3 id=&#34;what-would-i-do-next-time:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;What would I do next time?&lt;/h3&gt;
+&lt;h3 id=&#34;what-would-i-do-next-time&#34;&gt;What would I do next time?&lt;/h3&gt;
 
 &lt;p&gt;Find an easier way to keep track of people. Specifically, taking emails, or using Facebook login, instead of just a student ID and code - it would have made it a little easier to notify people they&amp;rsquo;d received a prize.&lt;/p&gt;
 
 &lt;p&gt;Store more information on the database: whether prizes have been given out, website feedback, and general statistics such as how many codes validated each day.&lt;/p&gt;
 
-&lt;h3 id=&#34;when-will-monash-ninja-return:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;When will Monash Ninja return?&lt;/h3&gt;
+&lt;h3 id=&#34;when-will-monash-ninja-return&#34;&gt;When will Monash Ninja return?&lt;/h3&gt;
 
 &lt;p&gt;Hopefully next year! &lt;sup&gt;&lt;sup&gt;Maybe during O-week?? (hint hint)&lt;/sup&gt;&lt;/sup&gt;&lt;/p&gt;
 </description>
@@ -112,12 +112,12 @@
       <guid>https://blog.hugo.sx/post/the-perfect-weechat-setup-2/</guid>
       <description>
 
-&lt;h3 id=&#34;update-13-08-15:70a01d90505be501afd05275e05825cf&#34;&gt;Update 13/08/15&lt;/h3&gt;
+&lt;h3 id=&#34;update-13-08-15&#34;&gt;Update 13/08/15&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;ve been getting a few emails asking for my configuration files so I&amp;rsquo;ve uploaded them: &lt;a href=&#34;http://s3.hugo.sx/files/weechat/13-07-15/weechat.conf&#34;&gt;weechat.conf&lt;/a&gt;, irc.conf (temporarily unavailable). &amp;ldquo;weechat.conf&amp;rdquo; contains general configurations for looks but &amp;ldquo;irc.conf&amp;rdquo; contains a setting that lets you create indented channels, under their respective server:&lt;br /&gt;
 &lt;img src=&#34;http://s3.hugo.sx/ss/qaUj7.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h3 id=&#34;what-we-ll-be-doing:70a01d90505be501afd05275e05825cf&#34;&gt;What we&amp;rsquo;ll be doing&lt;/h3&gt;
+&lt;h3 id=&#34;what-we-ll-be-doing&#34;&gt;What we&amp;rsquo;ll be doing&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;Important things to know&lt;/li&gt;
@@ -127,11 +127,11 @@
 &lt;li&gt;Setting up &lt;a href=&#34;http://wiki.znc.in/ZNC&#34;&gt;ZNC&lt;/a&gt; which lets you stay connected to IRC indefinitely.&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;prior-knowledge:70a01d90505be501afd05275e05825cf&#34;&gt;Prior knowledge&lt;/h3&gt;
+&lt;h3 id=&#34;prior-knowledge&#34;&gt;Prior knowledge&lt;/h3&gt;
 
 &lt;p&gt;Before we get started, it&amp;rsquo;s vital that you have some command line experience, whether it&amp;rsquo;s a little bash here and there or programming. I say this not to dissuade you from installing weechat but because if you don&amp;rsquo;t like CLI (Command Line Interface), you&amp;rsquo;d be far more comfortable using a GUI (Graphic User Interface).&lt;/p&gt;
 
-&lt;h5 id=&#34;weechat-irc-terminology:70a01d90505be501afd05275e05825cf&#34;&gt;Weechat/IRC terminology&lt;/h5&gt;
+&lt;h5 id=&#34;weechat-irc-terminology&#34;&gt;Weechat/IRC terminology&lt;/h5&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;buffers&lt;/code&gt; are essentially &amp;lsquo;windows&amp;rsquo; in which messages/chats/settings options are shown. You can generally switch between these using &lt;code&gt;meta-[1 .. 9]&lt;/code&gt;. The first buffer, labelled 1, contains connected server buffers by default, that&amp;rsquo;s the servers you&amp;rsquo;re connected to. You can switch between these servers using &lt;code&gt;Ctrl+X&lt;/code&gt;, that&amp;rsquo;s &lt;em&gt;not&lt;/em&gt; the same as switching between buffers.&lt;/li&gt;
@@ -143,7 +143,7 @@
 
 &lt;p&gt;Keeping these points in mind, we can begin our install and setup.&lt;/p&gt;
 
-&lt;h3 id=&#34;install:70a01d90505be501afd05275e05825cf&#34;&gt;Install&lt;/h3&gt;
+&lt;h3 id=&#34;install&#34;&gt;Install&lt;/h3&gt;
 
 &lt;p&gt;Head over to &lt;a href=&#34;http://weechat.org/&#34;&gt;weechat.org&lt;/a&gt; and download it from source or just use the repositories available on most linux distros:&lt;/p&gt;
 
@@ -162,7 +162,7 @@
 
 &lt;p&gt;On Windows, you can use &lt;a href=&#34;http://www.cygwin.com/&#34;&gt;Cygwin&lt;/a&gt;, although I haven&amp;rsquo;t personally experiemented with it.&lt;/p&gt;
 
-&lt;h3 id=&#34;plugins:70a01d90505be501afd05275e05825cf&#34;&gt;Plugins&lt;/h3&gt;
+&lt;h3 id=&#34;plugins&#34;&gt;Plugins&lt;/h3&gt;
 
 &lt;p&gt;Now onto one of my favourite parts about weechat. The plugins. Weechat has a whole range of plugins for just about everything you can and can&amp;rsquo;t think of. Most of the scripts are available &lt;a href=&#34;http://weechat.org/scripts/&#34;&gt;here&lt;/a&gt; and those that aren&amp;rsquo;t are likely on Github.&lt;/p&gt;
 
@@ -216,7 +216,7 @@
 
 &lt;p&gt;Typing &lt;code&gt;/script&lt;/code&gt; will give you a list of available plugins to install - you can then use the arrow keys to navigate through the list and then type &lt;code&gt;i&lt;/code&gt; followed by the enter key to install the selected plugin.&lt;/p&gt;
 
-&lt;h3 id=&#34;making-it-look-pretty:70a01d90505be501afd05275e05825cf&#34;&gt;Making it look pretty&lt;/h3&gt;
+&lt;h3 id=&#34;making-it-look-pretty&#34;&gt;Making it look pretty&lt;/h3&gt;
 
 &lt;p&gt;There&amp;rsquo;s a lot you can do to weechat to make it look the way you want but I personally love the amount of colour-related customisation  available. I explained how the settings worked in &lt;em&gt;Weechat/IRC terminology&lt;/em&gt; section and while you can choose to use &lt;code&gt;/set weechat.*&lt;/code&gt; to find all of the settings, it&amp;rsquo;s significantly easier to use the iset plugin.&lt;/p&gt;
 
@@ -257,7 +257,7 @@
 /set weechat.look.read_marker none
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;setting-up-znc:70a01d90505be501afd05275e05825cf&#34;&gt;Setting up ZNC&lt;/h3&gt;
+&lt;h3 id=&#34;setting-up-znc&#34;&gt;Setting up ZNC&lt;/h3&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://znc.in/&#34;&gt;ZNC&lt;/a&gt; is what&amp;rsquo;s called an IRC bouncer and is particularly useful if you want to remain connected to an IRC server all the time. It&amp;rsquo;s nice to be able to connect to a server and have some &amp;lsquo;history&amp;rsquo; of the channel; you can see what people have been discussing and then add to the conversation immediately. It also allows other users to leave you a message.&lt;/p&gt;
 

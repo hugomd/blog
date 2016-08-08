@@ -17,12 +17,12 @@
       <guid>https://blog.hugo.sx/post/the-perfect-weechat-setup-2/</guid>
       <description>
 
-&lt;h3 id=&#34;update-13-08-15:70a01d90505be501afd05275e05825cf&#34;&gt;Update 13/08/15&lt;/h3&gt;
+&lt;h3 id=&#34;update-13-08-15&#34;&gt;Update 13/08/15&lt;/h3&gt;
 
 &lt;p&gt;I&amp;rsquo;ve been getting a few emails asking for my configuration files so I&amp;rsquo;ve uploaded them: &lt;a href=&#34;http://s3.hugo.sx/files/weechat/13-07-15/weechat.conf&#34;&gt;weechat.conf&lt;/a&gt;, irc.conf (temporarily unavailable). &amp;ldquo;weechat.conf&amp;rdquo; contains general configurations for looks but &amp;ldquo;irc.conf&amp;rdquo; contains a setting that lets you create indented channels, under their respective server:&lt;br /&gt;
 &lt;img src=&#34;http://s3.hugo.sx/ss/qaUj7.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
-&lt;h3 id=&#34;what-we-ll-be-doing:70a01d90505be501afd05275e05825cf&#34;&gt;What we&amp;rsquo;ll be doing&lt;/h3&gt;
+&lt;h3 id=&#34;what-we-ll-be-doing&#34;&gt;What we&amp;rsquo;ll be doing&lt;/h3&gt;
 
 &lt;ol&gt;
 &lt;li&gt;Important things to know&lt;/li&gt;
@@ -32,11 +32,11 @@
 &lt;li&gt;Setting up &lt;a href=&#34;http://wiki.znc.in/ZNC&#34;&gt;ZNC&lt;/a&gt; which lets you stay connected to IRC indefinitely.&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;h3 id=&#34;prior-knowledge:70a01d90505be501afd05275e05825cf&#34;&gt;Prior knowledge&lt;/h3&gt;
+&lt;h3 id=&#34;prior-knowledge&#34;&gt;Prior knowledge&lt;/h3&gt;
 
 &lt;p&gt;Before we get started, it&amp;rsquo;s vital that you have some command line experience, whether it&amp;rsquo;s a little bash here and there or programming. I say this not to dissuade you from installing weechat but because if you don&amp;rsquo;t like CLI (Command Line Interface), you&amp;rsquo;d be far more comfortable using a GUI (Graphic User Interface).&lt;/p&gt;
 
-&lt;h5 id=&#34;weechat-irc-terminology:70a01d90505be501afd05275e05825cf&#34;&gt;Weechat/IRC terminology&lt;/h5&gt;
+&lt;h5 id=&#34;weechat-irc-terminology&#34;&gt;Weechat/IRC terminology&lt;/h5&gt;
 
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;buffers&lt;/code&gt; are essentially &amp;lsquo;windows&amp;rsquo; in which messages/chats/settings options are shown. You can generally switch between these using &lt;code&gt;meta-[1 .. 9]&lt;/code&gt;. The first buffer, labelled 1, contains connected server buffers by default, that&amp;rsquo;s the servers you&amp;rsquo;re connected to. You can switch between these servers using &lt;code&gt;Ctrl+X&lt;/code&gt;, that&amp;rsquo;s &lt;em&gt;not&lt;/em&gt; the same as switching between buffers.&lt;/li&gt;
@@ -48,7 +48,7 @@
 
 &lt;p&gt;Keeping these points in mind, we can begin our install and setup.&lt;/p&gt;
 
-&lt;h3 id=&#34;install:70a01d90505be501afd05275e05825cf&#34;&gt;Install&lt;/h3&gt;
+&lt;h3 id=&#34;install&#34;&gt;Install&lt;/h3&gt;
 
 &lt;p&gt;Head over to &lt;a href=&#34;http://weechat.org/&#34;&gt;weechat.org&lt;/a&gt; and download it from source or just use the repositories available on most linux distros:&lt;/p&gt;
 
@@ -67,7 +67,7 @@
 
 &lt;p&gt;On Windows, you can use &lt;a href=&#34;http://www.cygwin.com/&#34;&gt;Cygwin&lt;/a&gt;, although I haven&amp;rsquo;t personally experiemented with it.&lt;/p&gt;
 
-&lt;h3 id=&#34;plugins:70a01d90505be501afd05275e05825cf&#34;&gt;Plugins&lt;/h3&gt;
+&lt;h3 id=&#34;plugins&#34;&gt;Plugins&lt;/h3&gt;
 
 &lt;p&gt;Now onto one of my favourite parts about weechat. The plugins. Weechat has a whole range of plugins for just about everything you can and can&amp;rsquo;t think of. Most of the scripts are available &lt;a href=&#34;http://weechat.org/scripts/&#34;&gt;here&lt;/a&gt; and those that aren&amp;rsquo;t are likely on Github.&lt;/p&gt;
 
@@ -121,7 +121,7 @@
 
 &lt;p&gt;Typing &lt;code&gt;/script&lt;/code&gt; will give you a list of available plugins to install - you can then use the arrow keys to navigate through the list and then type &lt;code&gt;i&lt;/code&gt; followed by the enter key to install the selected plugin.&lt;/p&gt;
 
-&lt;h3 id=&#34;making-it-look-pretty:70a01d90505be501afd05275e05825cf&#34;&gt;Making it look pretty&lt;/h3&gt;
+&lt;h3 id=&#34;making-it-look-pretty&#34;&gt;Making it look pretty&lt;/h3&gt;
 
 &lt;p&gt;There&amp;rsquo;s a lot you can do to weechat to make it look the way you want but I personally love the amount of colour-related customisation  available. I explained how the settings worked in &lt;em&gt;Weechat/IRC terminology&lt;/em&gt; section and while you can choose to use &lt;code&gt;/set weechat.*&lt;/code&gt; to find all of the settings, it&amp;rsquo;s significantly easier to use the iset plugin.&lt;/p&gt;
 
@@ -162,7 +162,7 @@
 /set weechat.look.read_marker none
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;h3 id=&#34;setting-up-znc:70a01d90505be501afd05275e05825cf&#34;&gt;Setting up ZNC&lt;/h3&gt;
+&lt;h3 id=&#34;setting-up-znc&#34;&gt;Setting up ZNC&lt;/h3&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://znc.in/&#34;&gt;ZNC&lt;/a&gt; is what&amp;rsquo;s called an IRC bouncer and is particularly useful if you want to remain connected to an IRC server all the time. It&amp;rsquo;s nice to be able to connect to a server and have some &amp;lsquo;history&amp;rsquo; of the channel; you can see what people have been discussing and then add to the conversation immediately. It also allows other users to leave you a message.&lt;/p&gt;
 

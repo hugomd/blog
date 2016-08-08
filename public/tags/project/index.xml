@@ -17,13 +17,13 @@
       <guid>https://blog.hugo.sx/post/monash-ninja/</guid>
       <description>
 
-&lt;h3 id=&#34;what-is-monash-ninja:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;What is Monash Ninja?&lt;/h3&gt;
+&lt;h3 id=&#34;what-is-monash-ninja&#34;&gt;What is Monash Ninja?&lt;/h3&gt;
 
 &lt;p&gt;&lt;a href=&#34;http://monash.ninja&#34;&gt;Monash Ninja&lt;/a&gt; was week-long treasure-hunt-like event (14 Sept. to 21 Sept. 2015) run by &lt;a href=&#34;http://wired.org.au/&#34;&gt;Wired Monash&lt;/a&gt;. The concept and code was created by &lt;a href=&#34;http://hugo.sx/&#34;&gt;me&lt;/a&gt; (then Vice President) and the design for the website was created by &lt;a href=&#34;http://terencehuynh.com/&#34;&gt;Terence&lt;/a&gt; (then Secretary).&lt;/p&gt;
 
 &lt;p&gt;I purchased the &lt;em&gt;monash.ninja&lt;/em&gt; domain in April 2015 on a whim and then decided to come up with an idea for it. I had been thinking it would be fun for Wired to run a treasure hunt but thought it would be difficult to find participants as treasure hunts require effort for the hunters, but also for the organisers. This lead me to the idea of putting up (read: hiding) codes around campus (with help from Terence) that could then be entered on a website. Easy participation, a &amp;ldquo;keep your eyes peeled&amp;rdquo; approach, rather than actively looking for clues, and fairly easy implementation and organisation.&lt;/p&gt;
 
-&lt;h3 id=&#34;design-and-implementation:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;Design and Implementation&lt;/h3&gt;
+&lt;h3 id=&#34;design-and-implementation&#34;&gt;Design and Implementation&lt;/h3&gt;
 
 &lt;p&gt;Monash Ninja consists of a simple HTML + JQuery/Ajax + CSS frontend with a &lt;a href=&#34;http://flask.pocoo.org&#34;&gt;Flask&lt;/a&gt; + MySQL backend.&lt;/p&gt;
 
@@ -50,7 +50,7 @@
 - 4x Google Cardboard ($20 ea.)&lt;br /&gt;
 - 10x iTunes Gift Vouchers ($30 ea.)&lt;/p&gt;
 
-&lt;h3 id=&#34;end-result:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;End Result&lt;/h3&gt;
+&lt;h3 id=&#34;end-result&#34;&gt;End Result&lt;/h3&gt;
 
 &lt;p&gt;By the end of the week 26 of the 30 codes had been found and validated, of which around 2 were ripped down, presumably by university staff. To remedy this, we hid these two in the source code of wired.org.au and monash.ninja. Most of the prizes were collected on the following Monday after the event. Some participants were unable to collect their prizes and scheduled alternative times, while others did not respond.&lt;/p&gt;
 
@@ -58,13 +58,13 @@
 
 &lt;p&gt;I&amp;rsquo;d like to thank Terence for putting up with my stupid questions, helping me distribute and hide the codes, give out the prizes and for allowing me to sticky tape a ninja code to his back for the duration of the club&amp;rsquo;s Annual General Meeting (AGM).&lt;/p&gt;
 
-&lt;h3 id=&#34;what-would-i-do-next-time:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;What would I do next time?&lt;/h3&gt;
+&lt;h3 id=&#34;what-would-i-do-next-time&#34;&gt;What would I do next time?&lt;/h3&gt;
 
 &lt;p&gt;Find an easier way to keep track of people. Specifically, taking emails, or using Facebook login, instead of just a student ID and code - it would have made it a little easier to notify people they&amp;rsquo;d received a prize.&lt;/p&gt;
 
 &lt;p&gt;Store more information on the database: whether prizes have been given out, website feedback, and general statistics such as how many codes validated each day.&lt;/p&gt;
 
-&lt;h3 id=&#34;when-will-monash-ninja-return:cd54150df9629010ee9e8a81d8ec6df2&#34;&gt;When will Monash Ninja return?&lt;/h3&gt;
+&lt;h3 id=&#34;when-will-monash-ninja-return&#34;&gt;When will Monash Ninja return?&lt;/h3&gt;
 
 &lt;p&gt;Hopefully next year! &lt;sup&gt;&lt;sup&gt;Maybe during O-week?? (hint hint)&lt;/sup&gt;&lt;/sup&gt;&lt;/p&gt;
 </description>

@@ -17,13 +17,13 @@
       <guid>https://blog.hugo.sx/page/about/</guid>
       <description>
 
-&lt;h4 id=&#34;about-me:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;About Me&lt;/h4&gt;
+&lt;h4 id=&#34;about-me&#34;&gt;About Me&lt;/h4&gt;
 
 &lt;p&gt;I&amp;rsquo;m Hugo M&amp;uuml;ller-Downing, I live in Melbourne, Australia.&lt;br /&gt;
 I&amp;rsquo;m interested in web development, APIs, Python, NodeJS, etc.&lt;br /&gt;
 I&amp;rsquo;m probably not great at writing blog posts but I&amp;rsquo;m getting there.&lt;/p&gt;
 
-&lt;h4 id=&#34;about-this-site:6083a88ee3411b0d17ce02d738f69d47&#34;&gt;About this site&lt;/h4&gt;
+&lt;h4 id=&#34;about-this-site&#34;&gt;About this site&lt;/h4&gt;
 
 &lt;p&gt;This site runs on a &lt;a href=&#34;https://www.digitalocean.com/?refcode=8a96d5d50667&#34;&gt;DigitalOcean&lt;/a&gt; droplet in Singapore, powered by &lt;a href=&#34;http://gohugo.io/&#34;&gt;GoHugo&lt;/a&gt;.&lt;/p&gt;
 </description>
