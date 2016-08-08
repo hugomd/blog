@@ -2,7 +2,7 @@
 date = "2014-01-20T09:57:55+11:00"
 draft = false
 title = "I'm an Idiot"
-description = "TLDR; I overthought things"
+description = "I overthought things"
 slug = "im-an-idiot"
 aliases = [
 	"im-an-idiot"

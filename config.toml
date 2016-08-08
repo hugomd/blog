@@ -28,8 +28,8 @@ disqusShortname = "blog-17"
 	about = ""
 	subscribe = ""
 	# Pagination links
-	olderPosts = ""
-	newerPosts = ""
+	olderPosts = "Deprecated posts"
+	newerPosts = "Slightly less deprecated posts"
 	readMore = ""
 	copyright = ""
 	# Sharing options and author information in posts
