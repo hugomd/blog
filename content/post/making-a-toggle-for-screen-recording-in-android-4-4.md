@@ -2,6 +2,7 @@
 date = "2013-11-02T12:18:09+11:00"
 draft = false
 title = "Making a Toggle for Screen Recording in Android 4.4"
+description = "🍫 😋"
 slug = "making-a-toggle-for-screen-recording-in-android-4-4"
 aliases = [
 	"making-a-toggle-for-screen-recording-in-android-4-4"

@@ -2,6 +2,7 @@
 date = "2015-10-17T23:54:18+11:00"
 draft = false
 title = "Blocking"
+description = "Writing is hard"
 slug = "blocking"
 aliases = [
 	"blocking"

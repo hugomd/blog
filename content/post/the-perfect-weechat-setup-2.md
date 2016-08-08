@@ -2,6 +2,7 @@
 date = "2014-07-26T13:41:12+10:00"
 draft = false
 title = "The Perfect Weechat Setup"
+description = "Everything terminal is awesome"
 slug = "the-perfect-weechat-setup-2"
 aliases = [
 	"the-perfect-weechat-setup-2"
