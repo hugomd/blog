@@ -8,6 +8,9 @@ aliases = [
 	"the-pirate-bay-perpetual-ip-address"
 ]
 +++
+
+**_Disclaimer: this is old and doesn't work anymore, but I'm going to leave it up here for posterity._**
+
 I can't say I'm amused by the changing from .sx to .ac and then to .pe. It's annoying.  
 
 Open up Terminal, type <code>sudo nano /etc/hosts</code>, add a new line with the following:  
