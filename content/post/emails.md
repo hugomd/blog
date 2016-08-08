@@ -2,7 +2,7 @@
 date = "2015-09-14T19:57:08+10:00"
 draft = false
 title = "Emails can be bad."
-description = "TLDR; I suck at emails but I'm all better now 📮  👌"
+description = "I suck at emails but I'm all better now 📮  👌"
 slug = "emails"
 aliases = [
 	"emails"
