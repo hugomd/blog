@@ -598,7 +598,9 @@ a lot of these ideas, so I don&amp;rsquo;t renew many of them.&lt;/p&gt;
       <pubDate>Tue, 17 Dec 2013 02:34:10 +1100</pubDate>
       
       <guid>https://blog.hugo.sx/post/the-pirate-bay-perpetual-ip-address/</guid>
-      <description>&lt;p&gt;I can&amp;rsquo;t say I&amp;rsquo;m amused by the changing from .sx to .ac and then to .pe. It&amp;rsquo;s annoying.&lt;/p&gt;
+      <description>&lt;p&gt;&lt;strong&gt;&lt;em&gt;Disclaimer: this is old and doesn&amp;rsquo;t work anymore, but I&amp;rsquo;m going to leave it up here for posterity.&lt;/em&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;I can&amp;rsquo;t say I&amp;rsquo;m amused by the changing from .sx to .ac and then to .pe. It&amp;rsquo;s annoying.&lt;/p&gt;
 
 &lt;p&gt;Open up Terminal, type &lt;code&gt;sudo nano /etc/hosts&lt;/code&gt;, add a new line with the following:&lt;/p&gt;
 
