@@ -13,7 +13,7 @@ disqusShortname = "blog-17"
 	description = "I write stuff sometimes"
 	bio = "Software engineer, tinkerer, and occasional writer"
 	# Enter optionally your twitter account
-	twitter = "@hugojmd"
+	twitter = "hugojmd"
 	enableRSS = true
 
 	# Add custom assets with their paths relative to the static folder
