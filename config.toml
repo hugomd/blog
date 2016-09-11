@@ -1,5 +1,5 @@
 # Site settings
-baseurl = "https://blog.hugo.sx/"
+baseurl = "https://hugo.sx/"
 languageCode = "en-us"
 title = "Hugo's Blog"
 theme = "hugo-cactus-theme"
