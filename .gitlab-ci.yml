@@ -1,18 +1,9 @@
 image: node
-before_script:
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client --force-yes )'
-  - eval $(ssh-agent -s)
-  - ssh-add <(echo "$SSH_PRIVATE_KEY")
-  - mkdir -p ~/.ssh
-  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
 
 stages:
-  - deploy
+  - pass
 
 job1:
-  stage: deploy
+  stage: pass
   script:
-    - chmod +x deploy.sh
-    - bash deploy.sh
-  only:
-    - master
+    - echo "yay!"
