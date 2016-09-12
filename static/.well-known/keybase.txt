@@ -1,0 +1,74 @@
+==================================================================
+https://keybase.io/hugomd
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://hugo.sx
+  * I am hugomd (https://keybase.io/hugomd) on keybase.
+  * I have a public key with fingerprint 65C5 C64D BD7C B6F2 099B  523E 6A5F DA0B 0019 0B26
+
+To do so, I am signing this object:
+
+{
+    "body": {
+        "key": {
+            "eldest_kid": "0101e6a6d676411120b016f1db7517b06865e4c461e580b8fc75141177c921fdaddf0a",
+            "fingerprint": "65c5c64dbd7cb6f2099b523e6a5fda0b00190b26",
+            "host": "keybase.io",
+            "key_id": "6a5fda0b00190b26",
+            "kid": "0101e6a6d676411120b016f1db7517b06865e4c461e580b8fc75141177c921fdaddf0a",
+            "uid": "4233aa9c6fe9a8a5846e2b08cf221719",
+            "username": "hugomd"
+        },
+        "revoke": {
+            "sig_ids": [
+                "8a3338e9d31146bc80a1ed4c0fb11851c65e46489e4278eff79e9830657184e10f"
+            ]
+        },
+        "service": {
+            "hostname": "hugo.sx",
+            "protocol": "https:"
+        },
+        "type": "web_service_binding",
+        "version": 1
+    },
+    "ctime": 1473662552,
+    "expire_in": 157680000,
+    "prev": "6866ddc842a49346673519f0f1dcb0d0d266b11d9a144136f4c521e451a10ce7",
+    "seqno": 39,
+    "tag": "signature"
+}
+
+which yields the signature:
+
+-----BEGIN PGP MESSAGE-----
+Version: Keybase OpenPGP v2.0.56
+Comment: https://keybase.io/crypto
+
+yMJjAnicrVJbaFRHGN711mRF0aJg1BoY6ZMhzJwzM2fO6kNia5VQNRC8gNZ1bice
+1uxZz9lssgneEMQqShDrg9dGUYxX1IciGlBR0Yh5EIx4ja13tC+lXh5EnRMs9KGP
+nZdhfr7b//9zacTgRCp5e3Xdbd2ze27y+oU/mxML+uYsbAciUCWQbgdZPXDp5UpH
+hUzWVyANIIJIU04VdShGCFlQQEQ9pIRDkCMgZZRoLDFFmjAomCdN3QAdR7oW8hRX
+yoMcVAHPzzXqMB/6uYKRpUQSSbESypGCehZ0XUEs2zgRwzEeELlQWNQQlwVRzDDh
+BI90tR+YmnlkBuL9B/5/zt08IIct2+bcldTTLmecMEy1JSCTnmUhB7kxMNJhjjdp
+g17W3Bg0KbCyCoS6GGR1PNXIbzSRI5BeBBi3bZtpV9kIYSokgxxphSX0BEKMIBlH
+o5i5GlsO057nuNplNqTEQQxrBD3wk9E2fkVfDojHM/qXd3XUagLlw6AQyGB5XCwU
+8lE6DlQo5WNUixaZL/yM8HPKLMcwijqM/CAH0sggZcGPBRF2bEotQqwqoFvzfqgz
+fowgDmXQnNhHF+NVMEqVkgxbHLs2ptSxCXI9aGYuBVRQWZSa/pTLEcbIph6WxEIa
+E8QRlNoBcUcrcgFI267JyRuNphlajheaQw1WXjy/eEgimUoMGzoo/rWJVPmof/7y
+g/1liY7RuyZ0vD14d2lF9t7Bu2IjnJU/PRx29v9Vqu0o9c8/d3jLzL+/ESNPvJlY
+8/zhD5Wlul9/vjmhvXz2lM2nJ79uWDWWv/rqzIuWaZ+2nxnZ1VKs+L398f2hbb8M
+elpet2ferrpH13uSm45cXbdl9I0dz188CO+NW991bMxxNHxSb6ofjXlSuapn4v22
+NZ+m18+sso9WXlv64+TLnd29LfP2vtswlTx8n023bZ1em/0+l6w51tR3paaspqte
+DemQa59c2Z9ffKh89b58f/flOzN2fNz29OtN+EP0bbVY8kf2u/nnxnXfLMN94dmF
+DcenbP7t5ZE3i57V9z7b2VDROi09Xp3sBKdS9W7tgVufAc/TVsI=
+=89q6
+-----END PGP MESSAGE-----
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/hugomd
+
+==================================================================
