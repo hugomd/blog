@@ -6,6 +6,8 @@ tags = ["keyboards"]
 draft = true
 +++
 
+**Note: This blog post is a work in progress, I'm working on recording sound snippets of what each board sounds like, as well as adding photos**.
+
 ### Vortex Poker II
 I started my foray into mechanical keyboards in February of 2014, shortly after building my first custom PC.
 
@@ -26,7 +28,7 @@ Not yet satisfied with my first purchase, which was variable (to my initial dism
 Madly in love with Topre, I decided it was time to be able to use Topre switches on the go, and purchased an HHKB Pro II in October of 2014.
 
 ### 22kbd MX-Mini Winkeyless Korean Custom
-January of 2015
+In January of 2015, I started hankering more and more for a Korean custom board, that beautiful shiny aluminium body, with vintage Cherry MX Brown switches, and the [alluring pictures](http://22kbd.com/141) of the board finally pushed me to the limit, and I made the purchase.
 
 ### Realforce 108UG-HiPro YK0100
-July of 2015
+This is my latest board, purchased in July of 2015, and was a purchase based on a few things: my love for Topre, the HiPro keycaps, and my love of Topre (I really love Topre).
