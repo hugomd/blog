@@ -31,7 +31,7 @@ disqusShortname = "blog-17"
 	olderPosts = "Deprecated posts"
 	newerPosts = "Slightly less deprecated posts"
 	readMore = ""
-	copyright = ""
+	copyright = "&copy; Copyright Hugo Muller-Downing 2016"
 	# Sharing options and author information in posts
 	aboutAuthor = "Melbourne-based software engineer"
 	tweet = ""
