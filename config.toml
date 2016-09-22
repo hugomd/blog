@@ -47,8 +47,8 @@ disqusShortname = "blog-17"
 
 # Add additional social link entries underneath
 [social]
-    twitter  = "https://www.twitter.com/hugojmd"
-    key      = "https://keybase.io/hugomd"
-    # facebook = "https://www.facebook.com/"
-    github   = "https://www.github.com/hugomd"
-    # dribble  = "https://www.dribbble.com/"
+    twitter         = "https://www.twitter.com/hugojmd"
+    key             = "https://keybase.io/hugomd"
+    github          = "https://www.github.com/hugomd"
+    linkedin-square = "https://www.linkedin.com/in/hugomd"
+    instagram       = "https://instagram.com/hugojmd"
