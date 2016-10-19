@@ -10,8 +10,7 @@ aliases = [
 tags = ["development", "setup", "tutorial"]
 +++
 ### Update 13/08/15
-I've been getting a few emails asking for my configuration files so I've uploaded them: [weechat.conf](http://s3.hugo.sx/files/weechat/13-07-15/weechat.conf), irc.conf (temporarily unavailable). "weechat.conf" contains general configurations for looks but "irc.conf" contains a setting that lets you create indented channels, under their respective server:   
-![](http://s3.hugo.sx/ss/qaUj7.png)
+I've been getting a few emails asking for my configuration files so I've uploaded them: [weechat.conf](http://s3.hugo.sx/files/weechat/13-07-15/weechat.conf), irc.conf (temporarily unavailable). "weechat.conf" contains general configurations for looks but "irc.conf" contains a setting that lets you create indented channels, under their respective server.
 
 ### What we'll be doing
 1. Important things to know
@@ -99,18 +98,18 @@ The main changes I've made are:
     /set weechat.look.prefix_same_nick “↳”
     /set weechat.look.prefix_join “—>”
     /set weechat.look.prefix_quit <—”
-    —
+    
     /set weechat.look.buffer_time_format “%H:%M”
     /set weechat.look.prefix_align “none”
     /set weechat.look.align_end_of_lines “message”
     /set weechat.look.prefix_same_nick “”
     /set weechat.look.prefix_join “”
-    —
+   
     /set irc.look.display_host_quit off
     /set irc.look.display_host_join off
     /set irc.look.display_host_join_local off
     /set irc.look.color_nicks_in_server_messages off
-    —
+   
     /set buffers.look.show_number off
 	—
 	/set weechat.look.read_marker none
