@@ -19,7 +19,7 @@ I'm a third year computer science student studying at Monash University in Melbo
 	<li><a href="http://twitter.com/hugojmd">Twitter</a></li>
 	<li><a href="http://github.com/hugomd">Github</a></li>
 	<li><a href="http://telegram.me/hugomd">Telegram</a></li>
-	<li><a href="https://pgp.mit.edu/pks/lookup?search=h%40hugo.sx&op=index">PGP</a></li>
+	<li><a href="http://keybase.io/hugomd">PGP</a></li>
 </ul><br />
 
 If you like stuff I've done, or posts on here, I'd love it if you would [buy me a beer 🍺](https://paypal.me/hugo/5)
