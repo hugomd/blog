@@ -15,7 +15,7 @@ I'm a third year computer science student studying at Monash University in Melbo
 
 #### Contact
 <ul>
-	<li><a href="mailto:11111h11111@h1u1g1o1.1s1x1" onmouseover="this.href=this.href.replace(/1/g, '')">Email</a></li>
+	<li><a href="mailto:11111h1e1l1l1o1@h1u11.1m1d1" onmouseover="this.href=this.href.replace(/1/g, '')">Email</a></li>
 	<li><a href="http://twitter.com/hugojmd">Twitter</a></li>
 	<li><a href="http://github.com/hugomd">Github</a></li>
 	<li><a href="http://telegram.me/hugomd">Telegram</a></li>
