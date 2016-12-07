@@ -22,7 +22,7 @@ Recently, my friend [Theo](http://kortex.co.za) bought a new Mac, and asked if I
 * [Monodraw](https://monodraw.helftone.com)
 * [Atom](https://atom.io)
 * [Paw Rest Client](https://paw.cloud)
-* [ Icon Jar](http://geticonjar.com)
+* [Iconjar](http://geticonjar.com)
 * [Screens VNC](http://edovia.com/screens/)
 
 ## Writing
