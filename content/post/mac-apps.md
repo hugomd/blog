@@ -2,6 +2,7 @@
 date = "2016-12-07T22:00:00+11:00"
 description = "A long list of my favourite apps for Mac"
 title = "Mac Apps"
+tags = ["mac"]
 draft = false
 +++
 
