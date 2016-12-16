@@ -3,4 +3,4 @@
 	    url = https://github.com/tanksuzuki/angels-ladder.git/
 [submodule "themes/hugo-cactus-theme"]
 	path = themes/hugo-cactus-theme
-	url = https://github.com/digitalcraftsman/hugo-cactus-theme
+	url = ssh://git@git.hu.md:1022/hugo/hugo-cactus-theme.git
