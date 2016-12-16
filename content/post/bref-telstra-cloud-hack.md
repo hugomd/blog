@@ -3,6 +3,7 @@ date = "2016-12-11T23:14:50+11:00"
 description = "🎅🎄"
 title = "Bréf: Telstra Cloud Hack 2016"
 tags = ["bréf", "hackathons"]
+images = ["http://hu.md/Q76q.png"]
 
 +++
 
