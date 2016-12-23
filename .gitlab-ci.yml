@@ -1,9 +1,39 @@
 image: node
 
 stages:
-  - pass
+  - review
 
-job1:
-  stage: pass
+variables:
+  REPO_NAME: hugos-blog
+
+start_review:
+  stage: review
   script:
-    - echo "yay!"
+    - npm install -g now --silent
+    - sudo apt-get install hugo
+    - hugo -t hugo-cactus-theme
+    - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
+    - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
+    - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
+  environment:
+    name: review/$CI_BUILD_REF_NAME
+    url: https://$REPO_NAME-$CI_BUILD_REF_SLUG.now.sh
+    on_stop: stop_review
+  only:
+    - branches
+  except:
+    - master
+
+stop_review:
+  stage: review
+  script:
+    - npm install -g now --silent
+    - now rm -t ${NOW_TOKEN} -y ${REPO_NAME}-${CI_BUILD_REF_SLUG}
+  when: manual
+  environment:
+    name: review/$CI_BUILD_REF_NAME
+    action: stop
+  only:
+    - branches
+  except:
+    - master
