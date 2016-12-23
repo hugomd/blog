@@ -15,7 +15,7 @@ start_review:
     - npm install -g now --silent
     - wget https://github.com/spf13/hugo/releases/download/v0.15/hugo_0.15_amd64.deb
     - dpkg -i hugo*.deb
-    - hugo -t hugo-cactus-theme
+    - hugo -t hugo-cactus-theme --baseUrl=https://${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
     - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
     - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
     - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
