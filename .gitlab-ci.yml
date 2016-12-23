@@ -13,7 +13,7 @@ start_review:
   stage: review
   script:
     - npm install -g now --silent
-    - wget https://github.com/spf13/hugo/releases/download/v0.15/hugo_0.15-64bit.deb
+    - wget https://github.com/spf13/hugo/releases/download/v0.15/hugo_0.15_amd64.deb
     - dpkg -i hugo*.deb
     - hugo -t hugo-cactus-theme
     - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
