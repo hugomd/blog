@@ -11,7 +11,7 @@ start_review:
   script:
     - npm install -g now --silent
     - wget https://github.com/spf13/hugo/releases/download/v0.18/hugo_0.18-64bit.deb
-    - sudo dpkg -i hugo*.deb
+    - dpkg -i hugo*.deb
     - hugo -t hugo-cactus-theme
     - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
     - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
