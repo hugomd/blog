@@ -11,7 +11,7 @@ tags = ["gitlab", "zeit", "now"]
 This tutorial assumes that you’ve got a Zeit account, and have some familiarity with [GitLab Review Apps](https://about.gitlab.com/2016/11/22/introducing-review-apps/), [GitLab CI](https://about.gitlab.com/gitlab-ci/), and that you have a [GitLab Runner](https://docs.gitlab.com/runner/) setup and ready to go.
 
 ## Setting up your Project
-To get started, let’s create a new GitLab project, `now-review-app`. 
+To get started, let’s create a new GitLab project called `now-review-app`. 
 ![](DraggedImage.png)
 
 Next, clone the repository:
@@ -75,9 +75,9 @@ stop_review:
     - master
 ```
 
-The above code creates a GitLab Review App when a new merge request is created, letting you to view changes via a deployment. This allows your reviewers to see changes almost instantly, without having to run your app locally. In this case, `start_review` creates a new _Now_ deployment of the files in `src` and creates an alias for the merge request based on the name of the branch (e.g. `feature/modify-app`, becomes `reponame-feature-modify-app.now.sh`). Once the review has finished, `stop_review` will remove the deployments created as part of the merge request process, cleaning up.
+The above code creates a GitLab Review App when a new merge request is created, letting you view changes via a deployment. This allows your reviewers to see changes almost instantly, without having to run your app locally. In this case, `start_review` creates a new _Now_ deployment of the files in `src` and creates an alias for the merge request based on the name of the branch (e.g. `feature/modify-app`, becomes `reponame-feature-modify-app.now.sh`). Once the review has finished, `stop_review` will remove the deployments created as part of the merge request process, cleaning up.
 
-Commit and push this to GitLab.
+Commit and push this code to GitLab.
 
 ## Testing it out
 Add a new variable called `NOW_TOKEN` to the project, accessible via the project menu. This variable will contain a _Now_ token. You can create a new token on [this page](https://zeit.co/account#api-tokens).
