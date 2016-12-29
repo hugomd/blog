@@ -18,7 +18,7 @@ start_review:
     - hugo -t hugo-cactus-theme --baseUrl=$(echo https://${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh)
     - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
     - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
-    - now --static -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
+    - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
   environment:
     name: review/$CI_BUILD_REF_NAME
     url: https://$REPO_NAME-$CI_BUILD_REF_SLUG.now.sh
