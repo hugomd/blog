@@ -102,6 +102,6 @@ If everything is successful, your pipeline should pass, and you should now see a
 Clicking on it should take you to the _Now_ deployment with the correct changes to `index.html` displayed:
 ![](DraggedImage-4.png)
 
-It’s worth noting here this link is an alias for the latest review app deployment. You’ll have to use `now ls` to view all iterations of the merge request, if required. 
+It’s worth noting here that this link is an alias for the latest review app deployment. You’ll have to use `now ls` to view all iterations of the merge request, if required. 
 
 If you found this interesting, have any questions or queries, or just want to say hi, then hit me up on [Twitter](https://twitter.com/hugojmd)!
