@@ -75,6 +75,8 @@ stop_review:
     - master
 ```
 
+The above code creates a GitLab Review App when a new merge request is created, letting you to view changes via a deployment. This allows your reviewers to see changes almost instantly, without having to run your app locally. In this case, `start_review` creates a new _Now_ deployment of the files in `src` and creates an alias for the merge request based on the name of the branch (e.g. `feature/modify-app`, becomes `reponame-feature-modify-app.now.sh`). Once the review has finished, `stop_review` will remove the deployments created as part of the merge request process, cleaning up.
+
 Commit and push this to GitLab.
 
 ## Testing it out
