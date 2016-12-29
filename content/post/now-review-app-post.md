@@ -5,7 +5,7 @@ description = "GitLab & Now are 👌"
 tags = ["gitlab", "zeit", "now"]
 +++
 
-[Zeit](https://zeit.co/about) is a great little company that aspires to “Make Cloud Computing as Easy and Accessible as Mobile computing”, and they’re doing that just with their relatively new service, _[Now](https://zeit.co/now)_. _Now_ aims to make deploying Node and Docker apps as simple as typing `now` into your terminal. It also allows deploying static websites, which is what I’ll be using it for in this little tutorial.
+[Zeit](https://zeit.co/about) is a great little company that aims to “Make Cloud Computing as Easy and Accessible as Mobile computing”, and they’re doing that just with their relatively new service, _[Now](https://zeit.co/now)_. _Now_ aims to make deploying Node and Docker apps as simple as typing `now` into your terminal. It also allows deploying static websites, which is what I’ll be using it for in this little tutorial.
 
 ## Prerequisites 
 This tutorial assumes that you’ve got a Zeit account, and have some familiarity with [GitLab Review Apps](https://about.gitlab.com/2016/11/22/introducing-review-apps/), [GitLab CI](https://about.gitlab.com/gitlab-ci/), and that you have a [GitLab Runner](https://docs.gitlab.com/runner/) setup and ready to go.
@@ -15,55 +15,65 @@ To get started, let’s create a new GitLab project, `now-review-app`.
 ![](DraggedImage.png)
 
 Next, clone the repository:
-	git clone URL_TO_YOUR_REPOSITORY_
+```Bash
+git clone URL_TO_YOUR_REPOSITORY_
+```
 
 Create the `.gitlab-ci.yml` file:
-	touch .gitlab-ci.yml
+```Bash
+touch .gitlab-ci.yml
+```
 
 And create an `src` folder:
-	mkdir src
+```Bash
+mkdir src
+```
 
 Inside `src`, place an `index.html` file, with the contents:
-	<h1>Example HTML file</h1>
+```Bash
+<h1>Example HTML file</h1>
+```
 
 Modify `.gitlab-ci.yml` with the contents:
-	image: node
-	
-	stages:
-	  - review
-	
-	variables:
-	  REPO_NAME: now-review-app
-	
-	start_review:
-	  stage: review
-	  script:
-	    - npm install -g now --silent
-	    - URL=$(now --static -t ${NOW_TOKEN} ./src -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
-	    - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
-	    - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
-	  environment:
-	    name: review/$CI_BUILD_REF_NAME
-	    url: https://$REPO_NAME-$CI_BUILD_REF_SLUG.now.sh
-	    on_stop: stop_review
-	  only:
-	    - branches
-	  except:
-	    - master
-	
-	stop_review:
-	  stage: review
-	  script:
-	    - npm install -g now --silent
-	    - now rm -t ${NOW_TOKEN} -y ${CI_BUILD_REF_SLUG}
-	  when: manual
-	  environment:
-	    name: review/$CI_BUILD_REF_NAME
-	    action: stop
-	  only:
-	    - branches
-	  except:
-	    - master
+```YAML
+image: node
+
+stages:
+  - review
+
+variables:
+  REPO_NAME: now-review-app
+
+start_review:
+  stage: review
+  script:
+    - npm install -g now --silent
+    - URL=$(now --static -t ${NOW_TOKEN} ./src -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
+    - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
+    - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
+  environment:
+    name: review/$CI_BUILD_REF_NAME
+    url: https://$REPO_NAME-$CI_BUILD_REF_SLUG.now.sh
+    on_stop: stop_review
+  only:
+    - branches
+  except:
+    - master
+
+stop_review:
+  stage: review
+  script:
+    - npm install -g now --silent
+    - now rm -t ${NOW_TOKEN} -y ${CI_BUILD_REF_SLUG}
+  when: manual
+  environment:
+    name: review/$CI_BUILD_REF_NAME
+    action: stop
+  only:
+    - branches
+  except:
+    - master
+```
 
 Commit and push this to GitLab.
 
@@ -72,10 +82,14 @@ Add a new variable called `NOW_TOKEN` to the project, accessible via the project
 ![](DraggedImage-1.png)
 
 Create a new branch with:
-	git checkout -b feature/modify-app
+```Bash
+git checkout -b feature/modify-app
+```
 
 Modify the contents of the`index.html` file we created earlier, I’ll be changing it to:
-	<h1>Modified Example HTML source file.</h1>
+```Bash
+<h1>Modified Example HTML source file.</h1>
+```
 
 Commit and push this to GitLab.
 
