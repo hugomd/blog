@@ -15,27 +15,27 @@ To get started, let’s create a new GitLab project, `now-review-app`.
 ![](DraggedImage.png)
 
 Next, clone the repository:
-```Bash
+```
 git clone URL_TO_YOUR_REPOSITORY_
 ```
 
 Create the `.gitlab-ci.yml` file:
-```Bash
+```
 touch .gitlab-ci.yml
 ```
 
 And create an `src` folder:
-```Bash
+```
 mkdir src
 ```
 
 Inside `src`, place an `index.html` file, with the contents:
-```Bash
+```
 <h1>Example HTML file</h1>
 ```
 
 Modify `.gitlab-ci.yml` with the contents:
-```YAML
+```
 image: node
 
 stages:
@@ -78,22 +78,22 @@ stop_review:
 Commit and push this to GitLab.
 
 ## Testing it out
-Add a new variable called `NOW_TOKEN` to the project, accessible via the project menu. You can attain the token via [this link](https://zeit.co/account#api-tokens).
+Add a new variable called `NOW_TOKEN` to the project, accessible via the project menu. This variable will contain a _Now_ token. You can create a new token on [this page](https://zeit.co/account#api-tokens).
 ![](DraggedImage-1.png)
 
 Create a new branch with:
-```Bash
+```
 git checkout -b feature/modify-app
 ```
 
-Modify the contents of the`index.html` file we created earlier, I’ll be changing it to:
-```Bash
+Modify the contents of the `index.html` file we created earlier, we’ll be changing it to:
+```
 <h1>Modified Example HTML source file.</h1>
 ```
 
 Commit and push this to GitLab.
 
-Next, create merge request from `feature/modify-app` into `master`, and wait for the pipeline to finish building, this will create the review app:
+Next, create a merge request from `feature/modify-app` into `master`, and wait for the pipeline to finish building, this will create the review app:
 ![](DraggedImage-2.png)
 
 If everything is successful, your pipeline should pass, and you should now see a link to the review app on the merge request:
