@@ -4,7 +4,7 @@ languageCode = "en-us"
 title = "Hugo's Blog"
 theme = "hugo-cactus-theme"
 # Enter your tracking code to enable Google Analytics
-googleAnalytics = ""
+googleAnalytics = "UA-89641412-1"
 # Disable comments by leaving disqusShortname empty
 disqusShortname = "blog-17"
 
