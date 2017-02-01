@@ -16,16 +16,19 @@ I'm a fourth year computer science student studying at Monash University in Melb
 #### Currently
 * Software Engineer, [Localz](http://localz.co)
 
+
 #### Previously
 * Software Engineering Intern, [Odecee](http://odecee.com.au)
 * Software Engineering Intern, [Localz](http://localz.co)
 * President (2016), [WIRED Monash] (http://wired.org.au)
 * Vice-President (2015), [WIRED Monash] (http://wired.org.au)
 
+
 #### Projects
 * [Stallman as a Service](https://rms.now.sh/), [Git](https://git.hu.md/hugo/stallman)
 * [Aqua](http://aqua.bots.ovh/), a bot for [Discord](http://discordapp.com)
 * [FODMAP Search](https://fodmap.now.sh), [Git](https://github.com/hugomd/fodmap-react)
+
 
 #### Contact
 <ul>
