@@ -1,5 +1,5 @@
 +++
-date = "2013-10-20T12:00:00+11:00"
+date = "2017-02-01T17:19:52+11:00"
 draft = false
 title = "About"
 slug = "about"
@@ -11,7 +11,24 @@ type = "page"
 +++
 
 #### Hi, I'm Hugo
-I'm a third year computer science student studying at Monash University in Melbourne.
+I'm a fourth year computer science student studying at Monash University in Melbourne, Australia.
+
+#### Currently
+* Software Engineer, [Localz](http://localz.co)  
+<br />
+
+#### Previously
+* Software Engineering Intern, [Odecee](http://odecee.com.au)
+* Software Engineering Intern, [Localz](http://localz.co)
+* President (2016), [WIRED Monash] (http://wired.org.au)
+* Vice-President (2015), [WIRED Monash] (http://wired.org.au)  
+<br />
+
+#### Projects
+* [Stallman as a Service](https://rms.now.sh/), [Git](https://git.hu.md/hugo/stallman)
+* [Aqua](http://aqua.bots.ovh/), a bot for [Discord](http://discordapp.com)
+* [FODMAP Search](https://fodmap.now.sh), [Git](https://github.com/hugomd/fodmap-react)  
+<br />
 
 #### Contact
 <ul>

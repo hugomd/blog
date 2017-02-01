@@ -31,7 +31,7 @@ disqusShortname = "blog-17"
 	olderPosts = "Deprecated posts"
 	newerPosts = "Slightly less deprecated posts"
 	readMore = ""
-	copyright = "&copy; Copyright Hugo Muller-Downing 2016"
+	copyright = "&copy; Copyright Hugo Muller-Downing 2017, This blog uses [Cactus theme](https://github.com/digitalcraftsman/hugo-cactus-theme)."
 	# Sharing options and author information in posts
 	aboutAuthor = "Melbourne-based software engineer"
 	tweet = ""
