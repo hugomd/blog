@@ -10,7 +10,7 @@ Over the past couple of months I've received numerous messages asking me how I'v
 ![](screen-capture.gif)
 
 It's super simple to setup — I've done it with nginx and with Caddy. All it does is:  
-1. Check the user agent on incoming requests to the root site (`example.site/`)
+1. Check the user agent on incoming requests to the root site (`example.site/`)  
 2. If the user agent is cURL, respond with a JSON file
 
 With [nginx](https://www.nginx.com):
