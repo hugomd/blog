@@ -21,9 +21,11 @@ server {
   server_name example.site;
   root /home/you/www;
 
-  if ($http_user_agent ~* ^curl) {
-    		rewrite ^/$ "/path/to/about.json";
-    		break;
+  location / {
+    if ($http_user_agent ~* ^curl) {
+      rewrite ^/$ "/path/to/about.json";
+      break;
+    }
   }
 }
 ```
@@ -41,4 +43,4 @@ example.site {
 }
 ```
 
-**Note:** I'm not as familiar with nginx as I used to be so there's a slight difference between the configurations above. The Caddy config checks to see if cURL is getting the root `/` of the domain, and allows cURLing other pages, whereas nginx does not. If you know your nginx, I'd appreciate being corrected, hit me up on [Twitter](https://twitter.com/hugojmd).
+Thought this was neat? [Tweet me!](https://twitter.com/hugojmd)
