@@ -10,7 +10,7 @@ Over the past couple of months I've received numerous messages asking me how I'v
 ![](screen-capture.gif)
 
 It's super simple to setup — I've done it with nginx and with Caddy. All it does is:  
-1. Check the user agent on incoming requests   
+1. Check the user agent on incoming requests to the root site (`example.site/`)  
 2. If the user agent is cURL, respond with a JSON file
 
 With [nginx](https://www.nginx.com):
@@ -21,9 +21,11 @@ server {
   server_name example.site;
   root /home/you/www;
 
-  if ($http_user_agent ~* ^curl) {
-    		rewrite ^/$ "/path/to/about.json";
-    		break;
+  location / {
+    if ($http_user_agent ~* ^curl) {
+      rewrite ^/$ "/path/to/about.json";
+      break;
+    }
   }
 }
 ```
@@ -41,4 +43,4 @@ example.site {
 }
 ```
 
-**Note:** I'm not as familiar with nginx as I used to be so there's a slight difference between the configurations above. The Caddy config checks to see if cURL is getting the root `/` of the domain, and allows cURLing other pages, whereas nginx does not. If you know your nginx, I'd appreciate being corrected, hit me up on [Twitter](https://twitter.com/hugojmd).
+Thought this was neat? [Tweet me!](https://twitter.com/hugojmd)
