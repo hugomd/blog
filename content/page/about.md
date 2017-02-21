@@ -14,14 +14,15 @@ type = "page"
 I'm a fourth year computer science student studying at Monash University in Melbourne, Australia.
 
 #### Currently
-* Software Engineer, [Localz](http://localz.co)  
+* Software Engineer, [Localz](http://localz.co) 
 <br />
 
 #### Previously
 * Software Engineering Intern, [Odecee](http://odecee.com.au)
 * Software Engineering Intern, [Localz](http://localz.co)
-* President (2016), [WIRED Monash] (http://wired.org.au)
-* Vice-President (2015), [WIRED Monash] (http://wired.org.au)  
+* President (2016), [WIRED Monash](http://wired.org.au)
+* Vice-President (2015), [WIRED Monash](http://wired.org.au)  
+* Chair, [UNIHACK](http://unihack.net)
 <br />
 
 #### Projects
