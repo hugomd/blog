@@ -3,15 +3,16 @@ date = "2016-12-29T17:53:11+01:00"
 title = "GitLab Review Apps with Zeit's Now.sh service"
 description = "GitLab & Now are 👌"
 tags = ["gitlab", "zeit", "now"]
+weight = -2
 +++
 
 [Zeit](https://zeit.co/about) is a great little company that aims to “Make Cloud Computing as Easy and Accessible as Mobile computing”, and they’re doing that just with their relatively new service, _[Now](https://zeit.co/now)_. _Now_ aims to make deploying Node and Docker apps as simple as typing `now` into your terminal. It also allows deploying static websites, which is what I’ll be using it for in this little tutorial.
 
-## Prerequisites 
+## Prerequisites
 This tutorial assumes that you’ve got a Zeit account, and have some familiarity with [GitLab Review Apps](https://about.gitlab.com/2016/11/22/introducing-review-apps/), [GitLab CI](https://about.gitlab.com/gitlab-ci/), and that you have a [GitLab Runner](https://docs.gitlab.com/runner/) setup and ready to go.
 
 ## Setting up your Project
-To get started, let’s create a new GitLab project called `now-review-app`. 
+To get started, let’s create a new GitLab project called `now-review-app`.
 ![](DraggedImage.png)
 
 Next, clone the repository:
@@ -104,6 +105,6 @@ If everything is successful, your pipeline should pass, and you should now see a
 Clicking on it should take you to the _Now_ deployment with the correct changes to `index.html` displayed:
 ![](DraggedImage-4.png)
 
-It’s worth noting here that this link is an alias for the latest review app deployment. You’ll have to use `now ls` to view all iterations of the merge request, if required. 
+It’s worth noting here that this link is an alias for the latest review app deployment. You’ll have to use `now ls` to view all iterations of the merge request, if required.
 
 If you found this interesting, have any questions or queries, or just want to say hi, then hit me up on [Twitter](https://twitter.com/hugojmd)!
