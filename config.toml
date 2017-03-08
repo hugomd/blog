@@ -42,8 +42,8 @@ disqusShortname = "blog-17"
 
 	# Choose a font for the social icons in the footer. Either "mono-social" or "font-awesome"
 	iconFont = "font-awesome"
-  # The social icons can be styled differently if you use mono as font - circle, rounded, or empty
-  socialIconStyle = "circle"
+	  # The social icons can be styled differently if you use mono as font - circle, rounded, or empty
+	  socialIconStyle = "circle"
 
 # Add additional social link entries underneath
 [social]
