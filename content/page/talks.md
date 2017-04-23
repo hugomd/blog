@@ -2,6 +2,7 @@
 date = "2017-03-08T19:48:24+11:00"
 description = "A list of my talks."
 title = "Talks"
+hidden = true
 aliases = [
     "/talks"
 ]
