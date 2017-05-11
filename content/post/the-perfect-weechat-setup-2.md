@@ -38,12 +38,15 @@ Head over to [weechat.org](http://weechat.org/) and download it from source or j
     
 You can also use [homebrew](http://brew.sh/) on Mac.http://brew.sh/.  
 
-	brew install weechat
+	brew install weechat --with-aspell --with-curl --with-python --with-perl --with-ruby --with-lua --with-guile
+
 Or even [Macports](https://www.macports.org/)
 
 	sudo port install weechat
     
 On Windows, you can use [Cygwin](http://www.cygwin.com/), although I haven't personally experiemented with it.  
+
+More information on installing can be found in the [weechat documenation](https://weechat.org/files/doc/stable/weechat_user.en.html#install).
 
 ### Plugins
 Now onto one of my favourite parts about weechat. The plugins. Weechat has a whole range of plugins for just about everything you can and can't think of. Most of the scripts are available [here](http://weechat.org/scripts/) and those that aren't are likely on Github.  
