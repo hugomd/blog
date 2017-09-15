@@ -28,4 +28,4 @@ As with most hackathons, our idea evolved pretty quickly once we started impleme
 
 I think we did a fantastic job, well done team Moji! 🎉
 
-A huge thank you to [Daniel](https://twitter.com/dsykesturner) for proof reading this!
+A huge thank you to [Daniel](https://twitter.com/dsykesturner) and [Josh](https://twitter.com/joshparnham) for proof reading this!
