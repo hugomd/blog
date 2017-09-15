@@ -1,9 +1,13 @@
 +++
 date = "2017-09-15T19:27:50+10:00"
 title = "Moji.cool"
-description = "Emoji reactions for the web 🎉"
+description = "Emoji reactions for the modern web 🎉"
+videos = ["https://d.pr/0DhAQ.mp4"]
 tags = ['hackathons']
 weight = -3
+aliases = [
+	"moji"
+]
 +++
 
 Earlier this year (06/05 to 07/05), [Nathan Malishev](https://twitter.com/NathanMalishev), [Josh Parnham](https://twitter.com/joshparnham), [Daniel Sykes-Turner](https://twitter.com/dsykesturner), and I attended the Facebook Melbourne [Hackathon](https://facebook.com/hackathon) — located in Facebook’s beautiful, and [brand new, Melbourne office](https://twitter.com/search?f=images&vertical=default&q=%23fbmelhack17). 
@@ -19,7 +23,7 @@ The idea was to take what Facebook has done with their [reactions](https://newsr
 As with most hackathons, our idea evolved pretty quickly once we started implementing it, so we ended up adding live visualisations of reactions as users interacted with the page, in the form of a stream of emoji following a randomised sin wave (thanks to [Daniel](https://twitter.com/dsykesturner)). Here it is in action:
 
 <video controls width='100%' autoplay>
-	<source src='http://hu.md/0DhAQ.mp4' type='video/mp4'>
+	<source src='https://d.pr/0DhAQ.mp4' type='video/mp4'>
 	Your browser doesn't support the HTML5 video tag :(
 </video>
 
