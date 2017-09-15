@@ -17,7 +17,7 @@ We built an end-to-end product, [moji.cool](https://moji.cool/), consisting of a
 
 By hacking all of these together, we effectively built for two demographics: the end users, and website owners who might want to gauge reactions to their sites and pages.
 
-The idea was to take what Facebook has done with their [reactions](https://newsroom.fb.com/news/2016/02/reactions-now-available-globally/) but allow _anyone_ to react to _any_ website. The embedded version is similar to Disqus’ comments or the Facebook 👍 button; you embed it and anyone who visits your site can use it. The Chrome extension adds this functionality to all websites you visit and allows you to react to them by simply hovering over th reaction bar.
+The idea was to take what Facebook has done with their [reactions](https://newsroom.fb.com/news/2016/02/reactions-now-available-globally/) but allow _anyone_ to react to _any_ website. The embedded version is similar to Disqus’ comments or the Facebook 👍 button; you embed it and anyone who visits your site can use it. The Chrome extension adds this functionality to all websites you visit and allows you to react to them by simply hovering over the reaction bar.
 
 As with most hackathons, our idea evolved pretty quickly once we started implementing it, so we ended up adding live visualisations of reactions as users interacted with the page, in the form of a stream of emoji following a randomised sin wave (thanks to [Daniel](https://twitter.com/dsykesturner)). Here it is in action:
 
