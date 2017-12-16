@@ -4,7 +4,6 @@
   "contact": {
     "email": "hello@hu.md",
     "twitter": "http://twitter.com/hugojmd",
-    "mastodon": "https://m.ii.md/@hugo",
     "telegram": "http://telegram.me/hugomd",
     "paypal": "http://paypal.me/hugo",
     "keybase": "http://keybase.io/hugomd"
@@ -21,16 +20,22 @@
     "Theo Smith": "http://kortex.co.za",
     "Samuel Clements": "http://samc.io",
     "David Williames": "http://davew.io",
-    "Angus Gibson": "http://s.agibson.me"
+    "Angus Gibson": "http://s.agibson.me",
+    "Robert Koch": "https://me.kochie.io",
+    "Eric Jiang": "https://lorderikir.me"
   },
-  "work": [
-    {
-      "company": "Localz",
-      "title": "Software Engineer Intern"
-    },
-    {
-      "company": "Odecee",
-      "title": "Associate Software Engineer"
-    }
-  ]
+  "work": {
+    "current": [
+      {
+        "company": "Localz",
+        "title": "Software Engineer Intern"
+      }
+    ],
+    "previous": [
+      {
+        "company": "Odecee",
+        "title": "Associate Software Engineer"
+      }
+    ]
+  }
 }
