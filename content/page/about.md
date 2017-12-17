@@ -11,7 +11,9 @@ type = "page"
 +++
 
 #### Hi, I'm Hugo
-I'm a fourth year computer science student studying at Monash University in Melbourne, Australia.
+I'm a full time software engineer, working in Melbourne, Australia.
+
+I drink _a lot_ of coffee, tweet, have a few interesting side projects, and try to do open source.
 
 #### Currently
 * Software Engineer, [Localz](http://localz.co) 
@@ -29,6 +31,8 @@ I'm a fourth year computer science student studying at Monash University in Melb
 * [Stallman as a Service](https://rms.now.sh/), [Git](https://git.hu.md/hugo/stallman)
 * [Aqua](http://aqua.bots.ovh/), a bot for [Discord](http://discordapp.com)
 * [FODMAP Search](https://fodmap.now.sh), [Git](https://github.com/hugomd/fodmap-react)  
+* [parrot.live](https://github.com/hugomd/parrot.live)
+* [@notrealhugo](https://twitter.com/notrealhugo), [Git](https://github.com/hugomd/fake-hugo)
 <br />
 
 #### Contact
