@@ -10,8 +10,8 @@ disqusShortname = "blog-17"
 
 [params]
 	name = "Hugo Müller-Downing"
-	description = "I write stuff sometimes"
-	bio = "Software engineer, tinkerer, and occasional writer"
+	description = "Making things, drinking coffee, and enjoying life"
+	bio = "I make things 👨‍💻"
 	# Enter optionally your twitter account
 	twitter = "hugojmd"
 	enableRSS = true
@@ -26,12 +26,12 @@ disqusShortname = "blog-17"
 	# Navigation links
 	home = ""
 	about = ""
-	subscribe = ""
+	subscribe = "RSS"
 	# Pagination links
 	olderPosts = "Deprecated posts"
 	newerPosts = "Slightly less deprecated posts"
 	readMore = ""
-	copyright = "&copy; Copyright Hugo Muller-Downing 2017, This blog uses [Cactus theme](https://github.com/digitalcraftsman/hugo-cactus-theme)."
+	copyright = "&copy; Copyright Hugo Muller-Downing, This blog uses [Cactus theme](https://github.com/digitalcraftsman/hugo-cactus-theme)."
 	# Sharing options and author information in posts
 	aboutAuthor = "Melbourne-based software engineer"
 	tweet = ""
