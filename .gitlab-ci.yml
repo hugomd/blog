@@ -12,7 +12,7 @@ before_script:
 start_review:
   stage: review
   script:
-    - npm install -g now --silent
+    - npm install -g --silent --unsafe-perm now
     - wget https://github.com/spf13/hugo/releases/download/v0.15/hugo_0.15_amd64.deb
     - dpkg -i hugo*.deb
     - hugo -t hugo-cactus-theme --baseUrl=$(echo https://${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh)
