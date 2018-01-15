@@ -45,3 +45,5 @@ example.site {
 ```
 
 Thought this was neat? [Tweet me!](https://twitter.com/hugojmd)
+
+If you liked this post, you'll probably enjoy one of my other projects, [`parrot.live`](https://github.com/hugomd/parrot.live) 🐦 Try `curl parrot.live` to see it in action!
