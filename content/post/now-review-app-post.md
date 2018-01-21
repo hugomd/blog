@@ -3,7 +3,7 @@ date = "2016-12-29T17:53:11+01:00"
 title = "GitLab Review Apps with Zeit's Now.sh service"
 description = "GitLab & Now are 👌"
 tags = ["gitlab", "zeit", "now"]
-weight = -2
+# weight = -2
 +++
 
 [Zeit](https://zeit.co/about) is a great little company that aims to “Make Cloud Computing as Easy and Accessible as Mobile computing”, and they’re doing that just with their relatively new service, _[Now](https://zeit.co/now)_. _Now_ aims to make deploying Node and Docker apps as simple as typing `now` into your terminal. It also allows deploying static websites, which is what I’ll be using it for in this little tutorial.
