@@ -3,7 +3,7 @@ date = "2017-09-15T19:27:50+10:00"
 title = "Moji.cool"
 description = "Emoji reactions for the modern web 🎉"
 tags = ['hackathons']
-weight = -3
+# weight = -3
 aliases = [
 	"moji"
 ]

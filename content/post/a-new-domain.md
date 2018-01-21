@@ -3,7 +3,7 @@ date = "2016-11-30T00:17:20+11:00"
 description = "🚀"
 title = "A New Domain"
 tags = ["domains"]
-weight = -1
+# weight = -1
 +++
 
 Today, I acquired a new domain name. It's two letters short.
