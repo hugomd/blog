@@ -3,38 +3,44 @@
   "location": "Melbourne, Australia",
   "contact": {
     "email": "hello@hu.md",
-    "twitter": "http://twitter.com/hugojmd",
-    "telegram": "http://telegram.me/hugomd",
-    "paypal": "http://paypal.me/hugo",
-    "keybase": "http://keybase.io/hugomd"
+    "twitter": "https://twitter.com/hugojmd",
+    "github": "https://github.com/hugomd",
+    "telegram": "https://telegram.me/hugomd",
+    "paypal": "https://paypal.me/hugo",
+    "keybase": "https://keybase.io/hugomd"
   },
   "friends": {
-    "Terence Huynh": "http://terencehuynh.com",
-    "William Holt": "http://will.sx",
+    "Aadeeba Mou": "http://aadeeba.com",
+    "Angus Gibson": "http://s.agibson.me",
+    "Cyra Locsin": "http://cyra.locs.in",
+    "Daniel Sykes-Turner": "http://daniel.st",
+    "David Williames": "http://davew.io",
+    "Eric Jiang": "https://lorderikir.me",
+    "Farmehr Fahour": "http://ffarhour.nz",
     "Josh Parnham": "http://joshparnham.com",
     "Renlord Yang": "http://renlord.com",
-    "Aadeeba Mou": "http://aadeeba.com",
-    "Ryan Chew": "http://ryan.moe",
-    "Farmehr Fahour": "http://ffarhour.nz",
-    "Cyra Locsin": "http://cyra.locs.in",
-    "Theo Smith": "http://kortex.co.za",
-    "Samuel Clements": "http://samc.io",
-    "David Williames": "http://davew.io",
-    "Angus Gibson": "http://s.agibson.me",
     "Robert Koch": "https://me.kochie.io",
-    "Eric Jiang": "https://lorderikir.me"
+    "Ryan Chew": "http://ryan.moe",
+    "Samuel Clements": "http://samc.io",
+    "Terence Huynh": "http://terencehuynh.com",
+    "Theo Smith": "http://kortex.co.za",
+    "William Holt": "http://will.sx"
   },
   "work": {
     "current": [
       {
         "company": "Localz",
-        "title": "Software Engineer Intern"
+        "title": "Software Engineer"
       }
     ],
     "previous": [
       {
         "company": "Odecee",
         "title": "Associate Software Engineer"
+      },
+      {
+        "company": "Localz",
+        "title": "Software Engineer Intern"
       }
     ]
   }
