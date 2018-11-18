@@ -8,7 +8,7 @@ variables:
   REPO_NAME: hugos-blog
 
 before_script:
-  - apk add git 
+  - apk add --update git 
   - git submodule update --init --recursive
 
 # start_review:
