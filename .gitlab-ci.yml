@@ -1,7 +1,7 @@
-image: reg.g.hu.md/hugo/now-hugo-image:latest
+image: reg.g.hu.md/hugo/rancher-compose-image:latest
 
 stages:
-  - review
+  # - review
   - push
 
 variables:
@@ -10,34 +10,34 @@ variables:
 before_script:
   - git submodule update --init --recursive
 
-start_review:
-  stage: review
-  script:
-    - hugo -t hugo-cactus-theme --baseUrl=$(echo https://${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh)
-    - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
-    - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
-    - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
-  environment:
-    name: review/$CI_BUILD_REF_NAME
-    url: https://$REPO_NAME-$CI_BUILD_REF_SLUG.now.sh
-    on_stop: stop_review
-  only:
-    - branches
-  except:
-    - master
+# start_review:
+#   stage: review
+#   script:
+#     - hugo -t hugo-cactus-theme --baseUrl=$(echo https://${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh)
+#     - URL=$(now -t ${NOW_TOKEN} --static ./public -n ${REPO_NAME}-${CI_BUILD_REF_SLUG})
+#     - NOW_URL=$(echo ${URL} | sed s/'http:\/\/'/''/g | sed s/'https:\/\/'//g)
+#     - now -t ${NOW_TOKEN} alias set ${NOW_URL} ${REPO_NAME}-${CI_BUILD_REF_SLUG}.now.sh
+#   environment:
+#     name: review/$CI_BUILD_REF_NAME
+#     url: https://$REPO_NAME-$CI_BUILD_REF_SLUG.now.sh
+#     on_stop: stop_review
+#   only:
+#     - branches
+#   except:
+#     - master
 
-stop_review:
-  stage: review
-  script:
-    - now rm -t ${NOW_TOKEN} -y ${REPO_NAME}-${CI_BUILD_REF_SLUG}
-  when: manual
-  environment:
-    name: review/$CI_BUILD_REF_NAME
-    action: stop
-  only:
-    - branches
-  except:
-    - master
+# stop_review:
+#   stage: review
+#   script:
+#     - now rm -t ${NOW_TOKEN} -y ${REPO_NAME}-${CI_BUILD_REF_SLUG}
+#   when: manual
+#   environment:
+#     name: review/$CI_BUILD_REF_NAME
+#     action: stop
+#   only:
+#     - branches
+#   except:
+#     - master
 
 push:
   stage: push
