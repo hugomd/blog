@@ -44,9 +44,9 @@ push:
   stage: push
   script:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN reg.g.hu.md
-    - docker build . --tag blog
-    - docker tag reg.g.hu.md/hugo/blog/blog reg.g.hu.md/hugo/blog/blog:$CI_COMMIT_TAG
-    - docker push reg.g.hu.md/hugo/blog/blog:latest
-    - docker push reg.g.hu.md/hugo/blog/blog:$CI_COMMIT_TAG
+    - docker build . --tag reg.g.hu.md/hugo/blog
+    - docker tag reg.g.hu.md/hugo/blog reg.g.hu.md/hugo/blog:$CI_COMMIT_TAG
+    - docker push reg.g.hu.md/hugo/blog:latest
+    - docker push reg.g.hu.md/hugo/blog:$CI_COMMIT_TAG
   # only:
   # - tags
