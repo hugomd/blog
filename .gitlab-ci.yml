@@ -2,6 +2,7 @@ image: reg.g.hu.md/hugo/now-hugo-image:latest
 
 stages:
   - review
+  - push
 
 variables:
   REPO_NAME: hugos-blog
@@ -37,3 +38,14 @@ stop_review:
     - branches
   except:
     - master
+
+push:
+  stage: push
+  script:
+    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN reg.g.hu.md
+    - docker build . --tag blog
+    - docker tag reg.g.hu.md/hugo/blog/blog reg.g.hu.md/hugo/blog/blog:$CI_COMMIT_TAG
+    - docker push reg.g.hu.md/hugo/blog/blog:latest
+    - docker push reg.g.hu.md/hugo/blog/blog:$CI_COMMIT_TAG
+  # only:
+  # - tags
