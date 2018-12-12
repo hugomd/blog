@@ -11,15 +11,16 @@ type = "page"
 +++
 
 #### Hi, I'm Hugo
-I'm a full time software engineer, working in Melbourne, Australia.
+I'm a software engineer, working in Melbourne, Australia.
 
 I drink _a lot_ of coffee, tweet, have a few interesting side projects, and try to do open source.
 
 #### Currently
-* Software Engineer, [Localz](http://localz.co) 
+* Senior Engineer, [Localz](http://localz.co) 
 <br />
 
 #### Previously
+* Software Engineer, [Localz](http://localz.co) 
 * Software Engineering Intern, [Odecee](http://odecee.com.au)
 * Software Engineering Intern, [Localz](http://localz.co)
 * President (2016), [WIRED Monash](http://wired.org.au)
