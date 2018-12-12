@@ -76,6 +76,7 @@ build:
   services:
   - docker:stable-dind
   script:
+    - git submodule update --init --recursive
     - setup_docker
     - build
   only:
