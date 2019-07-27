@@ -7,7 +7,7 @@ stages:
   - deploy
 
 variables:
-  - CONTAINER_IMAGE: reg.g.hu.md/hugo/blog
+  CONTAINER_IMAGE: reg.g.hu.md/hugo/blog
 
 build:
   stage: build
@@ -19,7 +19,7 @@ build:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN reg.g.hu.md
     - docker build -t ${CONTAINER_IMAGE} .
     - docker tag ${CONTAINER_IMAGE} reg.g.hu.md/hugo/blog:latest
-    - docker push ${CONTAINER_IMAGE}:latest
+    - docker push ${CONTAINER_IMAGE}
 
 deploy:
   stage: deploy
