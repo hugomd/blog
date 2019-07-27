@@ -12,7 +12,7 @@ spec:
       imagePullSecrets:
         - name: gitlab-registry-hugo
       containers:
-      - image: reg.g.hu.md/hugo/blog:latest
+      - image: reg.g.hu.md/hugo/blog:<VERSION>
         name: blog
         ports:
         - containerPort: 80

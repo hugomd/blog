@@ -3,11 +3,20 @@ services:
   - docker:dind
 
 stages:
-  - build
-  - deploy
+  - test
+    # - build
+    # - deploy
 
 variables:
-  CONTAINER_IMAGE: reg.g.hu.md/hugo/blog
+  CONTAINER_IMAGE: reg.g.hu.md/hugo/blog:${CI_COMMIT_SHORT_SHA}
+
+test:
+  stage: test
+  image: docker:stable-git
+  script:
+    - echo $CONTAINER_IMAGE
+    - echo $CI_COMMIT_SHORT_SHA
+    - echo ${CI_COMMIT_SHORT_SHA}
 
 build:
   stage: build
