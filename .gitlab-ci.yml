@@ -16,7 +16,7 @@ test:
   script:
     - echo $CONTAINER_IMAGE
     - echo $CI_COMMIT_REF_SLUG
-    - echo ${CI_COMMIT_REF_SLUG}
+    - echo ${CI_COMMIT_SHA:0:8}
 
 build:
   stage: build
