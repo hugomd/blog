@@ -17,6 +17,7 @@ build:
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN reg.g.hu.md
     - docker build -t ${CONTAINER_IMAGE} .
     - docker tag ${CONTAINER_IMAGE} ${CONTAINER_IMAGE}:latest
+    - docker tag ${CONTAINER_IMAGE} ${CONTAINER_IMAGE}:${CI_COMMIT_SHORT_SHA}
     - docker push ${CONTAINER_IMAGE}:latest
 
 deploy:
