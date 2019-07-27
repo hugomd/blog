@@ -4,8 +4,8 @@ services:
 
 stages:
   - test
-    # - build
-    # - deploy
+  - build
+  - deploy
 
 variables:
   CONTAINER_IMAGE: reg.g.hu.md/hugo/blog:${CI_COMMIT_SHORT_SHA}
