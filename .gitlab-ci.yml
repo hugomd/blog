@@ -6,6 +6,9 @@ stages:
   - build
   - deploy
 
+variables:
+  - CONTAINER_IMAGE: reg.g.hu.md/hugo/blog
+
 build:
   stage: build
   image: docker:stable-git
@@ -15,7 +18,6 @@ build:
     - git submodule update --init --recursive
     - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN reg.g.hu.md
     - docker build -t ${CONTAINER_IMAGE} .
-    - docker tag ${CONTAINER_IMAGE} reg.g.hu.md/hugo/blog:$GIT_COMMIT_SHORT_SHA
     - docker tag ${CONTAINER_IMAGE} reg.g.hu.md/hugo/blog:latest
     - docker push ${CONTAINER_IMAGE}:latest
 
