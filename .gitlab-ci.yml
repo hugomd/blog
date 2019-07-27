@@ -20,7 +20,7 @@ build:
     - docker push ${CONTAINER_IMAGE}:latest
 
 deploy:
-  stage: build
+  stage: deploy
   image: dtzar/helm-kubectl
   script:
     - kubectl config set-cluster k8s --server="${SERVER}"
