@@ -1,5 +1,5 @@
 +++
-date = "2017-02-01T17:19:52+11:00"
+date = "2020-01-13T19:17:33+11:00"
 draft = false
 title = "About"
 slug = "about"
@@ -13,27 +13,31 @@ type = "page"
 #### Hi, I'm Hugo
 I'm a software engineer, working in Melbourne, Australia.
 
-I drink _a lot_ of coffee, tweet, have a few interesting side projects, and try to do open source.
+I drink ~~_a lot_~~ almost no of coffee, tweet, have a few interesting side projects, and try to do open source.
 
 #### Currently
-* Senior Engineer, [Localz](http://localz.co) 
+* Software Engineer, [Square](https://squareup.com), working on [Cash App](https://cash.app)
+<br />
 <br />
 
 #### Previously
-* Software Engineer, [Localz](http://localz.co) 
-* Software Engineering Intern, [Odecee](http://odecee.com.au)
-* Software Engineering Intern, [Localz](http://localz.co)
+* Senior Software Engineer (2018-2019), [Localz](http://localz.co) 
+* Software Engineer (2016-2018), [Localz](http://localz.co) 
+* Software Engineering Intern (2016), [Localz](http://localz.co)
+* Software Engineering Intern (2016), [Odecee](http://odecee.com.au)
 * President (2016), [WIRED Monash](http://wired.org.au)
 * Vice-President (2015), [WIRED Monash](http://wired.org.au)  
-* Chair, [UNIHACK](http://unihack.net)
+* Chair (2015), [UNIHACK](http://unihack.net)
+<br />
 <br />
 
 #### Projects
-* [Stallman as a Service](https://rms.now.sh/), [Git](https://git.hu.md/hugo/stallman)
-* [Aqua](http://aqua.bots.ovh/), a bot for [Discord](http://discordapp.com)
-* [FODMAP Search](https://fodmap.now.sh), [Git](https://github.com/hugomd/fodmap-react)  
-* [parrot.live](https://github.com/hugomd/parrot.live)
-* [@notrealhugo](https://twitter.com/notrealhugo), [Git](https://github.com/hugomd/fake-hugo)
+* [`cloudflare-ddns`](https://github.com/hugomd/cloudflare-ddns)
+* [`curl ascii.live`](https://github.com/hugomd/ascii-live)
+* [`curl parrot.live`](https://github.com/hugomd/parrot.live)
+* [FODMAP Search](https://fodmap.now.sh), [git](https://github.com/hugomd/fodmap-react)  
+* [@notrealhugo](https://twitter.com/notrealhugo), [git](https://github.com/hugomd/fake-hugo)
+<br />
 <br />
 
 #### Contact
@@ -42,7 +46,7 @@ I drink _a lot_ of coffee, tweet, have a few interesting side projects, and try 
 	<li><a href="http://twitter.com/hugojmd">Twitter</a></li>
 	<li><a href="http://github.com/hugomd">Github</a></li>
 	<li><a href="http://telegram.me/hugomd">Telegram</a></li>
-	<li><a href="http://keybase.io/hugomd">PGP</a></li>
+	<li><a href="http://keybase.io/hugomd">Keybase</a></li>
 </ul><br />
 
 If you like stuff I've done, or posts on here, I'd love it if you would [buy me a beer 🍺](https://paypal.me/hugo/5)
