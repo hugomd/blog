@@ -1,4 +1,4 @@
-FROM reg.g.hu.md/hugo/now-hugo-image:latest
+FROM hugomd/hugo-base-image:latest
 
 WORKDIR /src
 COPY . /src

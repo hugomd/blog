@@ -9,10 +9,8 @@ spec:
       labels:
         app: blog
     spec:
-      imagePullSecrets:
-        - name: gitlab-registry-hugo
       containers:
-      - image: reg.g.hu.md/hugo/blog:<VERSION>
+      - image: hugomd/blog:<VERSION>
         name: blog
         ports:
         - containerPort: 80
@@ -25,10 +23,10 @@ metadata:
 spec:
   selector:
     app: blog
-  type: ClusterIP
+  type: NodePort
   ports:
     - protocol: TCP
-      port: 1238
+      port: 80
       targetPort: 80
 ---
 apiVersion: extensions/v1beta1
@@ -48,7 +46,7 @@ spec:
       - path: /
         backend:
           serviceName: blog
-          servicePort: 1238
+          servicePort: 80
   tls:
     - secretName: blog-tls-prod-cert
       hosts:
