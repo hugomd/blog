@@ -1,0 +1,20 @@
+{
+  "name": "Hugo Müller-Downing",
+  "handle": "hugomd",
+  "website": "https://hugo.md",
+  "pronouns": "he/him",
+  "work": {
+    "title": "Software Engineer",
+    "company": "Square"
+  },
+  "code": {
+    "npm": "https://npm.im/~hugomd",
+    "github": "https://github.com/hugomd"
+  },
+  "social": {
+    "twitter": "https://twitter.com/hugomd"
+  },
+  "proofs": {
+    "keybase": "https://keybase.io/hugomd"
+  }
+}
