@@ -10,10 +10,12 @@ spec:
         app: blog
     spec:
       containers:
-      - image: hugomd/blog:<VERSION>
+      - image: docker.pkg.github.com/hugomd/blog/blog:<VERSION>
         name: blog
         ports:
         - containerPort: 80
+      imagePullSecrets:
+      - name: github-registry
 ---
 apiVersion: v1
 kind: Service
