@@ -17,16 +17,16 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: Build container image
-      run: docker build --tag hugomd/blog:$(echo $GITHUB_SHA | head -c7) --tag hugomd/blog:latest .
+      run: docker build --tag docker.pkg.github.com/hugomd/blog/blog:$(echo $GITHUB_SHA | head -c7) --tag hugomd/blog:latest .
 
     - name: Docker login
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      run: docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      run: docker login -u hugomd -p $GITHUB_TOKEN docker.pkg.github.com
       
     - name: Push image to Docker Hub
-      run: docker push hugomd/blog
+      run: docker push docker.pkg.github.com/hugomd/blog/blog
 
     - name: Save DigitalOcean kubeconfig
       uses: digitalocean/action-doctl@master
