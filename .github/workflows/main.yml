@@ -21,8 +21,7 @@ jobs:
 
     - name: Docker login
       env:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: docker login -u hugomd -p $GITHUB_TOKEN docker.pkg.github.com
       
     - name: Push image to Docker Hub
