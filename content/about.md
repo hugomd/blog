@@ -1,8 +1,11 @@
 +++
-title = "About"
+title = ""
 +++
 
-#### Hi, I'm Hugo
+{{< image src="/images/avatar.png" alt="Photo of me" position="left" style="border-radius: 8px;" >}}
+
+# Hi, I'm Hugo.
+
 I'm a software engineer, working in Melbourne, Australia.
 
 I drink ~~_a lot_~~ almost no coffee, tweet, have a few interesting side projects, and try to do open source.
