@@ -1,6 +1,5 @@
 +++
 date = "2018-12-03T00:00:00+11:00"
-description = "🐳"
 title = "Building lean Docker images"
 tags = ["docker"]
 +++
@@ -39,7 +38,7 @@ We define our parent image with:
 
 We can then build this image and tag it as `parent`
 
-```
+```bash
 docker build --file parent.Dockerfile --tag parent .
 ```
 

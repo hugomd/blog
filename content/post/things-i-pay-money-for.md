@@ -1,7 +1,6 @@
 +++
 date = "2016-05-22T17:16:40+10:00"
 title = "Things I actually pay money for"
-description = "Spending is easy 🙉 💰"
 tags = ["spending"]
 +++
 

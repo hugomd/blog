@@ -1,8 +1,7 @@
 +++
 date = "2017-02-02T20:55:04+11:00"
-description = "$ curl hugo.md 💻"
 title = "Responding to cURL with a JSON Resumé 📚"
-tags=[ "tutorial", "curl", "json" ]
+tags= ["tutorial", "curl", "json"]
 weight = -3
 +++
 

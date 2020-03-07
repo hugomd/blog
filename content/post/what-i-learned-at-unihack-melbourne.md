@@ -2,7 +2,6 @@
 date = "2014-08-08T12:00:00+10:00"
 draft = false
 title = "What I learned at UNIHACK Melbourne"
-description = "Sleep? What's that 😴"
 slug = "what-i-learned-at-unihack-melbourne"
 aliases = [
 	"what-i-learned-at-unihack-melbourne"

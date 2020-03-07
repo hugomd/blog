@@ -2,7 +2,6 @@
 date = "2015-09-14T19:48:43+10:00"
 draft = true
 title = "Droplr vs. CloudApp"
-description = "Better to roll your own"
 slug = "droplr-vs-cloudapp"
 aliases = [
 	"droplr-vs-cloudapp"

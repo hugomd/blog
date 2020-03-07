@@ -2,7 +2,6 @@
 date = "2015-12-31T19:31:45+01:00"
 draft = true
 title = "On New Year's Resolutions"
-
 +++
 
 I think it's great that people have New Year's resolutions - it's awesome to decide to start doing something, or change they way you're doing something for the new year. 

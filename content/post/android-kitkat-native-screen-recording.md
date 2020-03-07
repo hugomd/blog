@@ -1,14 +1,13 @@
 +++
 date = "2013-11-01T22:16:59+11:00"
-draft = false
 title = "Android KitKat Native Screen Recording"
-description = "A short howto"
 slug = "android-kitkat-native-screen-recording"
 aliases = [
 	"android-kitkat-native-screen-recording"
 ]
 tags = [ "android", "tutorial" ]
 +++
+
 I've just tried it out and it is absolutely awesome!
 
 Before I start, I'd like to thank Android Police for the initial information on how to do it, in [this article](http://www.androidpolice.com/2013/10/31/kitkat-feature-spotlight-android-4-4-includes-native-screen-recording-with-mp4-output/).

@@ -1,6 +1,5 @@
 +++
 date = "2018-12-04T00:00:00+11:00"
-description = "🐙 🐳"
 title = "Kubernetes & Traefik with local Wildcard certificates"
 tags = ["kubernetes", "devops"]
 +++
