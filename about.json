@@ -29,11 +29,15 @@
   "work": {
     "current": [
       {
-        "company": "Localz",
-        "title": "Senior Engineer"
+        "company": "Square",
+        "title": "Software Engineer"
       }
     ],
     "previous": [
+      {
+        "company": "Localz",
+        "title": "Senior Engineer"
+      },
       {
         "company": "Localz",
         "title": "Software Engineer"
