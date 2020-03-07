@@ -2,7 +2,7 @@ FROM hugomd/hugo-base-image:latest
 
 WORKDIR /src
 COPY . /src
-RUN hugo -t hello-friend --baseUrl=http://localhost:1337
+RUN hugo -t hello-friend --baseUrl=https://hugo.md
 
 FROM nginx:1.15.6-alpine
 COPY ./default.conf /etc/nginx/conf.d/default.conf
