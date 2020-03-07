@@ -1,7 +1,6 @@
 +++
 date = "2016-09-12T21:08:02+10:00"
 title = "Mechanical Keyboards: My Personal History"
-description = "I 💟 Topre"
 tags = ["keyboards"]
 draft = true
 +++

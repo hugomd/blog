@@ -2,7 +2,6 @@
 date = "2014-02-11T11:18:56+11:00"
 draft = false
 title = "How I bypassed my school's proxy"
-description = "Proxies are easy and fun 👍"
 slug = "how-i-bypassed-my-schools-proxy"
 aliases = [
 	"how-i-bypassed-my-schools-proxy"

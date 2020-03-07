@@ -2,7 +2,6 @@
 date = "2015-10-27T15:35:21+11:00"
 draft = false
 title = "Easy file sharing with S3 and Dropshare/ShareX"
-description = "Cheap, cost effective, and affordable 💸"
 slug = "roll-your-own-screenshot-service-with-s3"
 aliases = [
 	"roll-your-own-screenshot-service-with-s3"

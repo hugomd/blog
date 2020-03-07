@@ -2,7 +2,6 @@
 date = "2015-10-12T22:12:05+11:00"
 draft = false
 title = "Monash Ninja: what, how, and the end result"
-description = "It's like Uber, but for.."
 slug = "monash-ninja"
 image = "http://i.hugo.sx/longterm/97TbG.png"
 aliases = [

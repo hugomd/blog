@@ -2,7 +2,7 @@ FROM hugomd/hugo-base-image:latest
 
 WORKDIR /src
 COPY . /src
-RUN hugo -t hugo-cactus-theme --baseUrl=https://hugo.md
+RUN hugo -t hello-friend --baseUrl=http://localhost:1337
 
 FROM nginx:1.15.6-alpine
 COPY ./default.conf /etc/nginx/conf.d/default.conf

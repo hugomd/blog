@@ -1,55 +1,61 @@
 # Site settings
-baseurl = ""
+baseurl = "/"
 languageCode = "en-us"
 title = "Hugo's Blog"
 theme = "hugo-cactus-theme"
-# Enter your tracking code to enable Google Analytics
-googleAnalytics = "UA-89641412-1"
-# Disable comments by leaving disqusShortname empty
-disqusShortname = "blog-17"
+paginate = 4
 
 [params]
-	name = "Hugo Müller-Downing"
-	description = "Making things, drinking coffee, and relaxing"
-	bio = "I make things 👨‍💻"
-	# Enter optionally your twitter account
-	twitter = "hugojmd"
-	enableRSS = true
+  # dir name of your blog content (default is `content/posts`)
+  contentTypeName = "post"
 
-	# Add custom assets with their paths relative to the static folder
-	customCSS = []
-	customJS  = []
+  # "light" or "dark"
+  defaultTheme = "light"
 
-	# The variables below are optionally too and can be used to
-	# translate or customize each string of the theme.
+  # if you set this to 0, only submenu trigger will be visible
+  showMenuItems = 4
 
-	# Navigation links
-	home = ""
-	about = ""
-	subscribe = "RSS"
-	# Pagination links
-	olderPosts = "Deprecated posts"
-	newerPosts = "Slightly less deprecated posts"
-	readMore = ""
-	copyright = "&copy; Copyright Hugo Muller-Downing, This blog uses [Cactus theme](https://github.com/digitalcraftsman/hugo-cactus-theme). <a rel='me' href='https://melb.social/@hugo'></a> <link href='https://micro.blog/h' rel='me' />"
-	# Sharing options and author information in posts
-	aboutAuthor = "Melbourne-based software engineer"
-	tweet = ""
-	share = ""
-	# 404 page
-	title404 = ""
-	subtitle404 = ""
+  # Show reading time in minutes for posts
+  showReadingTime = false
 
-	# Choose a font for the social icons in the footer. Either "mono-social" or "font-awesome"
-	iconFont = "font-awesome"
-  # The social icons can be styled differently if you use mono as font - circle, rounded, or empty
-  socialIconStyle = "circle"
+[languages]
+  [languages.en]
+    title = "Hugo's Blog"
+    subtitle = "Making things, drinking coffee, and relaxing"
+    keywords = ""
+    copyright = "&copy; Copyright Hugo Müller-Downing 2020"
+    menuMore = "Show more"
+    writtenBy = "Written by"
+    readMore = "Continue reading"
+    readOtherPosts = "Read other posts"
+    newerPosts = "Newer posts"
+    olderPosts = "Older posts"
+    minuteReadingTime = "min read"
+    dateFormatSingle = "2006-01-02"
+    dateFormatList = "2006-01-02"
+    lastModDisplay = "Modified: "
 
-# Add additional social link entries underneath
-[social]
-    twitter         = "https://www.twitter.com/hugojmd"
-    key             = "https://keybase.io/hugomd"
-    github          = "https://www.github.com/hugomd"
-    linkedin-square = "https://www.linkedin.com/in/hugomd"
-    instagram       = "https://instagram.com/hugojmd"
-    paypal          = "https://paypal.me/hugo"
+    [languages.en.params.logo]
+      logoText = "Hugo's Blog"
+      logoHomeLink = "/"
+
+    [languages.en.menu]
+      [[languages.en.menu.main]]
+        identifier = "about"
+        name = "About"
+        url = "/about"
+
+      [[languages.en.menu.main]]
+        identifier = "archive"
+        name = "Archive"
+        url = "/archive"
+
+      [[languages.en.menu.main]]
+        identifier = "links"
+        name = "Links"
+        url = "/links"
+
+      [[languages.en.menu.main]]
+        identifier = "buy-me-a-beer"
+        name = "Buy me a beer 🍺"
+        url = "https://paypal.me/hugo/5"

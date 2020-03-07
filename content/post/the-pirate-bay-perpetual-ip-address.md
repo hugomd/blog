@@ -2,7 +2,6 @@
 date = "2013-12-17T02:34:10+11:00"
 draft = false
 title = "The Pirate Bay Perpetual IP Address"
-description = "I don't actually use TPB ☣️"
 slug = "the-pirate-bay-perpetual-ip-address"
 aliases = [
 	"the-pirate-bay-perpetual-ip-address"

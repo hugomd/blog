@@ -1,9 +1,9 @@
----
-title: "Adding Kotlin syntax highlighting to Sublime Merge"
-date: 2020-01-13T19:02:50+11:00
-description: "💅💅💅"
-tags: ["git"]
----
++++
+date = 2020-01-13T19:02:50+11:00
+title = "Adding Kotlin syntax highlighting to Sublime Merge"
+description = "Here's how to add Kotlin syntax highlighting to Sublime Merge:"
+tags = ["git"]
++++
 
 1. Download `Kotlin.tmLanguage` from [here](https://github.com/vkostyukov/kotlin-sublime-package/blob/ce599a846ac9f86d4671a024d21220ca08e50f66/Kotlin.tmLanguage)
 2. Open Sublime Merge, click Preferences -> Browse Packages

@@ -1,9 +1,8 @@
----
-title: "Vim, FZF & quicklists"
-date: 2019-09-08T15:48:36+10:00
-description: "Vim is magic ✨"
-tags: ["vim"]
----
++++
+title = "Vim, FZF & quicklists"
+date = 2019-09-08T15:48:36+10:00
+tags = ["vim"]
++++
 
 Despite using [FZF](https://github.com/junegunn/fzf) with [Neovim](https://github.com/neovim/neovim) for a few years, I've only recently found out about `:Ag` which lets you perform searches across your folders and files.
 

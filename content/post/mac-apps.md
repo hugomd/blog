@@ -1,12 +1,10 @@
 +++
 date = "2016-12-07T22:00:00+11:00"
-description = "A long list of my favourite apps for Mac"
 title = "Mac Apps"
 tags = ["mac"]
 draft = false
 +++
 
-# Mac Apps
 I have a pretty terrible habit of buying new apps _very_ frequently. My friends can vouch for this. Following new purchases, they're often inundated with messages from me about how 'good' an app is, and that they should go buy it ASAP, even if it's not relevant to them at all.
 
 Recently, my friend [Theo](http://kortex.co.za) bought a new Mac, and asked if I had any recommendations for him. I wrote up a list and sent it to him, but I thought I might publish it on here for my future reference, and to have something to direct people to.
