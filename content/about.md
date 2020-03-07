@@ -1,13 +1,5 @@
 +++
-date = "2020-01-13T19:17:33+11:00"
-draft = false
 title = "About"
-slug = "about"
-hidden = true
-aliases = [
-	"about"
-]
-type = "page"
 +++
 
 #### Hi, I'm Hugo
