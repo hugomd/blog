@@ -5,7 +5,7 @@ title = "About"
 #### Hi, I'm Hugo
 I'm a software engineer, working in Melbourne, Australia.
 
-I drink ~~_a lot_~~ almost no of coffee, tweet, have a few interesting side projects, and try to do open source.
+I drink ~~_a lot_~~ almost no coffee, tweet, have a few interesting side projects, and try to do open source.
 
 #### Currently
 * Software Engineer, [Square](https://squareup.com), working on [Cash App](https://cash.app)
