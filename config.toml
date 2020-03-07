@@ -2,7 +2,7 @@
 baseurl = "/"
 languageCode = "en-us"
 title = "Hugo's Blog"
-theme = "hugo-cactus-theme"
+theme = "hello-friend"
 paginate = 4
 
 [params]
@@ -21,7 +21,7 @@ paginate = 4
 [languages]
   [languages.en]
     title = "Hugo's Blog"
-    subtitle = "Making things, drinking coffee, and relaxing"
+    subtitle = ""
     keywords = ""
     copyright = "&copy; Copyright Hugo Müller-Downing 2020"
     menuMore = "Show more"
