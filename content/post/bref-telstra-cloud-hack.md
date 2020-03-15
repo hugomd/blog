@@ -2,7 +2,8 @@
 date = "2016-12-11T23:14:50+11:00"
 title = "Bréf: Telstra Cloud Hack 2016"
 tags = ["bréf", "hackathons"]
-cover = "http://hu.md/Q76q.png"
+slug = "bref-telstra-cloud-hack"
+cover = "./post/bref-telstra-cloud-hack/cover.png"
 +++
 
 _Bréf: where I try to explain something briefly._
@@ -17,6 +18,5 @@ We finished the hack with a _beautiful_ and _working_ frontend, but ran out of t
 
 I had an amazing time, surrounded by great friends and hackers. Thanks everyone – I'll be back next year!
 
-![](http://hu.md/Q76q.png)
-![](http://hu.md/seIq.png)
-![](http://hu.md/fKdN.png)
+![](1.png)
+![](2.png)

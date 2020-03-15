@@ -2,9 +2,10 @@
 date = "2018-12-04T00:00:00+11:00"
 title = "Kubernetes & Traefik with local Wildcard certificates"
 tags = ["kubernetes", "devops"]
+cover = "./post/kubernetes-and-traefik/cover.png"
 +++
 
-*This was originally posted on [Medium](https://medium.com/localz-engineering/kubernetes-traefik-locally-with-a-wildcard-certificateNaNe5255d).*
+*This was originally posted on [Medium](https://medium.com/localz-engineering/kubernetes-traefik-locally-with-a-wildcard-certificate-e15219e5255d<Paste>).*
 
 As a passionate software engineer at Localz, I get to tinker with fancy new tools (in my own time) and then annoy my coworkers by evangelising said tools in the workplace. Kubernetes is just one of those tools, and we’re currently exploring it for use internally! 🐙
 
