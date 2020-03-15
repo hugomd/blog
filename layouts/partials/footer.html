@@ -1,7 +1,7 @@
 <footer class="footer">
   <div class="footer__inner">
       <div class="copyright">
-        <span>© {{ now.Year }} Hugo Müller-Downing. Powered by <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>, using the <a href="https://github.com/panr/hugo-theme-hello-friend">Hello Friend</a> theme.</span>
+        <span>© {{ now.Year }} Hugo Müller-Downing. Powered by <a href="https://gohugo.io" target="_blank" rel="noopener">Hugo</a>, using the <a href="https://github.com/panr/hugo-theme-hello-friend">Hello Friend</a> theme. {{ if .GitInfo }}Commit: <a href="https://github.com/hugomd/blog/commit/{{.GitInfo.Hash}}">{{ .GitInfo.AbbreviatedHash }}</a>{{ end }}</span>
       </div>
   </div>
 </footer>

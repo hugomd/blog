@@ -4,6 +4,7 @@ languageCode = "en-us"
 title = "Hugo's Blog"
 theme = "hello-friend"
 paginate = 4
+enableGitInfo = true
 
 [params]
   # dir name of your blog content (default is `content/posts`)
