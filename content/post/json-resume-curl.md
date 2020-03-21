@@ -2,7 +2,6 @@
 date = "2017-02-02T20:55:04+11:00"
 title = "Responding to cURL with a JSON Resumé 📚"
 tags= ["tutorial", "curl", "json"]
-weight = -3
 +++
 
 Over the past couple of months I've received numerous messages asking me how I've made this website respond to cURL requests with JSON (a little like [JSON Resumé](https://jsonresume.org)).  If you're out of the loop, you can either `curl hugo.md` or check out this GIF:
