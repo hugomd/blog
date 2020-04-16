@@ -10,7 +10,7 @@ spec:
         app: blog
     spec:
       containers:
-      - image: docker.pkg.github.com/hugomd/blog/blog:<VERSION>
+      - image: docker.pkg.github.com/hugomd/blog/blog:b133584
         name: blog
         ports:
         - containerPort: 80
@@ -45,6 +45,10 @@ spec:
   - host: hugo.md
     http:
       paths:
+      - path: /donate
+        backend:
+          serviceName: lnd-invoice-proxy
+          servicePort: 80
       - path: /
         backend:
           serviceName: blog
