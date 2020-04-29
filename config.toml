@@ -46,6 +46,11 @@ unsafe= true
 
     [languages.en.menu]
       [[languages.en.menu.main]]
+        identifier = "now"
+        name = "Now"
+        url = "/now"
+
+      [[languages.en.menu.main]]
         identifier = "about"
         name = "About"
         url = "/about"
@@ -59,8 +64,3 @@ unsafe= true
         identifier = "links"
         name = "Links"
         url = "/links"
-
-      [[languages.en.menu.main]]
-        identifier = "buy-me-a-beer"
-        name = "Buy me a beer 🍺"
-        url = "https://paypal.me/hugo/5"
