@@ -45,10 +45,6 @@ spec:
   - host: hugo.md
     http:
       paths:
-      - path: /donate
-        backend:
-          serviceName: lnd-invoice-proxy
-          servicePort: 80
       - path: /
         backend:
           serviceName: blog
@@ -57,3 +53,26 @@ spec:
     - secretName: blog-tls-prod-cert
       hosts:
         - hugo.md
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: lightning
+  namespace: blog
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/tls-acme: "true"
+spec:
+  rules:
+  - host: lightning.hugo.md
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: inlets
+          servicePort: 8081
+  tls:
+    - secretName: lightning-tls-prod-cert
+      hosts:
+        - lightning.hugo.md
