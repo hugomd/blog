@@ -10,7 +10,7 @@ spec:
         app: blog
     spec:
       containers:
-      - image: docker.pkg.github.com/hugomd/blog/blog:b133584
+      - image: docker.pkg.github.com/hugomd/blog/blog:3ac1446
         name: blog
         ports:
         - containerPort: 80
