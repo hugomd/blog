@@ -51,7 +51,7 @@
 }
 </style>
 <script>
-  const url = 'https://micro.blog/conversation.js?format=jsonfeed&url={{.Site.BaseURL}}' + window.location.pathname.substr(1);
+  const url = 'https://micro.blog/conversation.js?format=jsonfeed&url={{.Site.BaseURL}}' + window.location.pathname;
   fetch(url)
     .then(data => data.json())
     .then(data => {
