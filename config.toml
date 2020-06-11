@@ -1,5 +1,5 @@
 # Site settings
-baseurl = "/"
+baseURL = "https://hugo.md/"
 languageCode = "en-us"
 title = "Hugo's Blog"
 theme = "hello-friend"

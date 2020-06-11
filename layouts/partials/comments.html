@@ -1,8 +1,79 @@
-<!--
-To add comments section, please create `layouts/partials/comments.html` in your
-Hugo directory and insert:
-{{ template "_internal/disqus.html" . }}
-or whatever comment engine you want -> https://gohugo.io/content-management/comments/#readout
+<h4>Webmentions</h4>
+<hr />
+<div class='comments' id='comments'></div>
+<style>
+.comments {
+  display: flex;
+  flex-direction: column;
+}
 
-TODO: Webmentions
--->
+.comment {
+  display: flex;
+  padding: 10px;
+  width: 100%;
+  flex-direction: column;
+}
+
+.author .avatar {
+  display: flex;
+  align-self: flex-start;
+  height: 40px;
+}
+
+.avatar img {
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  align-self: flex-start;
+}
+
+.author {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-self: flex-start;
+  height: 40px;
+  margin-bottom: 5px;
+}
+
+.author .name {
+  height: 20px;
+  padding-left: 5px;
+}
+
+.author .name .username {
+  height: 20px
+}
+
+.author .date {
+  width: 200px;
+  height: 20px;
+}
+</style>
+<script>
+  const url = 'https://micro.blog/conversation.js?format=jsonfeed&url={{.Site.BaseURL}}' + window.location.pathname.substr(1);
+  fetch(url)
+    .then(data => data.json())
+    .then(data => {
+      if (data.items.length === 0) {
+        comments.innerHTML += "No webmentions yet.."
+      } else {
+        const comments = document.getElementById('comments');
+        comments.innerHTML += data.items.map((item) => {
+          const {author: {avatar, name, url}, date_published, content_html} = item;
+          return `
+          <div class='comment'>
+            <div class='author'>
+              <div class='avatar'><img src="${avatar}" /></div>
+              <div class='name'>
+                <div class='username'><a href="${url}">${name}</a></div>
+                <div class='date'>${new Date(date_published).toDateString()}</div>
+              </div>
+            </div>
+            ${content_html}
+          </div>
+        `;
+        }).join('');
+      }
+    })
+</script>
