@@ -11,7 +11,7 @@ Until now, I never realised that you can use `Tab` and `Shift + Tab` to select m
 Here's a video demonstration:
 
 <video controls width='100%'>
-	<source src='https://hugo.lol/Qh1HfA.webm' type='video/webm'>
+	<source src='https://d.pr/Qh1HfA.webm' type='video/webm'>
 	Your browser doesn't support the HTML5 video tag :(
 </video>
 
