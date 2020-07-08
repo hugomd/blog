@@ -76,3 +76,20 @@ spec:
     - secretName: lightning-tls-prod-cert
       hosts:
         - lightning.hugo.md
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: handshake
+  namespace: blog
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: hugo.sgy
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: blog
+          servicePort: 80
