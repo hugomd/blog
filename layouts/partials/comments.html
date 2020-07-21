@@ -76,4 +76,7 @@
         }).join('');
       }
     })
+    .catch(() => {
+      comments.innerHTML += "Failed to fetch webmentions.";
+    });
 </script>
