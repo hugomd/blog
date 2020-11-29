@@ -32,5 +32,5 @@ Related posts:
 * [Adding webmentions to microblog by Steve Layton](https://shindakun.dev/posts/adding-webmentions-to-microblog/)
 * [Webmentions on a static site with GitHub Actions by Sebastian De Deyne](https://sebastiandedeyne.com/webmentions-on-a-static-site-with-github-actions/)
 
-If you have any trouble setting this up, or just want to chat, feel free to reach out to me on [Twitter](https://twitter.com/hugojmd) or [Mastodon](https://melb.social/@hugo)
+If you have any trouble setting this up, or just want to chat, feel free to reach out to me on [Twitter](https://twitter.com/hugojmd) or [Mastodon](https://melb.social/@hugo).
 
