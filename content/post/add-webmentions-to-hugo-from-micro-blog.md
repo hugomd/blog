@@ -28,6 +28,7 @@ Add webmention callbacks to your blog's `<head>`, replacing `USERNAME` with your
 After that, you can add a section for fetching comments as I've done [here](https://github.com/hugomd/blog/blob/97143d2bf7d2f7142632e9b970cb94c50bb948e1/layouts/partials/comments.html#L54-L78).
 
 Related posts:
+
 * [Adding webmentions to microblog by Steve Layton](https://shindakun.dev/posts/adding-webmentions-to-microblog/)
 * [Webmentions on a static site with GitHub Actions by Sebastian De Deyne](https://sebastiandedeyne.com/webmentions-on-a-static-site-with-github-actions/)
 
