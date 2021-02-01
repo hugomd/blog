@@ -38,7 +38,7 @@ unsafe= true
     minuteReadingTime = "min read"
     dateFormatSingle = "2006-01-02"
     dateFormatList = "2006-01-02"
-    lastModDisplay = "Modified: "
+    lastModDisplay = ""
 
     [languages.en.params.logo]
       logoText = "Hugo's Blog"
