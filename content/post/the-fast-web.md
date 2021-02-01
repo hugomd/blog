@@ -3,6 +3,8 @@ title: "The Fast Web"
 date: 2021-02-02T07:45:39+11:00
 description: "The web should feel fast, and my blog should, too!"
 tags: ["100DaysToOffload"]
+cover: "cover.png"
+useRelativeCover: true
 ---
 
 Over the past few months I've made a few changes to my blog, prompted by [this comment](https://lobste.rs/s/h9xgpv/rate_my_homepage#c_jvxqal) on Lobste.rs. This part really got me going: "Definitely feels more like “underperforming CMS with database” than static site."
