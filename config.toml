@@ -59,8 +59,3 @@ unsafe= true
         identifier = "archive"
         name = "Archive"
         url = "/archive"
-
-      [[languages.en.menu.main]]
-        identifier = "links"
-        name = "Links"
-        url = "/links"

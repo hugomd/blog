@@ -25,12 +25,13 @@ I avoid caffeine, tweet, have a few interesting side projects, and _try_ to do o
 * [`joi-currency-code`](https://github.com/hugomd/joi-currency-code)
 
 ## Contact
-<ul>
-	<li><a href="mailto:11111h1e1l1l1o1@h1u11.1m1d1" onmouseover="this.href=this.href.replace(/1/g, '')">Email</a></li>
-	<li><a href="http://twitter.com/hugojmd">Twitter</a></li>
-	<li><a href="http://github.com/hugomd">Github</a></li>
-	<li><a href="http://telegram.me/hugomd">Telegram</a></li>
-	<li><a href="http://keybase.io/hugomd">Keybase</a></li>
-</ul><br />
+
+* <a href="mailto:11111h1e1l1l1o1@h1u11.1m1d1" onmouseover="this.href=this.href.replace(/1/g, '')">Email</a>
+* [GitHub](https://github.com/hugomd)
+* [Keybase](https://keybase.io/hugomd)
+* [LinkedIn](https://www.linkedin.com/in/hugomd)
+* [PayPal](https://paypal.me/hugo)
+* [Twitter](https://twitter.com/hugojmd)
+* [Telegram](https://t.me/hugomd)
 
 If you like stuff I've done, or posts on here, I'd love it if you would [buy me a beer 🍺](https://paypal.me/hugo/5)
