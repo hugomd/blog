@@ -26,4 +26,4 @@ My most recent obsession has been dialling in my espresso, drawing inspiration f
 * [Unknown Mortal Orchestra](https://open.spotify.com/artist/1LeVJ5GPeYDOVUjxx1y7Rp?si=Ln9KbT5pS6um-Sx5hgzKIg)
 * [Carpenter Brut](https://open.spotify.com/artist/1l2oLiukA9i5jEtIyNWIEP?si=kos8-G-LRMWrOsVWaBCq-Q)
 
-*This page allows me to keep people updated on what I'm doing with my life, it's a *[now page](https://nownownow.com/)*.*
+*This page allows me to keep people updated on what I'm doing with my life, it's a [now page](https://nownownow.com/).*
