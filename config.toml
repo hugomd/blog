@@ -23,6 +23,9 @@ unsafe= true
   # Show reading time in minutes for posts
   showReadingTime = false
 
+  # Show full article in RSS, not just summary
+  rssFullText = true
+
 [languages]
   [languages.en]
     title = "Hugo's Blog"
