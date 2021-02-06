@@ -7,6 +7,8 @@ cover: "cover.png"
 useRelativeCover: true
 ---
 
+{{% 100daystooffload %}}
+
 Over the past few months I've made a few changes to my blog, prompted by [this comment](https://lobste.rs/s/h9xgpv/rate_my_homepage#c_jvxqal) on Lobste.rs. This part really got me going: "Definitely feels more like “underperforming CMS with database” than static site."
 
 Since then, I have:
@@ -31,7 +33,3 @@ Vercel is quite the opposite by comparison:
 * Edge caching. Vercel deployments get pushed out along their [edge network](https://vercel.com/docs/edge-network/overview). Regardless of where a visitor is, this blog should load quickly.
 
 So, what do you think of the load times? Is there anything else I should change? Let me know via [Twitter](https://twitter.com/hugojmd), [Mastodon](https://melb.social/@hugo), or email
-
----
-
-This post is my start to [#100DaysToOffload](https://100daystooffload.com/). The aim is to write 100 posts over the next year.
