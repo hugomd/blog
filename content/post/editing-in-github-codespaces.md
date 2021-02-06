@@ -1,7 +1,7 @@
 ---
 title: Editing in GitHub Codespaces
 date: 2021-02-06T07:45:39+11:00
-description: "Using GitHub Codespaces to edit my Hugo blog"
+description: "Using GitHub Codespaces to edit this blog ✨"
 tags: ["100DaysToOffload"]
 ---
 
