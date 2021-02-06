@@ -5,6 +5,7 @@ description: "The web should feel fast, and my blog should, too!"
 tags: ["100DaysToOffload"]
 cover: "cover.png"
 useRelativeCover: true
+sequence: 1
 ---
 
 {{% 100daystooffload %}}
