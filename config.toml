@@ -31,7 +31,6 @@ unsafe= true
     title = "Hugo's Blog"
     description = "I’m a software engineer, working at Square in Melbourne, Australia. I avoid caffeine, tweet, have a few interesting side projects, and try to do open source."
     keywords = ""
-    copyright = "&copy; Copyright Hugo Müller-Downing 2020"
     menuMore = "Show more"
     writtenBy = "Written by"
     readMore = "More"
