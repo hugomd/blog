@@ -16,7 +16,7 @@ Then I switched to [web mentions](/post/add-webmentions-to-hugo-from-micro-blog/
 
 I didn't end up using Micro.blog much, so it wasn't worth the $5 a month I was paying for it. That's not to say it's not a great platform, it just doesn't work for me personally.
 
-Since then, I've seen some great improvements to web mentions, pulling them from sources like Mastodon or Twitter. [Horst Gutmann](https://zerokspot.com) has a great post on supporting [comments via Mastodon](https://zerokspot.com/weblog/2021/01/07/comments-via-mastodon/), and maintains [webmentiond](https://github.com/zerok/webmentiond). If I were to set up web mentions again, I'd likely self-host `webmentiond` myself.
+Since then, I've seen some great improvements to web mentions, pulling them from sources like Mastodon or Twitter. [Horst Gutmann](https://zerokspot.com) has a great post on supporting [comments via Mastodon](https://zerokspot.com/weblog/2021/01/07/comments-via-mastodon/), and maintains [`webmentiond`](https://github.com/zerok/webmentiond). If I were to set up web mentions again, I'd likely self-host `webmentiond` myself.
 
 
 If you do happen to want to comment on one of my posts, feel free to [open an issue](https://github.com/hugomd/blog/issues/new), or to [contact me](/about) directly.
