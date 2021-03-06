@@ -3,7 +3,10 @@ title: Disabling comments
 date: 2021-03-06T16:43:03+11:00
 description: "If you want to comment, feel free to email me."
 tags: ["100DaysToOffload"]
+sequence: 3
 ---
+
+{{% 100daystooffload %}}
 
 I've disabled comments, again.
 
