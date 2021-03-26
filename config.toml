@@ -7,8 +7,12 @@ paginate = 4
 enableGitInfo = true
 
 # Enable HTML in markdown
-[markup.goldmark.renderer]
-unsafe= true
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+    [markup.goldmark.extensions]
+      linkify = true
 
 [params]
   # dir name of your blog content (default is `content/posts`)
