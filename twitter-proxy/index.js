@@ -26,7 +26,7 @@ const init = async () => {
       if (auth !== process.env.AUTH) return h.response().code(401);
       if (!tweetId) return h.response().code(400);
 
-      return instance.get(`https://api.twitter.com/1.1/statuses/show?id=${tweetId}`).then(({data}) => data)
+      return instance.get(`https://api.twitter.com/1.1/statuses/show?tweet_mode=extended&id=${tweetId}`).then(({data}) => data)
     }
   });
 

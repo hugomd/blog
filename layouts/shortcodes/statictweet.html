@@ -3,9 +3,18 @@
 {{ $urlPost := "&tweetId="}}
 {{ $id := .Get 0 }}
 {{ $json := getJSON $urlPre $auth $urlPost $id }}
+{{ $text_start := index $json.display_text_range 0 }}
+{{ $text_end := index $json.display_text_range 1 }}
+{{ $parsed_text := slicestr $json.full_text $text_start $text_end  }}
 <blockquote style="margin-left:0px;width:100%;border-color:#1DA1F2;background:rgba(29, 161, 242, 0.1)">
-  <img s>
-  {{ $json.text | safeHTML }}
+  {{ .Page.RenderString $parsed_text }}
+  {{ if and (isset $json "entities") (isset $json.entities "media")  }}
+    {{ range $item := $json.entities.media }}
+      {{ if eq $item.type "photo" }}
+        <img src="{{ $item.media_url_https }}" />
+      {{end}}
+    {{ end }}
+  {{ end }}
   <br />
   <p>&mdash; {{ $json.user.name }} (@{{ $json.user.screen_name }}) <a href='https://twitter.com/{{ $json.user.screen_name }}/status/{{ $json.id_str }}'>{{ dateFormat "January 2, 2006" $json.created_at }}</a></p>
 </blockquote>
