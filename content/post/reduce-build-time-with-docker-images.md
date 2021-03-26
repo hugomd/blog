@@ -15,7 +15,7 @@ Let's take a look at my `.gitlab-ci.yml` file that I used in ["GitLab Review App
 
 As you can see above, I'm installing build dependencies for `now` with `npm install -g now --silent` in both the `start_review` and `stop_review` pipeline stages. This is unnecessary and is done _every single time_ a job runs (not [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself)). If you run enough builds, that's a significant amount of time wasted.
 
-{{< tweet 942331411503177728>}}
+{{< statictweet 942331411503177728>}}
 
 Let's build a simple Docker image that includes the `now` dependency:
 
