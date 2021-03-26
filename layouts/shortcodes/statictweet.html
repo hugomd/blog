@@ -1,7 +1,9 @@
-{{ $urlPre := "http://localhost:3000/?auth=123&tweetId="}}
+{{ $urlPre := "http://localhost:3000/?auth="}}
+{{ $auth := getenv "AUTH" }}
+{{ $urlPost := "&tweetId="}}
 {{ $id := .Get 0 }}
-{{ $json := getJSON $urlPre $id }}
-<blockquote style="margin-left:0px;border-color:#1DA1F2;background:rgba(29, 161, 242, 0.1)">
+{{ $json := getJSON $urlPre $auth $urlPost $id }}
+<blockquote style="margin-left:0px;width:100%;border-color:#1DA1F2;background:rgba(29, 161, 242, 0.1)">
   <img s>
   {{ $json.text | safeHTML }}
   <br />
