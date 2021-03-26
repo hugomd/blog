@@ -3,6 +3,8 @@
 const Hapi = require('@hapi/hapi');
 const axios = require('axios');
 
+const delay = (duration) => new Promise(resolve => setTimeout(() => resolve(true), duration));
+
 const instance = axios.create({
   headers: {
     'Authorization': `Bearer ${process.env.TWITTER_BEARER_TOKEN}`
@@ -30,6 +32,10 @@ const init = async () => {
 
   await server.start();
   console.log('Server running on %s', server.info.uri);
+
+  await delay(10000);
+
+  await server.stop();
 };
 
 process.on('unhandledRejection', (err) => {
