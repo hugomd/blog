@@ -1,0 +1,18 @@
+{{ $prefix := "https://" }}
+{{ $baseUrl := .Get 0 }}
+{{ $id := .Get 1 }}
+{{ $json := getJSON $prefix $baseUrl "/api/v1/statuses/" $id }}
+<blockquote style="margin-left:0px;width:100%;border-color:rgba(189, 147, 249, 1);background:rgba(189, 147, 249, 0.1)">
+  {{ $json.content | markdownify }}
+
+  {{ if isset $json "media_attachments" }}
+    {{ range $item := $json.media_attachments }}
+      {{ if eq $item.type "image" }}
+        <img src="{{ $item.remote_url }}" />
+      {{ end }}
+    {{ end }}
+  {{ end }}
+
+  <br />
+  <p>&mdash; {{ $json.account.display_name }} (@{{ $json.account.acct }}) <a href='https://{{ $baseUrl }}/@{{ $json.account.acct }}/posts/{{ $id }}'>{{ dateFormat "January 2, 2006" $json.created_at }}</a></p>
+</blockquote>
