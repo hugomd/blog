@@ -18,7 +18,7 @@ Scanning through my post archive, I've mostly been embedding tweets. Static rend
 
 Inspired by this, I've attempted to replicate that functionality on this very blog.
 
-The tweet below might look like it's embeded via Twitter, but it's actually not. I've written a [_very hacky_ shortcode](https://github.com/hugomd/blog/blob/4c9554dda22e612dc511ce69ced3cc0006d541d9/layouts/shortcodes/statictweet.html) that fetches tweets as JSON via a [local web server](https://github.com/hugomd/blog/blob/4c9554dda22e612dc511ce69ced3cc0006d541d9/twitter-proxy/index.js). Unfortunately, [Hugo](https://gohugo.io) (the static site generator) doesn't support adding headers to requests, although [there is discussion](https://github.com/gohugoio/hugo/issues/5617#issuecomment-801767375) about making it a feature. For now, I have to proxy requests to deal with the lack of header support.
+The tweet below might look like it's embeded via Twitter, but it's actually not. I've written a [_very hacky_ shortcode](https://github.com/hugomd/blog/blob/4c9554dda22e612dc511ce69ced3cc0006d541d9/layouts/shortcodes/statictweet.html) that fetches tweets as JSON via a [local web server](https://github.com/hugomd/blog/blob/4c9554dda22e612dc511ce69ced3cc0006d541d9/twitter-proxy/index.js). Unfortunately, [Hugo](https://gohugo.io) (the static site generator) doesn't support adding authorisation headers to requests, to facilitate calling the Twitter API directly, although [there is discussion](https://github.com/gohugoio/hugo/issues/5617#issuecomment-801767375) about making it a feature. For now, I have to proxy requests, add the authorisation header, and then forward the request to Twitter.
 
 {{<statictweet "1310553323527745537" >}}
 
