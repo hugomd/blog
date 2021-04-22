@@ -1,0 +1,17 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "interest-cohort=()"
+        },
+        {
+          "key": "X-Obi-Wan-Kenobi",
+          "value": "Hello there"
+        }
+      ]
+    }
+  ]
+}
