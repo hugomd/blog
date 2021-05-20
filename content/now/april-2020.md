@@ -1,7 +1,7 @@
-+++
-title = "Now"
-date = 2020-04-29T18:41:24+10:00
-+++
+---
+title: "April 2020"
+date: 2020-04-29T18:41:24+10:00
+---
 
 I’m still living in Melbourne, Australia, although I’m staying at home because of Corona virus.
 
@@ -25,5 +25,3 @@ My most recent obsession has been dialling in my espresso, drawing inspiration f
 * [Radiohead](https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb?si=_4PQuBsnR9Wmqx7kAYRj3w)
 * [Unknown Mortal Orchestra](https://open.spotify.com/artist/1LeVJ5GPeYDOVUjxx1y7Rp?si=Ln9KbT5pS6um-Sx5hgzKIg)
 * [Carpenter Brut](https://open.spotify.com/artist/1l2oLiukA9i5jEtIyNWIEP?si=kos8-G-LRMWrOsVWaBCq-Q)
-
-*This page allows me to keep people updated on what I'm doing with my life, it's a [now page](https://nownownow.com/).*
