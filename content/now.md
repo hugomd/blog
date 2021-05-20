@@ -1,29 +1,31 @@
-+++
-title = "Now"
-date = 2020-04-29T18:41:24+10:00
-+++
+---
+title: "Now"
+date: 2021-05-20T16:47:24+10:00
+aliases: "/now"
+---
 
-I’m still living in Melbourne, Australia, although I’m staying at home because of Corona virus.
+It's been almost a year since I updated this page. I'm still living in Melbourne, Australia, although in a different place.
 
-I’m working on Bitcoin things at [Cash App](https://cash.app).
+We've adopted a cat. Her name is Choufleur, which means cauliflower in French.
 
-In my spare time, I’m building apps that make use of [Lightning](https://lightning.network), like an [invoice generator for accepting ⚡️ tips](https://github.com/hugomd/lnd-invoice) and a [Discord bot for tipping other users](https://github.com/hugomd/odin).
+## Writing
+- [100 days to Offload](https://hugo.md/tags/100daystooffload/)
 
-Given we’re in lockdown, I’ve also been [playing](https://store.steampowered.com/app/730/CounterStrike_Global_Offensive/) [games](https://bethesda.net/en/game/doom) without the usual guilt associated.
-
-I’m still fascinated by [Three Body Problem](https://en.wikipedia.org/wiki/The_Three-Body_Problem_(novel)) despite reading it some time ago.
-
-My most recent obsession has been dialling in my espresso, drawing inspiration from [James Hoffmann](https://www.jameshoffmann.co.uk).
 
 ## Listening to
 ### Podcasts
-* [Charged Tech](https://char.gd)
-* [Reply All](https://www.gimletmedia.com/reply-all)
-* [On the Metal](https://oxide.computer/podcast/)
+I've stopped listening to so many podcasts, because I spend so little time commuting. Recently I've been listening to [Serial](https://serialpodcast.org), I finally understand the hype. I'm also still keeping up with [Charged Tech](https://char.gd/podcast).
 
 ### Music
-* [Radiohead](https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb?si=_4PQuBsnR9Wmqx7kAYRj3w)
-* [Unknown Mortal Orchestra](https://open.spotify.com/artist/1LeVJ5GPeYDOVUjxx1y7Rp?si=Ln9KbT5pS6um-Sx5hgzKIg)
-* [Carpenter Brut](https://open.spotify.com/artist/1l2oLiukA9i5jEtIyNWIEP?si=kos8-G-LRMWrOsVWaBCq-Q)
+* Rubblebucket
+* Beirut
+* Mitski
+* Flaming Lips
+* Andrew Bird
 
 *This page allows me to keep people updated on what I'm doing with my life, it's a [now page](https://nownownow.com/).*
+
+---
+
+## Previous Now Updates
+* [April 2020](/previously/april-2020/)

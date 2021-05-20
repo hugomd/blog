@@ -1,6 +1,6 @@
-+++
-title = "About"
-+++
+---
+title: "About"
+---
 
 {{< image src="/images/avatar.png" alt="Photo of me" position="left" style="border-radius: 8px;" >}}
 
