@@ -1,6 +1,7 @@
 ---
 title: "Now"
 date: 2021-05-20T16:47:24+10:00
+aliases: "/now"
 ---
 
 It's been almost a year since I updated this page. I'm still living in Melbourne, Australia, although in a different place.
@@ -27,4 +28,4 @@ I've stopped listening to so many podcasts, because I spend so little time commu
 ---
 
 ## Previous Now Updates
-* [April 2020](./april-2020/)
+* [April 2020](/previously/april-2020/)
