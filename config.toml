@@ -6,6 +6,11 @@ theme = "hello-friend"
 paginate = 4
 enableGitInfo = true
 
+[caches]
+[caches.getjson]
+dir = ":resourceDir/json"
+maxAge = -1
+
 # Enable HTML in markdown
 [markup]
   [markup.goldmark]
