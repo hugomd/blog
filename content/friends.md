@@ -9,7 +9,7 @@ My friends have personal websites too, check them out:
 * [Cyra Locsin](http://cyra.locs.in)
 * [Daniel Sykes-Turner](http://daniel.st)
 * [David Williames](http://davew.io)
-* [Eric Jiang](https://lorderikir.me)
+* [Eric Jiang](https://ericjiang.dev)
 * [Farmehr Fahour](http://ffarhour.nz)
 * [Josh Parnham](http://joshparnham.com)
 * [Nicholas Whittaker](https://nicholas.cloud/)
