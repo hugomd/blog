@@ -7,7 +7,9 @@
     "github": "https://github.com/hugomd",
     "telegram": "https://telegram.me/hugomd",
     "paypal": "https://paypal.me/hugo",
-    "keybase": "https://keybase.io/hugomd"
+    "keybase": "https://keybase.io/hugomd",
+    "pleroma": "https://soykaf.org/uoya",
+    "mastodon": "https://melb.social/@hugo",
   },
   "friends": {
     "Aadeeba Mou": "http://aadeeba.com",
@@ -24,32 +26,13 @@
     "Samuel Clements": "http://samc.io",
     "Terence Huynh": "http://terencehuynh.com",
     "Theo Smith": "http://kortex.co.za",
-    "William Holt": "http://will.sx"
+    "William Holt": "http://will.sx",
+    "Nicholas Whittaker": "https://nicholas.cloud/"
   },
   "work": {
-    "current": [
-      {
-        "company": "Square",
-        "title": "Software Engineer"
-      }
-    ],
-    "previous": [
-      {
-        "company": "Localz",
-        "title": "Senior Engineer"
-      },
-      {
-        "company": "Localz",
-        "title": "Software Engineer"
-      },
-      {
-        "company": "Odecee",
-        "title": "Associate Software Engineer"
-      },
-      {
-        "company": "Localz",
-        "title": "Software Engineer Intern"
-      }
-    ]
+    {
+      "company": "Square",
+      "title": "Software Engineer"
+    }
   }
 }
