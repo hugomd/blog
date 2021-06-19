@@ -1,18 +1,25 @@
-{{ $urlPre := "http://localhost:3000/?auth="}}
-{{ $auth := getenv "AUTH" }}
-{{ $urlPost := "&tweetId="}}
+{{ $urlPre := "https://cdn.syndication.twimg.com/tweet?id="}}
 {{ $id := .Get 0 }}
-{{ $json := getJSON $urlPre $auth $urlPost $id }}
-{{ $text_start := index $json.display_text_range 0 }}
-{{ $text_end := index $json.display_text_range 1 }}
-{{ $parsed_text := slicestr $json.full_text $text_start $text_end  }}
+{{ $json := getJSON $urlPre $id }}
+{{ $text := .Page.RenderString $json.text }}
+
+{{ if and (isset $json "entities") (isset $json.entities "media")  }}
+  {{ range $media := $json.entities.media }}
+    {{ $text = replace $text $media.url "" }}
+  {{ end }}
+{{ end }}
+
+{{ if and (isset $json "entities") (isset $json.entities "urls")  }}
+  {{ range $url := $json.entities.urls}}
+  {{ $text = replace $text $url.url (printf "<a href='%s'>%s</a>" $url.url $url.display_url) }}
+  {{ end }}
+{{end}}
+
 <blockquote style="margin-left:0px;width:100%;border-color:#1DA1F2;background:rgba(29, 161, 242, 0.1)">
-  {{ .Page.RenderString $parsed_text }}
-  {{ if and (isset $json "entities") (isset $json.entities "media")  }}
-    {{ range $item := $json.entities.media }}
-      {{ if eq $item.type "photo" }}
-        <img src="{{ $item.media_url_https }}" />
-      {{end}}
+  {{ .Page.RenderString $text }}
+  {{ if isset $json "photos" }}
+    {{ range $item := $json.photos }}
+        <img src="{{ $item.url }}" />
     {{ end }}
   {{ end }}
   <br />
