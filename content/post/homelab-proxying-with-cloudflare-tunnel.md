@@ -520,3 +520,5 @@ The infrastructure now looks like:
 I no longer expose my IP, and have removed most open ports into my network. All in all, a neat solution!
 
 Do you proxy your homelab via a tunnel? Why/why not? Let me know via email: blog <at> hu <dot> md, or via [Twitter](https://twitter.com/hugojmd).
+
+Looking for something related to read? Check out [Nicholas Whittaker](https://nicholas.cloud)'s post: [Live previewing Hugo sites with Cloudflare Tunnel](https://nicholas.cloud/blips/live-previewing-hugo-sites-with-cloudflare-tunnel/).
