@@ -1,7 +1,7 @@
 # Hugo's Blog
 This is the repository that houses my blog and personal website. It runs [Hugo](https://gohugo.io/) (I know, I know, it has a very cool name).
 
-It uses the [Hello Friend](https://github.com/panr/hugo-theme-hello-friend) theme and is hosted on [Vercel](https://vercel.app).
+It uses the [Hello Friend](https://github.com/panr/hugo-theme-hello-friend) theme and is hosted on [Cloudflare Pages](https://pages.cloudflare.com/).
 
 ## Running locally
 ```
