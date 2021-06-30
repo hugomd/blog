@@ -14,6 +14,13 @@
 <!-- head custom -->
 {{- partial "prepended_head.html" . }}
 
+<script>
+  const theme = window.localStorage && window.localStorage.getItem('theme');
+  if (theme === 'dark') {
+    document.body.classList.toggle('dark-theme');
+  }
+</script>
+
 <!-- Theme CSS -->
 <link rel="stylesheet" href="{{ "assets/style.css" | absURL }}" />
 <!-- Custom CSS to override theme properties (/static/style.css) -->
