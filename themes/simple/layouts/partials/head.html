@@ -24,8 +24,12 @@
 
 
   <!-- Theme CSS -->
-  <link rel="stylesheet" href="{{ "css/style.css" | absURL }}" />
-  <link rel="stylesheet" href="{{ "css/syntax.css" | absURL }}" />
+  {{ $style := resources.Get "css/style.css" | minify | fingerprint}}
+  <link rel="stylesheet" href="{{ $style.Permalink }}" integrity="{{ $style.Data.Integrity }}">
+
+  {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
+  <link rel="stylesheet" href="{{ $syntax.Permalink }}" integrity="{{ $syntax.Data.Integrity }}">
+
 
   <!-- Icons -->
   <link rel="shortcut icon" href="{{ "img/favicon.png" | absURL }}" />
