@@ -29,6 +29,7 @@ body {
   max-width: 42rem;
   margin-left: auto;
   margin-right: auto;
+  padding: 20px;
 }
 
 .header {
@@ -96,12 +97,9 @@ body {
   color: var(--primary-color);
 }
 
-.container {
-  padding: 20px;
-}
-
 .content {
   margin-top: 50px;
+  line-height: 1.5rem;
 }
 
 .content a, .content a:visited {
