@@ -5,7 +5,9 @@ title: "Friends"
 My friends have personal websites too, check them out:
 
 * [Aadeeba Mou](http://aadeeba.com)
+* [Anirudh Oppiliappan](https://icyphox.sh/)
 * [Angus Gibson](http://s.agibson.me)
+* [Cassie Chew](https://cassie.codes)
 * [Cyra Locsin](http://cyra.locs.in)
 * [Daniel Sykes-Turner](http://daniel.st)
 * [David Williames](http://davew.io)
@@ -15,7 +17,7 @@ My friends have personal websites too, check them out:
 * [Nicholas Whittaker](https://nicholas.cloud/)
 * [Renlord Yang](http://renlord.com)
 * [Robert Koch](https://me.kochie.io)
-* [Ryan Chew](http://ryan.moe)
+* [Ru Singh](https://rusingh.com/)
 * [Samuel Clements](http://samc.io)
 * [Terence Huynh](http://terencehuynh.com)
 * [Theo Smith](http://kortex.co.za)
