@@ -1,7 +1,7 @@
-+++
-date = "2017-12-17T21:42:41+11:00"
-title = "Reduce build time with Docker"
-+++
+---
+date: "2017-12-17T21:42:41+11:00"
+title: "Reduce build time with Docker"
+---
 
 > One weird trick to reduce build time! CI services hate him!
 

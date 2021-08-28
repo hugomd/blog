@@ -1,0 +1,183 @@
+:root {
+  --bg-color: #fff;
+  --primary-color: #374151;
+  --secondary-color: #0071bc;
+  --light-gray: #bbb;
+  --color: #374151;
+}
+
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --bg-color: #000;
+    --primary-color: #ccc;
+    --color: #ccc;
+  }
+}
+
+html {
+  background: var(--bg-color)
+}
+
+body {
+  font-family: "San Francisco", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue",Noto Sans,sans-serif;
+  color: var(--primary-color);
+  font-size: 1rem;
+  line-height: 1.15rem;
+}
+
+.container {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.header {
+  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.header .left{
+  min-width: 100px;
+  flex: 1;
+}
+
+.logo a, .logo a:visited {
+  text-decoration: none;
+}
+
+.menu {
+  flex: 1
+}
+
+.menu ul {
+  display: flex;
+  list-style: none;
+  padding-left: 0;
+}
+
+.menu li {
+  display: block;
+  list-style-type: none;
+}
+
+.menu li:not(:first-child) {
+  margin-left: 1rem;
+}
+
+.header a {
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 0.1rem;
+  margin: 0.1rem;
+  border-radius: .25rem;
+  border-bottom: none;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 2rem;
+  margin-top: 2rem;
+  flex-direction: column;
+}
+
+.footer .menu ul {
+  display: flex;
+  list-style: none;
+  justify-content: center;
+}
+
+.footer a {
+  color: var(--primary-color);
+}
+
+.container {
+  padding: 20px;
+}
+
+.content {
+  margin-top: 50px;
+}
+
+.content a, .content a:visited {
+  color: var(--secondary-color);
+  border-bottom: 0.15rem solid var(--secondary-color);
+  text-decoration: none;
+}
+
+.post-meta {
+  margin-bottom: 0.5rem;
+}
+
+.posts {
+  line-height: 1.5rem;
+}
+
+.posts h1, .post-title {
+  margin-bottom: 0.5rem;
+  line-height: 2rem;
+}
+
+.posts h1 a, .posts h1 a:visited {
+  color: var(--primary-color);
+  border-bottom: none;
+}
+
+.posts .read-more {
+  margin-top: 1rem;
+}
+
+.post-content {
+  line-height: 1.5rem;
+}
+
+.post-content li {
+  margin-bottom: 0.3rem;
+}
+
+.pagination {
+  margin-top: 3rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.post-cover img {
+  width: 100%;
+  height: auto;
+}
+
+.git-sha {
+  color: var(--light-gray);
+  font-style: italic;
+  text-align: center;
+}
+
+.git-sha a, .git-sha a:visited {
+  color: var(--light-gray);
+}
+
+hr {
+  border: 0.01rem solid var(--light-gray);
+}
+
+pre {
+  overflow: auto;
+  white-space: pre;
+  padding: 10px;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+blockquote {
+  border-left: 2px solid;
+  margin: 40px;
+  padding: 10px 20px;
+}

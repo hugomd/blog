@@ -1,12 +1,9 @@
-+++
-date = "2015-10-27T15:35:21+11:00"
-draft = false
-title = "Easy file sharing with S3 and Dropshare/ShareX"
-slug = "roll-your-own-screenshot-service-with-s3"
-aliases = [
-	"roll-your-own-screenshot-service-with-s3"
-]
-+++
+---
+date: "2015-10-27T15:35:21+11:00"
+title: "Easy file sharing with S3 and Dropshare/ShareX"
+slug: "roll-your-own-screenshot-service-with-s3"
+aliases: ["roll-your-own-screenshot-service-with-s3"]
+---
 ### What we're going to be doing
 1. Setting up a subdomain
 2. Setting up Amazon S3
@@ -24,18 +21,20 @@ aliases = [
 3. Create a new Bucket and take a note of the bucket name.
 4. Open bucket properties (in the top right) and add a [bucket policy](http://docs.aws.amazon.com/AmazonS3/latest/dev/example-bucket-policies.html):  
 
-		{
-		  "Version":"2012-10-17",
-		  "Statement":[
-			{
-			  "Sid":"AddPerm",
-			  "Effect":"Allow",
-			  "Principal": "*",
-			  "Action":["s3:GetObject"],
-			  "Resource":["arn:aws:s3:::YOUR-BUCKET-NAME-HERE/*"]
-			}
-		  ]
-		}	
+{{< highlight json >}}
+{
+  "Version":"2012-10-17",
+  "Statement":[
+  {
+    "Sid":"AddPerm",
+    "Effect":"Allow",
+    "Principal": "*",
+    "Action":["s3:GetObject"],
+    "Resource":["arn:aws:s3:::YOUR-BUCKET-NAME-HERE/*"]
+  }
+  ]
+}	
+{{< / highlight >}}
 
 5. This bucket policy will make all of your uploads public. Now you can move on to setting up your subdomain.
 

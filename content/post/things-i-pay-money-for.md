@@ -1,8 +1,8 @@
-+++
-date = "2016-05-22T17:16:40+10:00"
-title = "Things I actually pay money for"
-tags = ["spending"]
-+++
+---
+date: "2016-05-22T17:16:40+10:00"
+title: "Things I actually pay money for"
+tags: ["spending"]
+---
 
 Surprisingly, I spend a lot of money on subscriptions every year.
 Unsurprisingly, I haven't tallied how much I actually spend, partly because I'm

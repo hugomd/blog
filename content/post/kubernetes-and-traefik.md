@@ -1,9 +1,9 @@
-+++
-date = "2018-12-04T00:00:00+11:00"
-title = "Kubernetes & Traefik with local Wildcard certificates"
-tags = ["kubernetes", "devops"]
-cover = "./post/kubernetes-and-traefik/cover.png"
-+++
+---
+date: "2018-12-04T00:00:00+11:00"
+title: "Kubernetes & Traefik with local Wildcard certificates"
+tags: ["kubernetes", "devops"]
+cover: "./post/kubernetes-and-traefik/cover.png"
+---
 
 *This was originally posted on [Medium](https://medium.com/localz-engineering/kubernetes-traefik-locally-with-a-wildcard-certificate-e15219e5255d<Paste>).*
 
@@ -28,16 +28,16 @@ It might take a few minutes for Kubernetes to start up, so in the mean time go g
 
 Once Kubernetes has installed successfully we’ll need to switch to the correct context:
 
-```
+{{< highlight bash >}}
 kubectl config use-context docker-for-desktop
-```
+{{< / highlight >}}
 
 Running `kubectl get nodes` should give you the following:
 
-```
+{{< highlight bash >}}
 NAME                 STATUS    ROLES     AGE       VERSION
 docker-for-desktop   Ready     master    17m       v1.10.3
-```
+{{< / highlight >}}
 
 ### Installing `dnsmasq`
 
@@ -45,47 +45,47 @@ Next we’ll install `dnsmasq` so that we can redirect any requests to `.local`
 
 To install:
 
-```
+{{< highlight bash >}}
 brew install dnsmasq
-```
+{{< / highlight >}}
 
 Open up `/usr/local/etc/dnsmasq.conf` and append this line to it:
 
-```
+{{< highlight bash >}}
 address=/k8s.local/127.0.0.1
-```
+{{< / highlight >}}
 
 The above will redirect all `.local` traffic to `127.0.0.1` but you could use any IP and any domain name extension you'd like.
 
 Now start `dnsmasq`:
 
-```
+{{< highlight bash >}}
 sudo brew services start dnsmasq
-```
+{{< / highlight >}}
 
 Next we’ll create a new resolver to handle all of those queries:
 
-```
+{{< highlight bash >}}
 sudo mkdir /etc/resolver
-```
+{{< / highlight >}}
 
 And create a new file at `/etc/resolver/dev` with the following contents:
 
-```
+{{< highlight bash >}}
 nameserver 127.0.0.1
-```
+{{< / highlight >}}
 
 Set your DNS to `127.0.0.1` in System Preferences > Network > Advanced > DNS. Don’t worry, this won’t null route you as we’ve set a fallback to Cloudflare DNS (`1.1.1.1`).
 
 Flush your DNS for good measure:
 
-```
+{{< highlight bash >}}
 sudo killall -HUP mDNSResponder
-```
+{{< / highlight >}}
 
 Now if you `dig` a `.local` domain locally, you'll find it redirects to `127.0.0.1`!
 
-```
+{{< highlight bash >}}
 dig k8s.local @127.0.0.1
 
 ; <<>> DiG 9.10.6 <<>> k8s.dev @127.0.0.1
@@ -104,35 +104,35 @@ k8s.local.                0       IN      A       127.0.0.1
 ;; SERVER: 127.0.0.1#53(127.0.0.1)
 ;; WHEN: Mon Aug 27 20:52:19 AEST 2018
 ;; MSG SIZE  rcvd: 41
-```
+{{< / highlight >}}
 
 ### Using [`mkcert`](https://github.com/FiloSottile/mkcert/) to create a local certificate authority
 
 First install `mkcert`:
 
-```
+{{< highlight bash >}}
 brew install mkcert
-```
+{{< / highlight >}}
 
 Then we can install the trusted Certificate Authority:
 
-```
+{{< highlight bash >}}
 mkcert --install
-```
+{{< / highlight >}}
 
 Now we can provision a wildcard certificate for our new local domain:
 
-```
+{{< highlight bash >}}
 mkcert '*.k8s.local'
-```
+{{< / highlight >}}
 
 This will create two files: `_wildcard.k8s.local-key.pem` and `_wildcard.k8s.local.pem`.
 
 Finally, we can create a Kubernetes secret to store the newly created certificate:
 
-```
+{{< highlight bash >}}
 kubectl -n kube-system create secret tls traefik-tls-cert --key=_wildcard.k8s.local-key.pem --cert=_wildcard.k8s.local.pem
-```
+{{< / highlight >}}
 
 ### Setting up Traefik
 
@@ -146,9 +146,9 @@ This will make `traefik.toml` configuration file available to the Traefik contai
 
 Apply `configmap.yml`:
 
-```
+{{< highlight bash >}}
 kubectl apply -f configmap.yml
-```
+{{< / highlight >}}
 
 Now we can deploy Traefik, creating `deployment.yml` and applying it:
 
@@ -158,9 +158,9 @@ This will deploy Traefik to Kubernetes, and create a service that exposes it on 
 
 Apply `deployment.yml`
 
-```
+{{< highlight bash >}}
 kubectl apply -f deployment.yml
-```
+{{< / highlight >}}
 
 Now we’ll create a new file called `rbac.yml` which will give Traefik access to look for Ingresses:
 
@@ -168,15 +168,15 @@ Now we’ll create a new file called `rbac.yml` which will give Traefik access t
 
 Apply `rbac.yml`:
 
-```
+{{< highlight bash >}}
 kubectl apply -f rbac.yml
-```
+{{< / highlight >}}
 
 Running `kubectl get pods --all-namespaces`, you should see a line that looks like the following:
 
-```
+{{< highlight bash >}}
 kube-system traefik-ingress-controller-6659bcdd46-7jh4l 1/1 Running
-```
+{{< / highlight >}}
 
 Notice `Running` and `1/1` — if it appears as `ContainerCreating` or `0/1`, you’ll have to give it a few moments to startup.
 
@@ -192,9 +192,9 @@ We’ll create a file called `whoami-deployment.yml` which will consist of a dep
 
 Now we can apply this:
 
-```
+{{< highlight bash >}}
 kubectl apply -f whoami-deployment.yml
-```
+{{< / highlight >}}
 
 Now if you hit [https://whoami.k8s.local](https://whoami.k8s.local) it should pop up with container and host information, rather than that 404 we were seeing earlier!
 

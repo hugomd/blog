@@ -9,7 +9,7 @@ It's been almost a year since I updated this page. I'm still living in Melbourne
 We've adopted a cat. Her name is Choufleur, which means cauliflower in French.
 
 ## Writing
-- [100 days to Offload](https://hugo.md/tags/100daystooffload/)
+- [100 days to Offload](/tags/100daystooffload/)
 
 
 ## Listening to

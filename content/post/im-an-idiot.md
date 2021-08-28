@@ -1,12 +1,9 @@
-+++
-date = "2014-01-20T09:57:55+11:00"
-draft = false
-title = "I'm an Idiot"
-slug = "im-an-idiot"
-aliases = [
-	"im-an-idiot"
-]
-+++
+---
+date: "2014-01-20T09:57:55+11:00"
+title: "I'm an Idiot"
+slug: "im-an-idiot"
+aliases: ["im-an-idiot"]
+---
 I've been working on a pretty big project on Github with a couple of developers. It has a lot of potential and requires a lot of work.  
 
 We happen to be using a [Content Delivery Network](http://en.wikipedia.org/wiki/Content_delivery_network) (CDN), because we're hosting files.  

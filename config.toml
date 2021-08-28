@@ -2,7 +2,7 @@
 baseURL = "/"
 languageCode = "en-us"
 title = "Hugo's Blog"
-theme = "hello-friend"
+theme = "simple"
 paginate = 4
 enableGitInfo = true
 
@@ -13,11 +13,24 @@ maxAge = -1
 
 # Enable HTML in markdown
 [markup]
-  [markup.goldmark]
-    [markup.goldmark.renderer]
-      unsafe = true
-    [markup.goldmark.extensions]
-      linkify = true
+[markup.blackFriday]
+angledQuotes = false
+footnoteAnchorPrefix = ''
+footnoteReturnLinkContents = ''
+fractions = true
+hrefTargetBlank = false
+latexDashes = true
+nofollowLinks = false
+noreferrerLinks = false
+plainIDAnchors = true
+skipHTML = false
+smartDashes = true
+smartypants = true
+smartypantsQuotesNBSP = false
+taskLists = true
+
+[markup.goldmark.renderer]
+unsafe= true
 
 [params]
   # dir name of your blog content (default is `content/posts`)
@@ -44,12 +57,12 @@ maxAge = -1
     writtenBy = "Written by"
     readMore = "Read more"
     readOtherPosts = "Read other posts"
-    newerPosts = "Newer posts"
-    olderPosts = "Older posts"
+    newerPosts = "←  Newer posts"
+    olderPosts = "Older posts →"
     minuteReadingTime = "min read"
-    dateFormatSingle = "2006-01-02"
-    dateFormatList = "2006-01-02"
     lastModDisplay = ""
+    dateFormatSingle = "Mon Jan 2 2006"
+    dateFormatList = "Mon Jan 2 2006"
 
     [languages.en.params.logo]
       logoText = "Hugo's Blog"
@@ -60,11 +73,6 @@ maxAge = -1
         identifier = "now"
         name = "Now"
         url = "/now"
-
-      [[languages.en.menu.main]]
-        identifier = "rss"
-        name = "RSS"
-        url = "/index.xml"
 
       [[languages.en.menu.main]]
         identifier = "about"

@@ -24,8 +24,8 @@ The tweet below might look like it's embeded via Twitter, but it's actually not.
 
 Here is what the shortcode looks like:
 
-```
+{{< highlight markdown >}}
 {{</* statictweet "1310553323527745537" */>}}
-```
+{{< / highlight >}}
 
 This shortcode is still experimental, and doesn't do nice things like rendering links in tweets, so let me know if you see anything funky.

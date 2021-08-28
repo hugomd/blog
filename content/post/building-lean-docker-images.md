@@ -1,8 +1,8 @@
-+++
-date = "2018-12-03T00:00:00+11:00"
-title = "Building lean Docker images"
-tags = ["docker"]
-+++
+---
+title: "Building lean Docker images"
+date: "2018-12-03T00:00:00+11:00"
+tags: ["docker"]
+---
 
 This was originally posted on [Medium](https://medium.com/localz-engineering/building-lean-docker-images-47b5a896688e).
 
@@ -38,9 +38,9 @@ We define our parent image with:
 
 We can then build this image and tag it as `parent`
 
-```bash
+{{< highlight bash >}}
 docker build --file parent.Dockerfile --tag parent .
-```
+{{< / highlight >}}
 
 Now we can make a _child_ image which is based upon the _parent_:
 

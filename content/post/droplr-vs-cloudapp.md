@@ -1,13 +1,11 @@
-+++
-date = "2015-09-14T19:48:43+10:00"
-draft = true
-title = "Droplr vs. CloudApp"
-slug = "droplr-vs-cloudapp"
-aliases = [
-	"droplr-vs-cloudapp"
-]
-tags = ["comparison"]
-+++
+---
+date: "2015-09-14T19:48:43+10:00"
+draft: true
+title: "Droplr vs. CloudApp"
+slug: "droplr-vs-cloudapp"
+aliases: ["droplr-vs-cloudapp"]
+tags: ["comparison"]
+---
 Side-by-side comparison (for the Mac App), completely subjective:
 
 <table>

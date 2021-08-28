@@ -1,12 +1,10 @@
-+++
-date = "2015-11-09T22:12:31+11:00"
-draft = true
-title = "Blog Theme"
-slug = "blog-theme"
-aliases = [
-	"blog-theme"
-]
-+++
+---
+date: "2015-11-09T22:12:31+11:00"
+draft: true
+title: "Blog Theme"
+slug: "blog-theme"
+aliases: ["blog-theme"]
+---
 I've just updated this blog with a new fancy theme, one that I made myself this time. 
 
 It's barebones, with no navigation, no tags listing and no author bio, although I can implement these whenever I get around to it.

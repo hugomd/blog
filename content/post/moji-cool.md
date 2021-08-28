@@ -1,11 +1,9 @@
-+++
-date = "2017-09-15T19:27:50+10:00"
-title = "Moji.cool"
-tags = ['hackathons']
-aliases = [
-	"moji"
-]
-+++
+---
+date: "2017-09-15T19:27:50+10:00"
+title: "Moji.cool"
+tags: ["hackathons"]
+aliases: ["moji"]
+---
 
 Earlier this year (06/05 to 07/05), [Nathan Malishev](https://twitter.com/NathanMalishev), [Josh Parnham](https://twitter.com/joshparnham), [Daniel Sykes-Turner](https://twitter.com/dsykesturner), and I attended the Facebook Melbourne [Hackathon](https://facebook.com/hackathon) — located in Facebook’s beautiful, and [brand new, Melbourne office](https://twitter.com/search?f=images&vertical=default&q=%23fbmelhack17). 
 
