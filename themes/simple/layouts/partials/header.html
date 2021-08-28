@@ -1,0 +1,13 @@
+<header class="header">
+  <div class="left">
+      <a href="{{ if $.Site.Params.Logo.LogoHomeLink }}{{ $.Site.Params.Logo.LogoHomeLink }}{{ else }}{{ $.Site.BaseURL }}{{ end }}">
+        {{ .Site.Title }}
+      </a>
+    </span>
+  </div>
+  <div class="right">
+    {{ if len $.Site.Menus }}
+      {{ partial "menu.html" . }}
+    {{ end }}
+  </div>
+</header>
