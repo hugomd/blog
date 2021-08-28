@@ -1,9 +1,8 @@
-+++
-date = "2016-12-07T22:00:00+11:00"
-title = "Mac Apps"
-tags = ["mac"]
-draft = false
-+++
+---
+title: "Mac Apps"
+date: "2016-12-07T22:00:00+11:00"
+tags: ["mac"]
+---
 
 I have a pretty terrible habit of buying new apps _very_ frequently. My friends can vouch for this. Following new purchases, they're often inundated with messages from me about how 'good' an app is, and that they should go buy it ASAP, even if it's not relevant to them at all.
 

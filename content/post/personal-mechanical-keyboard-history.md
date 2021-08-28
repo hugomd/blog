@@ -1,9 +1,9 @@
-+++
-date = "2016-09-12T21:08:02+10:00"
-title = "Mechanical Keyboards: My Personal History"
-tags = ["keyboards"]
-draft = true
-+++
+---
+date: "2016-09-12T21:08:02+10:00"
+title: "Mechanical Keyboards: My Personal History"
+tags: ["keyboards"]
+draft: true
+---
 
 **Note: This blog post is a work in progress, I'm working on recording sound snippets of what each board sounds like, as well as adding photos**.
 

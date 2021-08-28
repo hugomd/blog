@@ -14,15 +14,16 @@ I quickly ran into issues. Any video uploaded to PeerTube was inaccessible, beca
 After pulling on the thread long enough, I found that Spaces supports bucket policies, which allow you to specify a global ACL that applies to all objects.
 
 To apply this policy, you need to set up AWS CLI:
-```bash
+
+{{< highlight bash >}}
 brew install awscli
 aws configure
-```
+{{< / highlight >}}
 
 The arguments to `aws configure` are the same as those described in DigitalOcean's [guide to set up `s3cmd`](https://docs.digitalocean.com/products/spaces/resources/s3cmd/).
 
 Next, you can save the following to `policy.json`, replacing `BUCKET_NAME` with the name of your bucket:
-```json
+{{< highlight json >}}
 {
     "Version": "2008-10-17",
     "Statement": [
@@ -35,11 +36,11 @@ Next, you can save the following to `policy.json`, replacing `BUCKET_NAME` with 
         }
     ]
 }
-```
+{{< / highlight >}}
 
 You can then apply the policy with, replacing `BUCKET_NAME` with the name of your bucket, and `REGION` with the bucket region (e.g. `sgp1`):
-```bash
+{{< highlight bash >}}
 aws s3api --endpoint=https://REGION.digitaloceanspaces.com put-bucket-policy --bucket BUCKET_NAME --policy file://policy.json
-```
+{{< / highlight >}}
 
 Now any objects uploaded to your bucket will be publicly readable, but no one will be able to list the contents of the bucket in their entirety.

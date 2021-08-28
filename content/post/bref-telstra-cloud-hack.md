@@ -1,10 +1,10 @@
-+++
-date = "2016-12-11T23:14:50+11:00"
-title = "Bréf: Telstra Cloud Hack 2016"
-tags = ["bréf", "hackathons"]
-slug = "bref-telstra-cloud-hack"
-cover = "./post/bref-telstra-cloud-hack/cover.png"
-+++
+---
+date: "2016-12-11T23:14:50+11:00"
+title: "Bréf: Telstra Cloud Hack 2016"
+tags: ["bréf", "hackathons"]
+slug: "bref-telstra-cloud-hack"
+cover: "./post/bref-telstra-cloud-hack/cover.png"
+---
 
 _Bréf: where I try to explain something briefly._
 

@@ -1,12 +1,10 @@
-+++
-date = "2012-04-22T12:00:00+10:00"
-draft = true
-title = "Torrenting"
-slug = "torrenting"
-aliases = [
-	"torrenting"
-]
-+++
+---
+date: "2012-04-22T12:00:00+10:00"
+draft: true
+title: "Torrenting"
+slug: "torrenting"
+aliases: ["torrenting"]
+---
 Torrenting. Is it illegal? Not necessarily. Is it legal then? That depends.
 
 For those of you who don't know, torrents are used to share any number of files to friends or just people on the internet. The way this works is, if I send you a torrent so you can download 200 of my photos, that leaves you and me 'seeding' (uploading/sharing). Then, if you pass on the torrent to 'John', he will download from both of us. What this means is that his speed will be increased because we are both 'seeding' for him. Now, let's say you start download a set of 20GB files with 2000+ 'seeders' (people who are sharing), although 20GB is a lot, the download speed could get up to 30 to 50 MB/s (this depends on your network speed).

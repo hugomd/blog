@@ -1,12 +1,9 @@
-+++
-date = "2013-11-02T12:18:09+11:00"
-draft = false
-title = "Making a Toggle for Screen Recording in Android 4.4"
-slug = "making-a-toggle-for-screen-recording-in-android-4-4"
-aliases = [
-	"making-a-toggle-for-screen-recording-in-android-4-4"
-]
-+++
+---
+date: "2013-11-02T12:18:09+11:00"
+title: "Making a Toggle for Screen Recording in Android 4.4"
+slug: "making-a-toggle-for-screen-recording-in-android-4-4"
+aliases: ["making-a-toggle-for-screen-recording-in-android-4-4"]
+---
 Last night I made a blog post on how to screen record. This morning, I decided to make toggles with Tasker so that I could do it all from my phone easily, without a computer.  
 
 1. Install [Tasker](https://play.google.com/store/apps/details?id=net.dinglisch.android.taskerm).  

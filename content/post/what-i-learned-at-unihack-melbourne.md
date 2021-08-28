@@ -1,13 +1,11 @@
-+++
-date = "2014-08-08T12:00:00+10:00"
-draft = false
-title = "What I learned at UNIHACK Melbourne"
-slug = "what-i-learned-at-unihack-melbourne"
-aliases = [
-	"what-i-learned-at-unihack-melbourne"
-]
-tags = ["thoughts", "writeup", "development"]
-+++
+---
+date: "2014-08-08T12:00:00+10:00"
+draft: false
+title: "What I learned at UNIHACK Melbourne"
+slug: "what-i-learned-at-unihack-melbourne"
+aliases: ["what-i-learned-at-unihack-melbourne"]
+tags: ["thoughts", "writeup", "development"]
+---
 [UNIHACK Melbourne](http://unihack.net/) is a Melbourne-based hackathon that was run last weekend (August 8/9) and is open to all university and TAFE students in Victoria.  
 
 Over the past few years, I've heard *lots* about hackathons, particularly the ones run in the USA, and the amount of creative potential they seem to unleash. You hear the stories about how Facebook Video and Chat [emerged from hackathons](https://www.facebook.com/video/video.php?v=238358730483). This, for me, sounded exciting. 

@@ -17,9 +17,9 @@ In my case, I chose my blog repository: [`hugomd/blog`](https://github.com/hugom
 Once you start running `hugo serve`, you will be prompted to forward port `1313` (the default `hugo` port). Unfortunately, this means that when you load up your blog, it will load without any resources, because all requests will be routed to `localhost:1313` by default, rather than to the codespace.
 
 Thankfully, there's an easy fix to this:
-```bash
+{{< highlight bash >}}
 hugo serve --baseUrl=/ --appendPort=false 
-```
+{{< / highlight >}}
 
 The above command overrides the `baseUrl` from `config.toml`, which is `https://hugo.md/` in [my config](https://github.com/hugomd/blog/blob/develop/config.toml#L2). The last part is key, it avoids appending the port, `1313` to the `baseUrl`.
 

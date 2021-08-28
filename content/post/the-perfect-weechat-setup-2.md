@@ -1,13 +1,10 @@
-+++
-date = "2014-07-26T13:41:12+10:00"
-draft = false
-title = "The Perfect Weechat Setup"
-slug = "the-perfect-weechat-setup-2"
-aliases = [
-	"the-perfect-weechat-setup-2"
-]
-tags = ["development", "setup", "tutorial"]
-+++
+---
+date: "2014-07-26T13:41:12+10:00"
+title: "The Perfect Weechat Setup"
+slug: "the-perfect-weechat-setup-2"
+aliases: ["the-perfect-weechat-setup-2"]
+tags: ["development", "setup", "tutorial"]
+---
 ### Update 13/08/15
 I've been getting a few emails asking for my configuration files so I've uploaded them: [weechat.conf](http://s3.hugo.sx/files/weechat/13-07-15/weechat.conf), irc.conf (temporarily unavailable). "weechat.conf" contains general configurations for looks but "irc.conf" contains a setting that lets you create indented channels, under their respective server.
 
@@ -33,15 +30,21 @@ Keeping these points in mind, we can begin our install and setup.
 ### Install
 Head over to [weechat.org](http://weechat.org/) and download it from source or just use the repositories available on most linux distros:  
 
-	sudo apt-get install weechat
+{{< highlight bash >}}
+sudo apt-get install weechat
+{{< / highlight >}}
     
 You can also use [homebrew](http://brew.sh/) on Mac.http://brew.sh/.  
 
-	brew install weechat --with-aspell --with-curl --with-python --with-perl --with-ruby --with-lua --with-guile
+{{< highlight bash >}}
+brew install weechat --with-aspell --with-curl --with-python --with-perl --with-ruby --with-lua --with-guile
+{{< / highlight >}}
 
 Or even [Macports](https://www.macports.org/)
 
-	sudo port install weechat
+{{< highlight bash >}}
+sudo port install weechat
+{{< / highlight >}}
     
 On Windows, you can use [Cygwin](http://www.cygwin.com/), although I haven't personally experiemented with it.  
 
@@ -70,7 +73,9 @@ The scripts that I currently use are:
 
 Most of these plugins are fairly easy to install, you can just use the following command:  
 
-	/script install [plugin]
+{{< highlight bash >}}
+/script install [plugin]
+{{< / highlight >}}
 
 Or, if the plugin isn't available in the weechat repository, you can download it and place it in the `~/.weechat/plugins` folder.  
 
@@ -86,7 +91,9 @@ I'm currently using toggles so that I can hide certain parts of the interface wh
 
 Toggles are fairly simple to setup, for example, to toggle the buffer bar, press `Esc + B`:
 
-	/key bind meta-b /bar toggle buffers
+{{< highlight bash >}}
+/key bind meta-b /bar toggle buffers
+{{< / highlight >}}
     
 
 My weechat currently looks like this:
@@ -94,27 +101,29 @@ My weechat currently looks like this:
 
 The main changes I've made are:
   
-    /set weechat.look.buffer_time_format
-    /set weechat.look.prefix_align “right”
-    /set weechat.look.align_end_of_lines message
-    /set weechat.look.prefix_same_nick “↳”
-    /set weechat.look.prefix_join “—>”
-    /set weechat.look.prefix_quit <—”
-    
-    /set weechat.look.buffer_time_format “%H:%M”
-    /set weechat.look.prefix_align “none”
-    /set weechat.look.align_end_of_lines “message”
-    /set weechat.look.prefix_same_nick “”
-    /set weechat.look.prefix_join “”
-   
-    /set irc.look.display_host_quit off
-    /set irc.look.display_host_join off
-    /set irc.look.display_host_join_local off
-    /set irc.look.color_nicks_in_server_messages off
-   
-    /set buffers.look.show_number off
-	—
-	/set weechat.look.read_marker none
+{{< highlight bash >}}
+/set weechat.look.buffer_time_format
+/set weechat.look.prefix_align “right”
+/set weechat.look.align_end_of_lines message
+/set weechat.look.prefix_same_nick “↳”
+/set weechat.look.prefix_join “—>”
+/set weechat.look.prefix_quit <—”
+
+/set weechat.look.buffer_time_format “%H:%M”
+/set weechat.look.prefix_align “none”
+/set weechat.look.align_end_of_lines “message”
+/set weechat.look.prefix_same_nick “”
+/set weechat.look.prefix_join “”
+
+/set irc.look.display_host_quit off
+/set irc.look.display_host_join off
+/set irc.look.display_host_join_local off
+/set irc.look.color_nicks_in_server_messages off
+
+/set buffers.look.show_number off
+
+/set weechat.look.read_marker none
+{{< / highlight >}}
 
 ### Setting up ZNC
 [ZNC](http://znc.in/) is what's called an IRC bouncer and is particularly useful if you want to remain connected to an IRC server all the time. It's nice to be able to connect to a server and have some 'history' of the channel; you can see what people have been discussing and then add to the conversation immediately. It also allows other users to leave you a message.

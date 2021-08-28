@@ -18,12 +18,12 @@ This is where micro.blog comes in. Any post from this blog gets posted to micro.
 Implementing this involves adding some links to your `<head>` tags, and then fetching comments from micro.blog.
 
 Add webmention callbacks to your blog's `<head>`, replacing `USERNAME` with your microblog username:
-```html
+{{< highlight html >}}
 <link href="https://micro.blog/USERNAME" rel="me" />
 <link rel="webmention" href="https://micro.blog/webmention" />
 <link rel="authorization_endpoint" href="https://micro.blog/indieauth/auth" />
 <link rel="token_endpoint" href="https://micro.blog/indieauth/token" />
-```
+{{< / highlight >}}
 
 After that, you can add a section for fetching comments as I've done [here](https://github.com/hugomd/blog/blob/97143d2bf7d2f7142632e9b970cb94c50bb948e1/layouts/partials/comments.html#L54-L78).
 

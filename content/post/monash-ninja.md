@@ -1,14 +1,11 @@
-+++
-date = "2015-10-12T22:12:05+11:00"
-draft = false
-title = "Monash Ninja: what, how, and the end result"
-slug = "monash-ninja"
-image = "http://i.hugo.sx/longterm/97TbG.png"
-aliases = [
-	"monash-ninja"
-]
-tags = ["development", "project", "writeup"]
-+++
+---
+date: "2015-10-12T22:12:05+11:00"
+title: "Monash Ninja: what, how, and the end result"
+slug: "monash-ninja"
+image: "http://i.hugo.sx/longterm/97TbG.png"
+aliases: ["monash-ninja"]
+tags: ["development", "project", "writeup"]
+---
 
 ### What is Monash Ninja?
 [Monash Ninja](http://monash.ninja) was week-long treasure-hunt-like event (14 Sept. to 21 Sept. 2015) run by [Wired Monash](http://wired.org.au/). The concept and code was created by [me](http://hugo.sx/) (then Vice President) and the design for the website was created by [Terence](http://terencehuynh.com/) (then Secretary).  

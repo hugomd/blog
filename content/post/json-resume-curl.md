@@ -1,8 +1,8 @@
-+++
-date = "2017-02-02T20:55:04+11:00"
-title = "Responding to cURL with a JSON Resumé 📚"
-tags= ["tutorial", "curl", "json"]
-+++
+---
+date: "2017-02-02T20:55:04+11:00"
+title: "Responding to cURL with a JSON Resumé 📚"
+tags: ["tutorial", "curl", "json"]
+---
 
 Over the past couple of months I've received numerous messages asking me how I've made this website respond to cURL requests with JSON (a little like [JSON Resumé](https://jsonresume.org)).  If you're out of the loop, you can either `curl hugo.md` or check out this GIF:
 
@@ -14,7 +14,7 @@ It's super simple to setup — I've done it with nginx and with Caddy. All it do
 
 With [nginx](https://www.nginx.com):
 
-```nginx
+{{< highlight text >}}
 server {
   listen 80;
   server_name example.site;
@@ -27,11 +27,11 @@ server {
     }
   }
 }
-```
+{{< / highlight >}}
 
 With [Caddy](https://caddyserver.com), it's even easier:
 
-```
+{{< highlight text >}}
 example.site {
     root /home/you/www
     rewrite {
@@ -40,7 +40,7 @@ example.site {
         to /path/to/about.json
     }
 }
-```
+{{< / highlight >}}
 
 Thought this was neat? [Tweet me!](https://twitter.com/hugojmd)
 
