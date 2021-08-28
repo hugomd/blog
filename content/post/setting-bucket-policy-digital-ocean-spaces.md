@@ -1,5 +1,6 @@
 ---
 title: "Setting Bucket Policy DigitalOcean Spaces"
+description: "Disabling public listing of objects, while allowing objects to be publicly accessed directly."
 date: 2021-08-24T11:15:32+10:00
 sequence: 11
 ---
