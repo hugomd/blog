@@ -3,9 +3,11 @@
 {{ range .Pages.ByPublishDate.Reverse }}
 <p>
     <h3><a class="title" href="{{ .RelPermalink }}">{{ .Title }}</a></h3>
-    <a class="summary" href="{{ .RelPermalink }}">
-        <p>{{ .Summary }}</p>
-    </a>
+    {{ if .Date | default nil }}
+    <span class="post-date">
+      {{ .Date.Format ($.Site.Params.DateFormatSingle | default "2006-01-02") }}
+    </span>
+    {{ end }}
 </p>
 {{ end }}
 {{ end }}
