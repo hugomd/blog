@@ -5,6 +5,7 @@ title = "Hugo's Blog"
 theme = "simple"
 paginate = 4
 enableGitInfo = true
+pygmentsUseClasses = true
 
 [caches]
 [caches.getjson]
