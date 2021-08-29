@@ -167,6 +167,13 @@ pre {
   padding: 10px;
 }
 
+code {
+  overflow: auto;
+  word-break: break-all;
+  word-wrap: break-word;
+  display: inline;
+}
+
 img {
   display: block;
   max-width: 100%;
