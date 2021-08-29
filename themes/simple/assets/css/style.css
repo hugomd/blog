@@ -120,6 +120,10 @@ body {
   text-decoration: none;
 }
 
+.posts h1, .post-title {
+  line-height: 2rem;
+}
+
 .posts .read-more {
   margin-top: 1rem;
 }
