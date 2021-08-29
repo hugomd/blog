@@ -104,8 +104,6 @@ body {
 
 .content a, .content a:visited {
   color: var(--secondary-color);
-  border-bottom: 0.15rem solid var(--secondary-color);
-  text-decoration: none;
 }
 
 .post-meta {
@@ -116,14 +114,10 @@ body {
   line-height: 1.5rem;
 }
 
-.posts h1, .post-title {
-  margin-bottom: 0.5rem;
-  line-height: 2rem;
-}
-
 .posts h1 a, .posts h1 a:visited {
   color: var(--primary-color);
   border-bottom: none;
+  text-decoration: none;
 }
 
 .posts .read-more {
