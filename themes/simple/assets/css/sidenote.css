@@ -22,7 +22,7 @@
 }
 
 /* For narrow viewports, the sidenote is hidden by default and shown when the checkbox is checked. */
-@media screen and (max-width: 1079px) {
+@media screen and (max-width: 1199px) {
 
   .sidenote__checkbox~.sidenote__content {
     /* Hidden, but accessible to browsers that don't do CSS (e.g. screenreaders, Pocket) */
@@ -62,7 +62,7 @@
   }
 }
 
-@media screen and (min-width: 1080px) {
+@media screen and (min-width: 1200px) {
   .sidenote {
     --sidenote-width: 12.0rem;
     --sidenote-margin: 2.0rem;
