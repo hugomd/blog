@@ -4,7 +4,7 @@
   --secondary-color: #0071bc;
   --light-gray: #bbb;
   --color: #374151;
-  --highlight: #ffc;
+  --highlight: rgba(255, 255, 0, 0.3);
 }
 
 @media screen and (prefers-color-scheme: dark) {
