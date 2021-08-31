@@ -1,5 +1,5 @@
 :target {
-  background: var(--light-gray);
+  background: var(--highlight);
 }
 
 .sidenote {
@@ -67,6 +67,11 @@
     --sidenote-width: 12.0rem;
     --sidenote-margin: 2.0rem;
     cursor: default;
+  }
+
+  .sidenote:hover,
+  .sidenote:hover .sidenote__content {
+    background: var(--highlight);
   }
 
   .sidenote:active,

@@ -12,8 +12,8 @@
     for="sidenote__checkbox--{{ $id }}"
     class="sidenote__button sidenote__button--number-{{ $id }}
   ">
-    {{- .Get 0 -}}
-  </label><sup class="sidenoteref" id="sidenoteref-{{ $id }}"><a href='#sidenote-{{ $id }}'>*</a></sup><small
+    {{- .Get 0 -}}*
+  </label><small
     id="sidenote-{{ $id }}"
     class="sidenote__content sidenote__content--number-{{ $id }}"><span class="sidenote__content-parenthesis"> (sidenote: </span>{{- .Inner | markdownify -}}<a href='#sidenoteref-0'>↩︎</a><span class="sidenote__content-parenthesis">)</span></small></span>
 {{- print "" -}}
