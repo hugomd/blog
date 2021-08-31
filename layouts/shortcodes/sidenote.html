@@ -15,5 +15,5 @@
     {{- .Get 0 -}}*
   </label><small
     id="sidenote-{{ $id }}"
-    class="sidenote__content sidenote__content--number-{{ $id }}"><span class="sidenote__content-parenthesis"> (sidenote: </span>{{- .Inner | markdownify -}}<a href='#sidenoteref-0'>↩︎</a><span class="sidenote__content-parenthesis">)</span></small></span>
+    class="sidenote__content sidenote__content--number-{{ $id }}"><span class="sidenote__content-parenthesis"> (sidenote: </span>{{- .Inner | markdownify -}}<span class="sidenote__content-parenthesis">)</span></small></span>
 {{- print "" -}}
