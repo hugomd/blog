@@ -1,0 +1,92 @@
+:target {
+  background: var(--light-gray);
+}
+
+.sidenote {
+  display: inline;
+}
+
+.sidenote__checkbox {
+  display: none;
+}
+
+/* Hidden, but accessible to browsers that don't do CSS (e.g. screenreaders, Pocket) */
+.sidenote__content-parenthesis {
+  position: absolute;
+  left: -99999px;
+  top: auto;
+}
+
+.sidenoteref a {
+  text-decoration: none;
+}
+
+/* For narrow viewports, the sidenote is hidden by default and shown when the checkbox is checked. */
+@media screen and (max-width: 1079px) {
+
+  .sidenote__checkbox~.sidenote__content {
+    /* Hidden, but accessible to browsers that don't do CSS (e.g. screenreaders, Pocket) */
+    position: absolute;
+    left: -99999px;
+    top: auto;
+  }
+
+  .sidenote__checkbox:checked~.sidenote__content {
+    /* override hidden-but-accessible */
+    position: relative;
+    left: auto;
+
+    /* Don't break up line containing the sidenote */
+    float: left;
+    min-width: 100%;
+
+    /** display: block; **/
+    margin: 0.8rem 0;
+    padding: 0.8rem 1.6rem;
+  }
+
+  .sidenote__button {
+    color: var(--link-color);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    cursor: pointer;
+  }
+
+  .sidenote__button:not(:hover):focus::after {
+    display: inline;
+    /* display:inline-block causes misalignment between focus ring and background. */
+  }
+
+  .sidenote__checkbox:checked~.sidenote__button::after {
+    content: none;
+  }
+}
+
+@media screen and (min-width: 1080px) {
+  .sidenote {
+    --sidenote-width: 12.0rem;
+    --sidenote-margin: 2.0rem;
+    cursor: default;
+  }
+
+  .sidenote:active,
+  .sidenote:active .sidenote__content {
+    background: var(--highlight);
+  }
+
+  .sidenote__content {
+    /** display: block; */
+    display: inline-block;
+    position: absolute;
+    right: 0;
+
+    /* Align sidenote top with main text */
+    margin-top: calc(-1.5*var(--text-size));
+
+    margin-right: calc(-1*var(--sidenote-width) - 1*var(--sidenote-margin));
+    width: var(--sidenote-width);
+    color: var(--text-color);
+    padding-left: 5px;
+    border-left: 1px solid var(--light-gray);
+  }
+}

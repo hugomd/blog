@@ -30,6 +30,9 @@
   {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
   <link rel="stylesheet" href="{{ $syntax.Permalink }}" integrity="{{ $syntax.Data.Integrity }}">
 
+  {{ $sidenote := resources.Get "css/sidenote.css" | minify | fingerprint }}
+  <link rel="stylesheet" href="{{ $sidenote.Permalink }}" integrity="{{ $sidenote.Data.Integrity }}">
+
 
   <!-- Icons -->
   <link rel="shortcut icon" href="{{ "img/favicon.png" | absURL }}" />
