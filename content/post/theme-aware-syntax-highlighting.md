@@ -7,8 +7,7 @@ sequence: 12
 ---
 {{% 100daystooffload %}}
 
-Hugo (the [static site generator](https://gohugo.io/)) supports static syntax 
-highlighting.
+{{< sidenote "Hugo" 1 >}}I keep having to specify, so it doesn't seem like I'm referring to myself in third person.{{< /sidenote >}} (the [static site generator](https://gohugo.io/)) supports static syntax highlighting.
 
 Instead of using a JavaScript based highlighter, you can perform highlighting
 at build time, rather than pulling in yet another dependency to slow down your
