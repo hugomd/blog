@@ -80,9 +80,10 @@
   }
 
   .sidenote__content {
-    /** display: block; */
     display: inline-block;
-    position: absolute;
+    margin-bottom: 1.0rem;
+    float: right;
+    clear: right;
     right: 0;
 
     /* Align sidenote top with main text */
