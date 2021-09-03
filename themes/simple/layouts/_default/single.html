@@ -76,5 +76,7 @@
       {{ end }}
     {{ end }}
   </div>
-  {{- partial "openring_out.html" . -}}
+  {{ if eq .Type "post" }}
+    {{- partial "openring_out.html" . -}}
+  {{ end }}
 {{ end }}
