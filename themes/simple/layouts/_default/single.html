@@ -53,6 +53,10 @@
       {{ end }}
       {{ .Content }}
     </div>
+    <hr />
+    {{ if eq .Type "post" }}
+    {{- partial "openring_out.html" . -}}
+    {{ end }}
     {{ if eq .Type $.Site.Params.contentTypeName }}
       {{ if or .NextInSection .PrevInSection }}
         <div class="pagination">
@@ -76,7 +80,4 @@
       {{ end }}
     {{ end }}
   </div>
-  {{ if eq .Type "post" }}
-    {{- partial "openring_out.html" . -}}
-  {{ end }}
 {{ end }}
