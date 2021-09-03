@@ -186,3 +186,24 @@ blockquote {
   margin: 40px;
   padding: 10px 20px;
 }
+
+.webring .articles ul {
+  list-style: none;
+  padding: 0px;
+}
+
+.webring h1 {
+  margin-top: 1rem;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.webring .attribution {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--light-gray);
+}
+
+.webring .attribution a {
+  color: var(--light-gray);
+}
