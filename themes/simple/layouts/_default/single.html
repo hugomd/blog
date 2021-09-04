@@ -53,8 +53,8 @@
       {{ end }}
       {{ .Content }}
     </div>
-    <hr />
     {{ if eq .Type "post" }}
+    <hr />
     {{- partial "openring_out.html" . -}}
     {{ end }}
     {{ if eq .Type $.Site.Params.contentTypeName }}
