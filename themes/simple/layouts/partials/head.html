@@ -25,13 +25,13 @@
 
   <!-- Theme CSS -->
   {{ $style := resources.Get "css/style.css" | minify | fingerprint}}
-  <link rel="stylesheet" href="{{ $style.Permalink }}" integrity="{{ $style.Data.Integrity }}">
+  <link rel="stylesheet" href="{{ $style.Permalink | relURL }}" integrity="{{ $style.Data.Integrity }}">
 
   {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
-  <link rel="stylesheet" href="{{ $syntax.Permalink }}" integrity="{{ $syntax.Data.Integrity }}">
+  <link rel="stylesheet" href="{{ $syntax.Permalink | relURL }}" integrity="{{ $syntax.Data.Integrity }}">
 
   {{ $sidenote := resources.Get "css/sidenote.css" | minify | fingerprint }}
-  <link rel="stylesheet" href="{{ $sidenote.Permalink }}" integrity="{{ $sidenote.Data.Integrity }}">
+  <link rel="stylesheet" href="{{ $sidenote.Permalink | relURL }}" integrity="{{ $sidenote.Data.Integrity }}">
 
 
   <!-- Icons -->

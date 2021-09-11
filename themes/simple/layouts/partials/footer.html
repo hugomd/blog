@@ -4,11 +4,11 @@
       <li><a href="mailto:11111h1e1l1l1o1@h1u11.1m1d1" onmouseover="this.href=this.href.replace(/1/g, '')">Email</a></li>
       <li><a href="https://github.com/hugomd">GitHub</a></li>
       <li><a href="https://twitter.com/hugojmd">Twitter</a></li>
-      <li><a href="/index.xml">RSS</a></li>
+      <li><a href="{{ "/index.xml" | relURL }}">RSS</a></li>
     </ul>
     <ul>
-      <li><a href="/about-this-website">About this website</a></li>
-      <li><a href="/friends">Friends</a></li>
+      <li><a href="{{ relref . "/about-this-website" }}">About this website</a></li>
+      <li><a href="{{ relref . "/friends" }}">Friends</a></li>
     </ul>
   </nav>
   {{ if .GitInfo }}
