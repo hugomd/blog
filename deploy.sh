@@ -20,4 +20,4 @@ $GOPATH/bin/openring \
   < openring_in.html \
   > ./layouts/partials/openring_out.html
 
-hugo --minify --baseURL="https://hugo.md/"
+hugo --minify --baseURL=$BASE_URL
