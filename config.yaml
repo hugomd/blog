@@ -5,6 +5,7 @@ theme: simple
 paginate: 4
 enableGitInfo: true
 pygmentsUseClasses: true
+relativeURLs: true
 caches:
   getjson:
     dir: ':resourceDir/json'
