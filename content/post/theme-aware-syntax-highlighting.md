@@ -2,7 +2,7 @@
 title: "Theme-aware syntax highlighting"
 description: "Syntax highlighting themes that adapt to light and dark modes with the static site generator Hugo."
 date: 2021-08-29T12:38:46+10:00
-tags: []
+tags: ["100DaysToOffload"]
 sequence: 12
 ---
 {{% 100daystooffload %}}
