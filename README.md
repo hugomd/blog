@@ -1,12 +1,12 @@
 # Hugo's Blog
+
 This is the repository that houses my blog and personal website. It runs [Hugo](https://gohugo.io/) (I know, I know, it has a very cool name).
 
-It uses the [Hello Friend](https://github.com/panr/hugo-theme-hello-friend) theme and is hosted on [Cloudflare Pages](https://pages.cloudflare.com/).
+It uses the [TBD](https://github.com/hugomd/blog/tree/develop/themes/simple) theme (of my own making) and is hosted on [Cloudflare Pages](https://pages.cloudflare.com/).
 
 ## Running locally
 ```
-git submodule update --init --recursive
-hugo serve --baseUrl=/ --appendPort=false
+hugo server
 ```
 
 ### Static Assets
