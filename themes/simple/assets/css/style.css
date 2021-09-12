@@ -95,7 +95,7 @@ body {
 }
 
 .footer a {
-  color: var(--primary-color);
+  color: var(--primary-color) !important;
 }
 
 .content {
