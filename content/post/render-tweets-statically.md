@@ -8,6 +8,8 @@ sequence: 5
 
 {{% 100daystooffload %}}
 
+*Update (12/09/21): I wrote an update to this post [here](/post/update-rendering-static-tweets/), which describes a much less hacky way of doing this*.
+
 I recently wrote about [shortcodes](/post/custom-hugo-shortcodes), describing a way to avoid duplicating text all over the place.
 
 Delving into shortcodes got me thinking about static rendering. In an ideal world, this site would be completely static, it wouldn't call out to third-party sites to fetch data. 
