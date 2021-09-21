@@ -22,15 +22,33 @@
   <!-- head custom -->
   {{- partial "prepended_head.html" . }}
 
+  {{ $style := resources.Get "css/style.css" | minify | fingerprint}}
+  {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
+  {{ $sidenote := resources.Get "css/sidenote.css" | minify | fingerprint }}
+
+  <!-- Prefetch -->
+  <link rel="prefetch" href="{{ $style.Permalink | relURL }}" as="style">
+  <link rel="prefetch" href="{{ $syntax.Permalink | relURL }}" as="style">
+  <link rel="prefetch" href="{{ $sidenote.Permalink | relURL }}" as="style">
+
+  {{ if .IsHome }}
+    {{ $paginator := .Paginate (where .Site.RegularPages "Type" "post") }}
+    {{ range $paginator.Pages }}
+      <link rel="prefetch" href="{{ .Permalink }}" as="document">
+    {{ end }}
+
+    {{ if or $.Site.Params.showMenuItems (eq $.Site.Params.showMenuItems 0) }}
+      {{ range first $.Site.Params.showMenuItems $.Site.Menus.main }}
+        {{ if not .HasChildren }}
+          <link rel="prefetch" href="{{ .URL }}" as="document">
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
 
   <!-- Theme CSS -->
-  {{ $style := resources.Get "css/style.css" | minify | fingerprint}}
   <link rel="stylesheet" href="{{ $style.Permalink | relURL }}" integrity="{{ $style.Data.Integrity }}">
-
-  {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
   <link rel="stylesheet" href="{{ $syntax.Permalink | relURL }}" integrity="{{ $syntax.Data.Integrity }}">
-
-  {{ $sidenote := resources.Get "css/sidenote.css" | minify | fingerprint }}
   <link rel="stylesheet" href="{{ $sidenote.Permalink | relURL }}" integrity="{{ $sidenote.Data.Integrity }}">
 
 

@@ -47,10 +47,10 @@ languages:
       main:
         - identifier: now
           name: Now
-          url: /now
+          url: /now/
         - identifier: about
           name: About
-          url: /about
+          url: /about/
         - identifier: archive
           name: Archive
-          url: /archive
+          url: /archive/
