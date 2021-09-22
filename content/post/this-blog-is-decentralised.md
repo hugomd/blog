@@ -16,6 +16,6 @@ I've seen a few people on Twitter sporting `$name.eth` handles, and thought I wo
 
 I used [Fleek](https://fleek.co/) to deploy to IPFS, which was almost as streamlined as Cloudflare Pages. You sign up, link your GitHub account and a repository, configure the builder you want to use, and you're done.
 
-I ran into a few issues finding an image that supported `hugo` and `openring`, but I found one eventually [this one](https://github.com/klakegg/docker-hugo).
+I ran into a few issues finding a Docker image that supported `hugo` and `openring`, but I found [one eventually](https://github.com/klakegg/docker-hugo).
 
 What are your thoughts on decentralised DNS? Let me know.
