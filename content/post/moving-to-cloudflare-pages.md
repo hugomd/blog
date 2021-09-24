@@ -36,4 +36,4 @@ Expect a follow-up post on using [Cloudflare Tunnel](https://www.cloudflare.com/
 _This post was **not** sponsored by Cloudflare._
 
 [^0]: You can read more about this [here](https://support.cloudflare.com/hc/en-us/articles/200168196-How-do-I-minify-HTML-CSS-and-JavaScript-to-optimize-my-site-).
-[^1]: A PoP is a Point of Presence. Cloudflare has a paged dedicated to their network [here](https://www.cloudflare.com/network/).
+[^1]: A PoP is a Point of Presence. Cloudflare has a page dedicated to their network [here](https://www.cloudflare.com/network/).
