@@ -6,6 +6,7 @@ My friends have personal websites too, check them out:
 
 * [Anirudh Oppiliappan](https://icyphox.sh/)
 * [Cassie Chew](https://cassie.codes)
+* [Chris Morris](https://chrismorris.org)
 * [Cyra Locsin](http://cyra.locs.in)
 * [Daniel Sykes-Turner](http://daniel.st)
 * [Eric Jiang](https://ericjiang.dev)
