@@ -207,3 +207,7 @@ blockquote {
 .webring .attribution a {
   color: var(--light-gray);
 }
+
+.reply-via-email {
+  text-align: right;
+}

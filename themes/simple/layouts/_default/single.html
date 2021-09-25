@@ -54,6 +54,9 @@
       {{ .Content }}
     </div>
     {{ if eq .Type "post" }}
+    <div class="reply-via-email">
+      <a href="mailto:blog@hu.md?subject={{ .Title | markdownify }}">Reply via email</a>
+    </div>
     <hr />
     {{- partial "openring_out.html" . -}}
     {{ end }}
