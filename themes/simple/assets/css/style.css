@@ -9,9 +9,9 @@
 
 @media screen and (prefers-color-scheme: dark) {
   :root {
-    --bg-color: #000;
-    --primary-color: #ccc;
-    --color: #ccc;
+    --bg-color: rgb(32, 33, 36);
+    --primary-color: rgb(213, 215, 216);
+    --color: rgb(213, 215, 216);
   }
 }
 
