@@ -21,6 +21,8 @@ params:
   showMenuItems: 4
   showReadingTime: false
   rssFullText: true
+  replyViaEmail: true
+  replyEmail: blog@hu.md
 languages:
   en:
     title: Hugo's Blog

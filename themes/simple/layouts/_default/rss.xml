@@ -58,6 +58,9 @@
           {{ else }}{{ .Summary | html }}
           {{ end }}
         {{ end }}
+        {{ if .Site.Params.ReplyViaEmail }}
+          <a href="mailto:{{ .Site.Params.ReplyEmail }}?subject={{ .Title }}">Reply via email</a>
+        {{ end }}
         </description>
     </item>
     {{ end }}
