@@ -38,9 +38,11 @@
     {{ end }}
 
     {{ if or $.Site.Params.showMenuItems (eq $.Site.Params.showMenuItems 0) }}
-      {{ range first $.Site.Params.showMenuItems $.Site.Menus.main }}
-        {{ if not .HasChildren }}
-          <link rel="prefetch" href="{{ .URL }}" as="document">
+      {{ with $.Site.Menus.main }}
+        {{ range first $.Site.Params.showMenuItems $.Site.Menus.main }}
+          {{ if not .HasChildren }}
+            <link rel="prefetch" href="{{ .URL }}" as="document">
+          {{ end }}
         {{ end }}
       {{ end }}
     {{ end }}

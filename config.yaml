@@ -1,5 +1,7 @@
 baseURL: /
 languageCode: en-us
+defaultContentLanguage: en
+defaultContentLanguageInSubdir: false
 title: Hugo's Blog
 theme: simple
 paginate: 4
@@ -16,15 +18,17 @@ markup:
     renderer:
       unsafe: true
 params:
+  showMenuItems: 4
   contentTypeName: post
   defaultTheme: light
-  showMenuItems: 4
   showReadingTime: false
   rssFullText: true
   replyViaEmail: true
   replyEmail: blog@hu.md
 languages:
   en:
+    languageName: English
+    weight: 1
     title: Hugo's Blog
     description: >-
       I’m a software engineer, working at Square in Melbourne, Australia. I
@@ -37,11 +41,11 @@ languages:
     readOtherPosts: Read other posts
     newerPosts: ←  Newer posts
     olderPosts: Older posts →
-    minuteReadingTime: min read
     lastModDisplay: ''
     dateFormatSingle: Mon Jan 2 2006
     dateFormatList: Mon Jan 2 2006
     params:
+      showMenuItems: 4
       logo:
         logoText: Hugo's Blog
         logoHomeLink: /
@@ -56,3 +60,26 @@ languages:
         - identifier: archive
           name: Archive
           url: /archive/
+  fr:
+    languageName: Français
+    weight: 2
+    title: Hugo's Blog
+    description: >-
+      Je travaille en informatique, à Square, à Melbourne, Australie. 
+      Comme passe-temps, je travaille sur des projets open source sur GitHub, 
+      prépare du café décaféiner, et m'occupe dans la cuisine.
+    keywords: ''
+    menuMore: Afficher plus
+    writtenBy: Écrit par
+    readMore: Lire la suite
+    readOtherPosts: Lire d'autres
+    newerPosts: ←  Plus récent
+    olderPosts: Plus ancien →
+    lastModDisplay: ''
+    dateFormatSingle: Mon Jan 2 2006
+    dateFormatList: Mon Jan 2 2006
+    params:
+      showMenuItems: 0
+      logo:
+        logoText: Hugo's Blog
+        logoHomeLink: /

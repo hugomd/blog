@@ -10,6 +10,7 @@
           {{ .Date.Format ($.Site.Params.DateFormatSingle | default "2006-01-02") }}
         </span>
       {{ end }}
+      {{- partial "i18nlist.html" . }}
 
       {{ with .Params.Author }}
         <span class="post-author"
