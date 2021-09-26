@@ -57,7 +57,7 @@
     {{ if eq .Type "post" }}
       {{ if .Site.Params.ReplyViaEmail }}
       <div class="reply-via-email">
-        <a href="mailto:{{ .Site.Params.ReplyEmail }}?subject={{ htmlEscape "RE: " }}{{ .Title | markdownify }}">Reply via email</a>
+        <a href="mailto:{{ .Site.Params.ReplyEmail }}?subject={{ htmlEscape "RE: " }}{{ .Title | markdownify }}">{{ i18n "replyviaemail" . }}</a>
       </div>
       {{ end }}
     <hr />

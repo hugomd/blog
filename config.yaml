@@ -45,9 +45,8 @@ languages:
     dateFormatSingle: Mon Jan 2 2006
     dateFormatList: Mon Jan 2 2006
     params:
-      showMenuItems: 4
+      showMenuItems: 3
       logo:
-        logoText: Hugo's Blog
         logoHomeLink: /
     menu:
       main:
@@ -63,7 +62,7 @@ languages:
   fr:
     languageName: Français
     weight: 2
-    title: Hugo's Blog
+    title: Le blog d'Hugo
     description: >-
       Je travaille en informatique, à Square, à Melbourne, Australie. 
       Comme passe-temps, je travaille sur des projets open source sur GitHub, 
@@ -79,7 +78,17 @@ languages:
     dateFormatSingle: Mon Jan 2 2006
     dateFormatList: Mon Jan 2 2006
     params:
-      showMenuItems: 0
+      showMenuItems: 3
       logo:
-        logoText: Hugo's Blog
         logoHomeLink: /
+    menu:
+      main:
+        - identifier: now
+          name: Now
+          url: /now/
+        - identifier: about
+          name: About
+          url: /about/
+        - identifier: archive
+          name: Archive
+          url: /archive/
