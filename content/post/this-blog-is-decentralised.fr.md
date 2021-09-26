@@ -12,6 +12,6 @@ Je vois quelques personnes sur Twitter avec des noms `$nom.eth`, et je pensais a
 
 J'ai utilisé [Fleek](https://fleek.co/) pour déployer le site. Le processus était aussi bon qu’avec Cloudflare Pages. Il faut juste enregistrer, relier votre compte GitHub et un dépôt git, choisir la façon de compilation, et vous avez fini.
 
-J'avais du mal à trouver une image Docker qui soutenait `hugo` et `openring`, mais j'en ai finalement [trouvé une qui marchait](https://github.com/klakegg/docker-hugo). 
+J'avais du mal à trouver une image Docker qui soutenait `hugo` et `openring`, mais j'en ai [trouvé une qui marchait](https://github.com/klakegg/docker-hugo). 
 
 Que pensez-vous du DNS décentralisé ?
