@@ -1,5 +1,5 @@
 ---
-title: "About"
+title: "About me"
 ---
 
 Hi, I'm Hugo 👋.
