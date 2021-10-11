@@ -83,7 +83,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  padding: 2rem;
   margin-top: 2rem;
   flex-direction: column;
 }
