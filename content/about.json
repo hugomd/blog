@@ -9,7 +9,7 @@
     "paypal": "https://paypal.me/hugo",
     "keybase": "https://keybase.io/hugomd",
     "pleroma": "https://soykaf.org/uoya",
-    "mastodon": "https://melb.social/@hugo",
+    "mastodon": "https://melb.social/@hugo"
   },
   "friends": {
     "Aadeeba Mou": "http://aadeeba.com",
@@ -30,9 +30,7 @@
     "Nicholas Whittaker": "https://nicholas.cloud/"
   },
   "work": {
-    {
-      "company": "Square",
-      "title": "Software Engineer"
-    }
+    "company": "Square",
+    "title": "Software Engineer"
   }
 }
