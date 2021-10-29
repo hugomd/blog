@@ -18,6 +18,7 @@
 @font-face {
     font-family: 'PragmataPro';
     src: url('../fonts/pragmatapro.woff2') format('woff2');
+    font-display: swap;
 }
 
 @font-face {
@@ -25,6 +26,7 @@
     src: url('../fonts/newsreader-variable.ttf') format('truetype'), url('../fonts/newsreader-italic.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -32,6 +34,7 @@
     font-style: italic;
     src: url('../fonts/newsreader-italic.ttf') format('truetype');
     font-weight: 400;
+    font-display: swap;
 }
 
 html {
