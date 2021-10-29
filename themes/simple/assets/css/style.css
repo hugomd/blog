@@ -15,15 +15,31 @@
   }
 }
 
+@font-face {
+    font-family: 'PragmataPro';
+    src: url('../fonts/pragmatapro.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Newsreader';
+    src: url('../fonts/newsreader-variable.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
 html {
   background: var(--bg-color)
 }
 
 body {
-  font-family: "San Francisco", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue",Noto Sans,sans-serif;
+  font-family: 'Newsreader', Serif;
   color: var(--primary-color);
+}
+
+p {
   font-size: 1rem;
-  line-height: 1.15rem;
+  line-height: 1.25rem;
+  font-weight: 400;
 }
 
 .container {
@@ -95,33 +111,33 @@ body {
 
 .footer a {
   color: var(--primary-color) !important;
+  text-decoration: none;
 }
 
 .content {
   margin-top: 50px;
-  line-height: 1.5rem;
+  /* line-height: 1.1rem; */
 }
 
 .content a, .content a:visited {
-  color: var(--secondary-color);
+  color: var(--primary-color);
+  text-decoration-color: var(--secondary-color)
 }
 
-.post-meta {
+.post-meta, .archive__post-date {
   margin-bottom: 0.5rem;
+  font-size: 0.875rem;
 }
 
 .posts {
   line-height: 1.5rem;
 }
 
-.posts h1 a, .posts h1 a:visited {
+.posts h1 a, .posts h1 a:visited, .post-title {
+  font-size: 2.1rem;
   color: var(--primary-color);
   border-bottom: none;
   text-decoration: none;
-}
-
-.posts h1, .post-title {
-  line-height: 2rem;
 }
 
 .posts .read-more {
@@ -163,12 +179,15 @@ hr {
 }
 
 pre {
+  font-family: 'PragmataPro';
   overflow: auto;
   white-space: pre;
   padding: 10px;
 }
 
 code {
+  font-family: 'PragmataPro';
+  font-size: 0.875rem;
   overflow: auto;
   word-break: break-all;
   word-wrap: break-word;
@@ -186,6 +205,10 @@ blockquote {
   padding: 10px 20px;
 }
 
+.webring {
+  line-height: 1.4rem;
+}
+
 .webring .articles ul {
   list-style: none;
   padding: 0px;
@@ -195,6 +218,10 @@ blockquote {
   margin-top: 1rem;
   margin-bottom: 0;
   padding: 0;
+}
+
+.webring h1 a {
+  text-decoration: none;
 }
 
 .webring .attribution {

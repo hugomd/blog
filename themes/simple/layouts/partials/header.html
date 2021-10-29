@@ -1,8 +1,10 @@
 <header class="header">
   <div class="left">
-    <a href="{{ if $.Site.Params.Logo.LogoHomeLink }}{{ $.Site.Params.Logo.LogoHomeLink }}{{ else }}{{ $.Site.BaseURL }}{{ end }}">
-      {{ .Site.Title }}
-    </a>
+    <h3>
+      <a href="{{ if $.Site.Params.Logo.LogoHomeLink }}{{ $.Site.Params.Logo.LogoHomeLink }}{{ else }}{{ $.Site.BaseURL }}{{ end }}">
+        {{ .Site.Title }}
+      </a>
+    </h3>
   </div>
   <div class="right">
     {{ if len $.Site.Menus }}
