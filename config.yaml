@@ -25,6 +25,7 @@ params:
   rssFullText: true
   replyViaEmail: true
   replyEmail: blog@hu.md
+  hideReadMore: true
 languages:
   en:
     languageName: English
