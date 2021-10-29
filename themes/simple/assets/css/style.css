@@ -52,16 +52,20 @@ html {
 body {
   font-family: 'Newsreader', Serif;
   color: var(--primary-color);
+  font-size: 1.2rem;
+  line-height: 1.5rem;
 }
 
 p {
-  font-size: 1rem;
-  line-height: 1.25rem;
   font-weight: 400;
 }
 
+h1 {
+  line-height: 2.2rem;
+}
+
 .container {
-  max-width: 42rem;
+  max-width: 34rem;
   margin-left: auto;
   margin-right: auto;
   padding: 20px;
@@ -144,7 +148,7 @@ p {
 
 .post-meta, .archive__post-date {
   margin-bottom: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .posts {
