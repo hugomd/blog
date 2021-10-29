@@ -22,9 +22,16 @@
 
 @font-face {
     font-family: 'Newsreader';
-    src: url('../fonts/newsreader-variable.ttf') format('truetype');
+    src: url('../fonts/newsreader-variable.ttf') format('truetype'), url('../fonts/newsreader-italic.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
+}
+
+@font-face {
+    font-family: 'Newsreader';
+    font-style: italic;
+    src: url('../fonts/newsreader-italic.ttf') format('truetype');
+    font-weight: 400;
 }
 
 html {
