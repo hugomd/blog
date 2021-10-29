@@ -25,7 +25,6 @@ params:
   rssFullText: true
   replyViaEmail: true
   replyEmail: blog@hu.md
-  hideReadMore: true
 languages:
   en:
     languageName: English
@@ -46,6 +45,7 @@ languages:
     dateFormatSingle: Mon Jan 2 2006
     dateFormatList: Mon Jan 2 2006
     params:
+      hideReadMore: true
       showMenuItems: 3
       logo:
         logoHomeLink: /
