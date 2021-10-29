@@ -170,6 +170,10 @@ h1 {
   justify-content: space-between;
 }
 
+.next {
+  text-align: right;
+}
+
 .post-cover img {
   width: 100%;
   height: auto;
@@ -214,10 +218,6 @@ blockquote {
   border-left: 2px solid;
   margin: 40px;
   padding: 10px 20px;
-}
-
-.webring {
-  line-height: 1.4rem;
 }
 
 .webring .articles ul {
