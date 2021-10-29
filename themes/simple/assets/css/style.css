@@ -42,6 +42,10 @@ p {
   font-weight: 400;
 }
 
+h1 {
+  line-height: 2rem;
+}
+
 .container {
   max-width: 42rem;
   margin-left: auto;
