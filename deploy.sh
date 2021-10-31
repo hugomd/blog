@@ -9,7 +9,7 @@ $GOPATH/bin/openring \
   -s https://joelchrono12.ml/feed.xml \
   -s https://mxb.dev/feed.xml \
   -s https://ndanes.com/feed.xml \
-  -s https://www.renlord.com/index.xml \
+  -s https://renlord.com/index.xml \
   -s https://rusingh.com/feed/ \
   -s https://stanislas.blog/atom.xml \
   -s https://icyphox.sh/blog/feed.xml \
