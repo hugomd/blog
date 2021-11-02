@@ -4,9 +4,9 @@
     <ul class="articles">
     {{range .Articles}}
     <li>
-      <h1>
+      <h3>
       <a href="{{.Link}}" target="_blank" rel="noopener">{{.Title}}</a>
-      </h1>
+      </h3>
       <small class="date">{{.Date | datef "Mon Jan 2 2006"}}</small>
       <small class="source">
         by <a href="{{.SourceLink}}">{{.SourceTitle}}</a>

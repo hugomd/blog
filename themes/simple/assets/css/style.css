@@ -111,8 +111,6 @@ h1, h2, h3, h4, h5 {
 .header a {
   color: var(--primary-color);
   text-decoration: none;
-  padding: 0.1rem;
-  margin: 0.1rem;
   border-radius: .25rem;
   border-bottom: none;
 }
@@ -236,14 +234,13 @@ blockquote {
   padding: 0px;
 }
 
-.webring h1 {
+.webring h3 {
   margin-top: 1rem;
   margin-bottom: 0;
   padding: 0;
-  line-height: 1.1rem;
 }
 
-.webring h1 a {
+.webring a {
   text-decoration: none;
 }
 
