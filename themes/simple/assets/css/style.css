@@ -150,7 +150,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .posts {
-  line-height: 1.5rem;
+  line-height: 2rem;
 }
 
 .posts h1 a, .posts h1 a:visited, .post-title {
@@ -165,7 +165,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .post-content {
-  line-height: 1.5rem;
+  line-height: 2rem;
   position: relative;
 }
 
