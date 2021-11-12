@@ -1,11 +1,7 @@
 <footer class="footer">
   <nav class="menu">
     <ul>
-      <li><a href="mailto:11111h1e1l1l1o1@h1u11.1m1d1" onmouseover="this.href=this.href.replace(/1/g, '')">Email</a></li>
-      <li><a href="https://github.com/hugomd">GitHub</a></li>
-      <li><a href="https://twitter.com/hugojmd">Twitter</a></li>
-      <li><a href="{{ "/index.xml" | relURL }}">RSS</a></li>
-      <li><a href="{{ "/friends" | relURL }}">Friends</a></li>
+      {{- partial "footer_links.html" . }}
     </ul>
   </nav>
   {{ if .GitInfo }}
@@ -13,5 +9,4 @@
     Last modified via <a href="https://github.com/hugomd/blog/commit/{{.GitInfo.Hash}}">{{ .GitInfo.AbbreviatedHash }}</a>
   </span>
   {{ end }}
-
 </footer>

@@ -23,7 +23,7 @@
   {{ end }}
 {{ end }}
 
-<blockquote style="margin-left:0px;width:100%;border-color:#1DA1F2;background:rgba(29, 161, 242, 0.1)">
+<blockquote class="functional" style="margin-left:0px;width:100%;border-color:#1DA1F2;background:rgba(29, 161, 242, 0.1)">
   {{ .Page.RenderString $text }}
   {{ if isset $json "photos" }}
     {{ range $item := $json.photos }}

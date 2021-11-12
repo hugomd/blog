@@ -23,7 +23,7 @@
 
 @font-face {
     font-family: 'Newsreader';
-    src: url('../fonts/newsreader-variable.ttf') format('truetype');
+    src: url('../fonts/newsreader-variable.woff') format('woff');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -31,7 +31,7 @@
 
 @font-face {
     font-family: 'Newsreader';
-    src: url('../fonts/newsreader-variable.ttf') format('truetype');
+    src: url('../fonts/newsreader-variable.woff') format('woff');
     font-weight: 700;
     font-style: normal;
     font-display: swap;
@@ -40,8 +40,24 @@
 @font-face {
     font-family: 'Newsreader';
     font-style: italic;
-    src: url('../fonts/newsreader-italic.ttf') format('truetype');
+    src: url('../fonts/newsreader-italic.woff') format('woff');
     font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'LibreFranklin';
+    src: url('../fonts/libre-franklin-variable.woff') format('woff');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'LibreFranklin';
+    font-style: italic;
+    src: url('../fonts/libre-franklin-italic.woff') format('woff');
+    font-weight: 300;
     font-display: swap;
 }
 
@@ -52,7 +68,7 @@ html {
 body {
   font-family: 'Newsreader', Serif;
   color: var(--primary-color);
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   line-height: 2rem;
 }
 
@@ -64,15 +80,19 @@ h1, h2, h3, h4, h5 {
   line-height: 2.2rem;
 }
 
+.functional {
+  font-family: LibreFranklin
+}
+
 .container {
   max-width: 34rem;
   margin-left: auto;
   margin-right: auto;
-  padding: 20px;
+  padding: 0 20px;
 }
 
 .header {
-  font-weight: 600;
+  font-weight: 300;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -90,7 +110,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .menu {
-  flex: 1
+  flex: 1;
 }
 
 .menu ul {
@@ -125,6 +145,7 @@ h1, h2, h3, h4, h5 {
 
 .footer .menu ul {
   display: flex;
+  flex-wrap: wrap;
   list-style: none;
   justify-content: center;
 }
@@ -141,10 +162,12 @@ h1, h2, h3, h4, h5 {
 
 .content a, .content a:visited {
   color: var(--primary-color);
-  text-decoration-color: var(--secondary-color)
+  text-decoration-color: var(--secondary-color);
+  text-decoration-thickness: 0.15rem;
 }
 
 .post-meta, .archive__post-date {
+  font-family: LibreFranklin;
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
@@ -189,7 +212,9 @@ h1, h2, h3, h4, h5 {
 }
 
 .git-sha {
+  font-size: 1rem;
   color: var(--light-gray);
+  font-family: LibreFranklin;
   font-style: italic;
   text-align: center;
 }
