@@ -1,8 +1,8 @@
 {{ if .IsTranslated }}
-  <p class="functional"><i>
+  <p class="functional">
   {{ i18n "translated" . }}:
   {{ range .Translations }}
     <a href="{{ .Permalink }}">{{ .Site.Language.LanguageName }}</a>
   {{ end }}
-  </i></p>
+  </p>
 {{ end }}

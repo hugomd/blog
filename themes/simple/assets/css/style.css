@@ -166,7 +166,7 @@ h1, h2, h3, h4, h5 {
   text-decoration-thickness: 0.15rem;
 }
 
-.post-meta, .archive__post-date {
+.meta, .post-meta, .archive__post-date, .post-tags {
   font-family: LibreFranklin;
   margin-bottom: 0.5rem;
   font-size: 1rem;

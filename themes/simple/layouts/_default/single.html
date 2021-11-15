@@ -9,6 +9,15 @@
         <span class="post-date">
           {{ .Date.Format ($.Site.Params.DateFormatSingle | default "2006-01-02") }}
         </span>
+
+    {{ if .Params.tags }}
+      <span class="post-tags functional">
+        &#9670;
+        {{ range .Params.tags }}
+          <a href="{{ (urlize (printf "tags/%s" . )) | absURL }}/">#{{ . }}</a>&nbsp;
+        {{ end }}
+      </span>
+    {{ end }}
       {{ end }}
       {{- partial "i18nlist.html" . }}
 
@@ -24,14 +33,6 @@
         >
       {{ end }}
     </div>
-
-    {{ if .Params.tags }}
-      <span class="post-tags">
-        {{ range .Params.tags }}
-          <a href="{{ (urlize (printf "tags/%s" . )) | absURL }}/">#{{ . }}</a>&nbsp;
-        {{ end }}
-      </span>
-    {{ end }}
 
     {{ if .Params.Cover }}
       <figure class="post-cover">
