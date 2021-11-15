@@ -61,12 +61,20 @@
     font-display: swap;
 }
 
+@font-face {
+  font-display: swap;
+  font-family: CCSymbols;
+  font-synthesis: none;
+  src: url('../fonts/CCSymbols.woff2') format(woff2);
+  unicode-range: u+a9, u+229c, u+1f10d-1f10f, u+1f16d-1f16f;
+}
+
 html {
   background: var(--bg-color)
 }
 
 body {
-  font-family: 'Newsreader', Serif;
+  font-family: 'Newsreader', Serif, CCSymbols;
   color: var(--primary-color);
   font-size: 1.3rem;
   line-height: 2rem;
