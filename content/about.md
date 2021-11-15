@@ -4,7 +4,7 @@ title: "About me"
 
 Hi, I'm Hugo 👋.
 
-I'm a software engineer, working on [CashApp](https://cash.app) in Melbourne, Australia.
+I'm a software engineer at [CashApp](https://cash.app) in Melbourne, Australia.
 
 I avoid caffeine, tweet, have a few interesting side projects, and _try_ to do open source.
 
@@ -14,7 +14,7 @@ If you like any of my projects, or posts on this blog, please do let me know via
 
 # About this website
 
-This blog is built with a static site generator called [Hugo](https://gohugo.io/), is hosted on [Cloudflare Pages](https://pages.cloudflare.com/) (I wrote about it [here](/post/moving-to-cloudflare-pages/)).
+This blog is built with a static site generator called [Hugo](https://gohugo.io/) and is hosted on [Cloudflare Pages](https://pages.cloudflare.com/) (I wrote about it [here](/post/moving-to-cloudflare-pages/)).
 
 I'm using the [TBD theme](https://github.com/hugomd/blog/tree/develop/themes/simple), which I wrote myself.
 

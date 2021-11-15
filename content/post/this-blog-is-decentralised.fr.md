@@ -4,7 +4,7 @@ date: 2021-09-12T19:33:06+10:00
 description: "Disponible sur HNS et ENS, avec IPFS."
 ---
 
-Ce blog existe maintenant sur Handshake sur http://blog.hugomd, et aussi sur le Ethereum Name Service (ENS) sur http://hugomd.eth (ou https://hugomd.eth.limo si vous n'avez pas d’ENS resolver).
+Ce blog existe maintenant sur Handshake sur [blog.hugomd](http://blog.hugomd), et aussi sur le Ethereum Name Service (ENS) sur [hugomd.eth](https://hugomd.eth) (ou [hugomd.eth.limo](https://hugomd.eth.limo) si vous n'avez pas d’ENS resolver).
 
 Pourquoi ?
 

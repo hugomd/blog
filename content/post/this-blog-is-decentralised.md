@@ -8,7 +8,7 @@ sequence: 13
 
 {{% 100daystooffload %}}
 
-This blog is now available on the Handshake blockchain via http://blog.hugomd and on the Ethereum Name Service (ENS) via http://hugomd.eth (or https://hugomd.eth.limo if you don't have an ENS resolver).
+This blog is now available on the Handshake blockchain via [blog.hugomd](http://blog.hugo.md) and on the Ethereum Name Service (ENS) via [hugomd.eth](http://hugomd.eth) (or [hugomd.eth.limo](https://hugomd.eth.limo) if you don't have an ENS resolver).
 
 Why? 
 
