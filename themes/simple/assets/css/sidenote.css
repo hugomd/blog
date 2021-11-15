@@ -38,7 +38,6 @@
 
     /* Don't break up line containing the sidenote */
     float: left;
-    min-width: 100%;
 
     /** display: block; **/
     margin: 0.8rem 0;
