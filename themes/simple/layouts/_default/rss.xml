@@ -59,7 +59,7 @@
           {{ end }}
         {{ end }}
         {{ if .Site.Params.ReplyViaEmail }}
-          <a href="mailto:{{ .Site.Params.ReplyEmail }}?subject={{ htmlEscape "RE: " }}{{ .Title }}">Reply via email</a>
+          <a href="mailto:{{ .Site.Params.ReplyEmail }}?subject={{ htmlEscape "RE: " }}{{ .Title }}">{{ i18n "replyviaemail" . }}</a>
         {{ end }}
         </description>
     </item>
