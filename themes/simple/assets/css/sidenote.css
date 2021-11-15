@@ -37,9 +37,10 @@
     left: auto;
 
     /* Don't break up line containing the sidenote */
-    float: left;
+    float: inherit;
 
-    /** display: block; **/
+    display: block;
+    width: calc(100% - 3em);
     margin: 0.8rem 0;
     padding: 0.8rem 1.6rem;
   }
