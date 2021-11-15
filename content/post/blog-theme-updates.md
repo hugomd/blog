@@ -2,7 +2,7 @@
 title: "Theme updates"
 date: 2021-11-15T17:30:49+11:00
 description: "The only thing that's changed is everything."
-tags: ["100daystooffload"]
+tags: ["100DaysToOffload"]
 ---
 
 I've made a few changes to this blog's theme over the last few weeks, and I thought it would be nice to summarise them in a post.
