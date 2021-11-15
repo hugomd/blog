@@ -4,9 +4,4 @@
       {{- partial "footer_links.html" . }}
     </ul>
   </nav>
-  {{ if .GitInfo }}
-  <span class="git-sha">
-    Last modified via <a href="https://github.com/hugomd/blog/commit/{{.GitInfo.Hash}}">{{ .GitInfo.AbbreviatedHash }}</a>
-  </span>
-  {{ end }}
 </footer>

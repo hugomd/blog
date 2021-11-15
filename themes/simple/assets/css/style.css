@@ -212,18 +212,6 @@ h1, h2, h3, h4, h5 {
   height: auto;
 }
 
-.git-sha {
-  font-size: 1rem;
-  color: var(--light-gray);
-  font-family: LibreFranklin;
-  font-style: italic;
-  text-align: center;
-}
-
-.git-sha a, .git-sha a:visited {
-  color: var(--light-gray);
-}
-
 hr {
   border: 0.01rem solid var(--light-gray);
 }
