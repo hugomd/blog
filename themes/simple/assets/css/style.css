@@ -98,11 +98,12 @@ h1, h2, h3, h4, h5 {
   align-items: center;
   flex-direction: row;
   justify-content: space-between;
+  line-height: 1rem;
 }
 
-.header .left{
-  min-width: 100px;
-  flex: 1;
+.header .left {
+  display: block;
+  padding-right: 1rem;
 }
 
 .logo a, .logo a:visited {
