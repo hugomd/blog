@@ -24,6 +24,8 @@ params:
   showReadingTime: false
   rssFullText: true
   replyViaEmail: true
+  editUrl: https://github.com/hugomd/blog/edit/develop/content/
+  editOnGitHub: true
   replyEmail: blog@hu.md
   hideReadMore: true
 languages:
