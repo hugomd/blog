@@ -4,7 +4,7 @@ date: 2021-05-20T16:47:24+10:00
 aliases: "/now"
 ---
 
-<span class="functional">This page allows me to keep people updated on what I'm doing with my life, known as a [‘now’ page](https://nownownow.com/).</span>
+<span class="post-meta">This page allows me to keep people updated on what I'm doing with my life, known as a [‘now’ page](https://nownownow.com/).</span>
 
 It's been almost a year since I updated this page. I'm still living in Melbourne, Australia, although in a different place.
 
