@@ -2,7 +2,7 @@
   --bg-color: #fff;
   --primary-color: #374151;
   --secondary-color: #0071bc;
-  --light-gray: #bbb;
+  --light-gray: #aaa;
   --color: #374151;
   --highlight: rgba(255, 255, 0, 0.3);
 }
@@ -62,11 +62,11 @@
 }
 
 @font-face {
-  font-display: swap;
-  font-family: CCSymbols;
+  font-family: 'CCSymbols';
   font-synthesis: none;
   src: url('../fonts/CCSymbols.woff2') format(woff2);
   unicode-range: u+a9, u+229c, u+1f10d-1f10f, u+1f16d-1f16f;
+  font-display: swap;
 }
 
 html {
