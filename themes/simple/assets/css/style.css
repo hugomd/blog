@@ -173,6 +173,7 @@ h1, h2, h3, h4, h5 {
   color: var(--primary-color);
   text-decoration-color: var(--secondary-color);
   text-decoration-thickness: 0.15rem;
+  text-underline-offset: 0.1rem;
 }
 
 .meta, .post-meta, .archive__post-date, .post-tags {
