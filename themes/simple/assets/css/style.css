@@ -1,7 +1,7 @@
 :root {
   --bg-color: #fff;
-  --primary-color: #374151;
-  --secondary-color: #0071bc;
+  --primary-color: #000;
+  --secondary-color: rgb(0, 122, 255);
   --light-gray: #aaa;
   --color: #374151;
   --highlight: rgba(255, 255, 0, 0.3);
