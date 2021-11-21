@@ -7,11 +7,5 @@
 }
 
 .cashapp a {
-  text-decoration-color: #00d64b;
-  background: none;
-  color: var(--primary-color);
-}
-.cashapp a:hover {
-  background-size: none;
-  color: var(--primary-color);
+  --secondary-color: #00d64b;
 }
