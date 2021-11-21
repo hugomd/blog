@@ -8,7 +8,7 @@ aliases: "/now"
 
 It's been almost a year since I updated this page. I'm still living in Melbourne, Australia, although in a different place.
 
-We've adopted a cat. Her name is Choufleur, which means cauliflower in French.
+We've adopted a cat. Her name is {{% sidenote "Choufleur."%}}Which means “Cauliflower” in French.{{% /sidenote %}}
 
 ## Writing
 - [100 days to Offload](/tags/100daystooffload/)

@@ -4,7 +4,8 @@ title: "About me"
 
 Hi, I'm Hugo 👋.
 
-I'm a software engineer at [CashApp](https://cash.app) in Melbourne, Australia.
+I live in Melbourne, Australia, and I'm a software engineer at <span class='cashapp'><a href='https://cash.app/'>Cash App</a></span> <img class="icon" src='/img/cash-app-icon.svg' />
+
 
 I avoid caffeine, tweet, have a few interesting side projects, and _try_ to do open source.
 

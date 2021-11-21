@@ -1,0 +1,17 @@
+.icon {
+  height: 1.35rem;
+  width: 1.35rem;
+  display: inline-block;
+  align-self: center;
+  vertical-align: middle;
+}
+
+.cashapp a {
+  text-decoration-color: #00d64b;
+  background: none;
+  color: var(--primary-color);
+}
+.cashapp a:hover {
+  background-size: none;
+  color: var(--primary-color);
+}
