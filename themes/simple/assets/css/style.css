@@ -186,17 +186,6 @@ h1, h2, h3, h4, h5 {
   line-height: 2rem;
 }
 
-.posts h1 a, .posts h1 a:visited, .post-title {
-  font-size: 2.1rem;
-  color: var(--primary-color);
-  border-bottom: none;
-  text-decoration: none;
-}
-
-.posts .read-more {
-  margin-top: 1rem;
-}
-
 .post-content {
   line-height: 2rem;
   position: relative;
@@ -204,6 +193,36 @@ h1, h2, h3, h4, h5 {
 
 .post-content li {
   margin-bottom: 0.3rem;
+}
+
+.posts h1 a, .posts h1 a:visited, .post-title {
+  font-size: 2.1rem;
+  color: var(--primary-color);
+  border-bottom: none;
+  text-decoration: none;
+  background: none;
+}
+
+.post-content a, .post-meta a, .post-footer a {
+  background:
+     linear-gradient(
+       to bottom, var(--secondary-color) 0%,
+       var(--secondary-color) 100%
+     );
+  background-position: 0 100%;
+  background-repeat: repeat-x;
+  background-size: 0px 0px;
+  color: var(--primary-color);
+  transition: background-size .2s, color .2s;
+}
+
+.post-content a:hover, .post-meta a:hover {
+  background-size: 4px 50px;
+  color: var(--bg-color);
+}
+
+.posts .read-more {
+  margin-top: 1rem;
 }
 
 .pagination {
@@ -263,8 +282,10 @@ blockquote {
   padding: 0;
 }
 
-.webring a {
+.webring a, .webring a:hover, .webring a:visited {
   text-decoration: none;
+  background: none;
+  color: var(--primary-color);
 }
 
 .webring .attribution {

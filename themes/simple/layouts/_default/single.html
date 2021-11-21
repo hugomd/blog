@@ -57,7 +57,7 @@
     </div>
     {{ if eq .Type "post" }}
       {{ if or (.Site.Params.ReplyViaEmail) (.Site.Params.EditOnGitHub) }}
-      <div class="flex">
+      <div class="post-footer flex">
         {{ if .Site.Params.ReplyViaEmail }}
         <div class="right">
           <a href="mailto:{{ .Site.Params.ReplyEmail }}?subject={{ htmlEscape "RE: " }}{{ .Title | markdownify }}">{{ i18n "replyviaemail" . }}</a>
