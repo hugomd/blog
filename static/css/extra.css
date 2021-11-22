@@ -1,11 +1,3 @@
-.icon {
-  height: 1.35rem;
-  width: 1.35rem;
-  display: inline-block;
-  align-self: center;
-  vertical-align: middle;
-}
-
 .cashapp a {
   --secondary-color: #00d64b;
 }
