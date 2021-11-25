@@ -218,7 +218,7 @@ h1, h2, h3, h4, h5 {
 
 .post-content a:hover, .post-meta a:hover {
   background-size: 4px 50px;
-  color: var(--bg-color);
+  color: #FFF;
 }
 
 .posts .read-more {
