@@ -17,6 +17,12 @@
   top: auto;
 }
 
+.sidenote small {
+  font-family: LibreFranklin;
+  font-size: 1rem;
+  line-height: 1.8rem;
+}
+
 .sidenoteref a {
   text-decoration: none;
 }
