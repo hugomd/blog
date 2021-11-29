@@ -203,7 +203,7 @@ h1, h2, h3, h4, h5 {
   background: none;
 }
 
-.post-content a, .post-meta a, .post-footer a {
+.post-content a {
   background:
      linear-gradient(
        to bottom, var(--secondary-color) 0%,
@@ -216,7 +216,14 @@ h1, h2, h3, h4, h5 {
   transition: background-size .2s, color .2s;
 }
 
-.post-content a:hover, .post-meta a:hover {
+.post-meta a, .post-meta a:hover, .post-footer a, .post-footer a:hover {
+  background-size: none;
+  background: none;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.post-content a:hover {
   background-size: 4px 50px;
   color: #FFF;
 }
