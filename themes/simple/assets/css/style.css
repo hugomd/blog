@@ -2,7 +2,7 @@
   --bg-color: #fff;
   --primary-color: #000;
   --secondary-color: rgb(0, 122, 255);
-  --light-gray: #aaa;
+  --light-gray: rgb(112, 112, 112);
   --color: #374151;
   --highlight: rgba(255, 255, 0, 0.3);
 }
@@ -48,7 +48,7 @@
 @font-face {
     font-family: 'LibreFranklin';
     src: url('../fonts/libre-franklin-variable.woff') format('woff');
-    font-weight: 300;
+    font-weight: 400;
     font-style: normal;
     font-display: swap;
 }
@@ -57,7 +57,7 @@
     font-family: 'LibreFranklin';
     font-style: italic;
     src: url('../fonts/libre-franklin-italic.woff') format('woff');
-    font-weight: 300;
+    font-weight: 400;
     font-display: swap;
 }
 
@@ -272,10 +272,26 @@ img {
   max-width: 100%;
 }
 
+figcaption {
+  font-family: 'LibreFranklin';
+  font-size: 1rem;
+  color: var(--light-gray);
+  font-weight: 400;
+}
+
 blockquote {
   border-left: 2px solid;
-  margin: 40px;
-  padding: 10px 20px;
+  margin: 0px;
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.twitter-quote {
+  margin-left: 0px;
+  width: 100%;
+  border-color: #1DA1F2;
+  background: rgba(29, 161, 242, 0.1)
 }
 
 .webring .articles ul {
