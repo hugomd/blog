@@ -2,7 +2,7 @@
 {{ $baseUrl := .Get 0 }}
 {{ $id := .Get 1 }}
 {{ $json := getJSON $prefix $baseUrl "/api/v1/statuses/" $id }}
-<blockquote style="margin-left:0px;width:100%;border-color:rgba(189, 147, 249, 1);background:rgba(189, 147, 249, 0.1)">
+<blockquote class="functional pleroma-quote">
   {{ $json.content | markdownify }}
 
   {{ if isset $json "media_attachments" }}
