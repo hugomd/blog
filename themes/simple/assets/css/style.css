@@ -1,6 +1,6 @@
 :root {
   --bg-color: #fff;
-  --primary-color: #000;
+  --primary-color: rgb(41, 41, 41);
   --secondary-color: rgb(0, 122, 255);
   --light-gray: rgb(112, 112, 112);
   --color: #374151;
@@ -62,11 +62,14 @@
 }
 
 @font-face {
-  font-family: 'CCSymbols';
-  font-synthesis: none;
-  src: url('../fonts/CCSymbols.woff2') format(woff2);
-  unicode-range: u+a9, u+229c, u+1f10d-1f10f, u+1f16d-1f16f;
   font-display: swap;
+  font-family: CCSymbols;
+  font-synthesis: none;
+  src: url('../fonts/CCSymbols.woff2') format(woff2),
+       url('../fonts/CCSymbols.woff')  format(woff);
+  unicode-range: u+a9, u+229c,
+                 u+1f10d-1f10f,
+                 u+1f16d-1f16f;
 }
 
 html {
@@ -93,7 +96,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .container {
-  max-width: 34rem;
+  max-width: 36rem;
   margin-left: auto;
   margin-right: auto;
   padding: 0 20px;
@@ -171,8 +174,7 @@ h1, h2, h3, h4, h5 {
 
 .content a, .content a:visited {
   color: var(--primary-color);
-  text-decoration-color: var(--secondary-color);
-  text-decoration-thickness: 0.15rem;
+  text-decoration-color: var(--primary-color);
   text-underline-offset: 0.1rem;
 }
 
@@ -187,7 +189,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .post-content {
-  line-height: 2rem;
+  line-height: 1.8rem;
   position: relative;
 }
 
@@ -204,28 +206,13 @@ h1, h2, h3, h4, h5 {
 }
 
 .post-content a {
-  background:
-     linear-gradient(
-       to bottom, var(--secondary-color) 0%,
-       var(--secondary-color) 100%
-     );
-  background-position: 0 100%;
-  background-repeat: repeat-x;
-  background-size: 0px 0px;
-  color: var(--primary-color);
-  transition: background-size .2s, color .2s;
+  text-decoration: underline;
+  text-decoration-color: var(--primary-color);
 }
 
 .post-meta a, .post-meta a:hover, .post-footer a, .post-footer a:hover {
-  background-size: none;
-  background: none;
-  color: var(--primary-color);
+  text-decoration-color: var(--primary-color);
   text-decoration: none;
-}
-
-.post-content a:hover {
-  background-size: 4px 50px;
-  color: #FFF;
 }
 
 .posts .read-more {
