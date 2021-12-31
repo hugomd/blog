@@ -62,11 +62,11 @@
 }
 
 @font-face {
+  font-family: 'ccsymbols';
+  src: url('../fonts/ccsymbols.woff2') format('woff2'),
+       url('../fonts/ccsymbols.woff')  format('woff');
   font-display: swap;
-  font-family: CCSymbols;
-  font-synthesis: none;
-  src: url('../fonts/CCSymbols.woff2') format(woff2),
-       url('../fonts/CCSymbols.woff')  format(woff);
+  font-style: normal;
   unicode-range: u+a9, u+229c,
                  u+1f10d-1f10f,
                  u+1f16d-1f16f;
@@ -77,7 +77,7 @@ html {
 }
 
 body {
-  font-family: 'Newsreader', Serif, CCSymbols;
+  font-family: 'Newsreader', serif, 'ccsymbols';
   color: var(--primary-color);
   font-size: 1.3rem;
   line-height: 2rem;
