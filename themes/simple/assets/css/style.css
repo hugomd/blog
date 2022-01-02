@@ -134,6 +134,7 @@ h1, h2, h3, h4, h5 {
 .menu li {
   display: block;
   list-style-type: none;
+  font-family: LibreFranklin;
 }
 
 .menu li:not(:first-child) {
@@ -178,7 +179,11 @@ h1, h2, h3, h4, h5 {
   text-underline-offset: 0.1rem;
 }
 
-.meta, .post-meta, .archive__post-date, .post-tags, .post-tags a {
+.post-content .meta a, .post-content .meta a:visited, .post-tags a, .post-tags a:visited {
+  color: var(--light-gray);
+}
+
+.meta, .post-meta, .archive__post-date, .post-tags {
   font-family: LibreFranklin;
   margin-bottom: 0.5rem;
   font-size: 1rem;
@@ -224,6 +229,11 @@ h1, h2, h3, h4, h5 {
   margin-top: 3rem;
   display: flex;
   justify-content: space-between;
+  font-family: LibreFranklin;
+}
+
+.pagination a:link {
+  text-decoration: none;
 }
 
 .next {
