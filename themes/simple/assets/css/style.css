@@ -79,7 +79,7 @@ html {
 body {
   font-family: 'Newsreader', serif, 'ccsymbols';
   color: var(--primary-color);
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   line-height: 2rem;
 }
 
@@ -178,10 +178,11 @@ h1, h2, h3, h4, h5 {
   text-underline-offset: 0.1rem;
 }
 
-.meta, .post-meta, .archive__post-date, .post-tags {
+.meta, .post-meta, .archive__post-date, .post-tags, .post-tags a {
   font-family: LibreFranklin;
   margin-bottom: 0.5rem;
   font-size: 1rem;
+  color: var(--light-gray);
 }
 
 .posts {
@@ -198,7 +199,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .posts h1 a, .posts h1 a:visited, .post-title {
-  font-size: 2.1rem;
+  font-size: 1.8rem;
   color: var(--primary-color);
   border-bottom: none;
   text-decoration: none;
@@ -312,6 +313,10 @@ blockquote {
 }
 
 .webring .attribution a {
+  color: var(--light-gray);
+}
+
+.articles .date, .source, .source a, .source a:visited {
   color: var(--light-gray);
 }
 
