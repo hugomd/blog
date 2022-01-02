@@ -126,6 +126,7 @@ h1, h2, h3, h4, h5 {
 }
 
 .menu ul {
+  font-size: 1.1rem;
   display: flex;
   list-style: none;
   padding-left: 0;
