@@ -135,7 +135,7 @@ h1, h2, h3, h4, h5 {
 .menu li {
   display: block;
   list-style-type: none;
-  font-family: LibreFranklin;
+  font-family: 'LibreFranklin', sans-serif, 'ccsymbols';
 }
 
 .menu li:not(:first-child) {
