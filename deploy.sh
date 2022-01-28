@@ -17,6 +17,7 @@ $GOPATH/bin/openring \
   -s https://stefanzweifel.io/rss.xml \
   -s https://healeycodes.com/feed.xml \
   -s https://peppe.rs/index.xml \
+  -s http://millicent.gay/index.xml \
   < openring_in.html \
   > ./layouts/partials/openring_out.html
 
