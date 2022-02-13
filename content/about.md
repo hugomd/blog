@@ -13,7 +13,7 @@ If you like any of my projects, or posts on this blog, please do let me know via
 
 <center>
   <figure>
-    <img style="width:10rem;border-radius: 8px;" src="/images/avatar.png" alt="Photo of me">
+    <img style="width:10rem;border-radius: 8px;" src="/images/avatar.jpg" alt="Photo of me">
     <figcaption>That's me!</figcaption>
   </figure>
 </center>
