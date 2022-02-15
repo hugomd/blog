@@ -50,7 +50,7 @@
     src: url('../fonts/libre-franklin-variable.woff') format('woff');
     font-weight: 400;
     font-style: normal;
-    font-display: optional;
+    font-display: fallback;
 }
 
 @font-face {
@@ -58,14 +58,14 @@
     font-style: italic;
     src: url('../fonts/libre-franklin-italic.woff') format('woff');
     font-weight: 400;
-    font-display: optional;
+    font-display: fallback;
 }
 
 @font-face {
   font-family: 'ccsymbols';
   src: url('../fonts/ccsymbols.woff2') format('woff2'),
        url('../fonts/ccsymbols.woff')  format('woff');
-  font-display: optional;
+  font-display: swap;
   font-style: normal;
   unicode-range: u+a9, u+229c,
                  u+1f10d-1f10f,
