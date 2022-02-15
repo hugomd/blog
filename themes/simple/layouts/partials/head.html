@@ -11,6 +11,7 @@
       />
   <meta name="robots" content="noodp" />
   <link rel="canonical" href="{{ .Permalink }}" />
+
   {{ block "title" . }}
     <title>
       {{ if .IsHome }}{{ $.Site.Title }}{{ with $.Site.Params.Subtitle }} —
@@ -26,10 +27,20 @@
   {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
   {{ $sidenote := resources.Get "css/sidenote.css" | minify | fingerprint }}
 
+  <!-- Theme CSS -->
   <!-- Prefetch -->
-  <link rel="prefetch" href="{{ $style.Permalink | relURL }}" as="style">
-  <link rel="prefetch" href="{{ $syntax.Permalink | relURL }}" as="style">
-  <link rel="prefetch" href="{{ $sidenote.Permalink | relURL }}" as="style">
+  <link rel="preload" href="{{ $style.Permalink | relURL }}" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="{{ $style.Data.Integrity }}">
+  <noscript><link rel="stylesheet" href="{{ $syntax.Permalink | relURL }}" integrity="{{ $syntax.Data.Integrity }}"></noscript>
+
+  <!-- Load async -->
+  <link rel="preload" href="{{ $syntax.Permalink | relURL }}" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="{{ $syntax.Data.Integrity }}">
+  <noscript><link rel="stylesheet" href="{{ $syntax.Permalink | relURL }}" integrity="{{ $syntax.Data.Integrity }}"></noscript>
+
+  <link rel="preload" href="{{ $sidenote.Permalink | relURL }}" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="{{ $sidenote.Data.Integrity }}">
+  <noscript><link rel="stylesheet" href="{{ $sidenote.Permalink | relURL }}" integrity="{{ $sidenote.Data.Integrity }}"></noscript>
+
+  <link rel="preload" href="/css/extra.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/css/extra.css"></noscript>
 
   {{ if .IsHome }}
     {{ $paginator := .Paginate (where .Site.RegularPages "Type" "post") }}
@@ -47,14 +58,6 @@
       {{ end }}
     {{ end }}
   {{ end }}
-
-  <!-- Theme CSS -->
-  <link rel="stylesheet" href="{{ $style.Permalink | relURL }}" integrity="{{ $style.Data.Integrity }}">
-  <link rel="stylesheet" href="{{ $syntax.Permalink | relURL }}" integrity="{{ $syntax.Data.Integrity }}">
-  <link rel="stylesheet" href="{{ $sidenote.Permalink | relURL }}" integrity="{{ $sidenote.Data.Integrity }}">
-
-  <link rel="stylesheet" href="/css/extra.css">
-
 
   <!-- Icons -->
   <link rel="shortcut icon" href="{{ "img/favicon.png" | absURL }}" />
