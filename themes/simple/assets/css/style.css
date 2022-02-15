@@ -18,7 +18,7 @@
 @font-face {
     font-family: 'PragmataPro';
     src: url('../fonts/pragmatapro.woff2') format('woff2');
-    font-display: swap;
+    font-display: optional;
 }
 
 @font-face {
@@ -26,7 +26,7 @@
     src: url('../fonts/newsreader-variable.woff') format('woff');
     font-weight: 400;
     font-style: normal;
-    font-display: swap;
+    font-display: optional;
 }
 
 @font-face {
@@ -34,7 +34,7 @@
     src: url('../fonts/newsreader-variable.woff') format('woff');
     font-weight: 700;
     font-style: normal;
-    font-display: swap;
+    font-display: optional;
 }
 
 @font-face {
@@ -42,7 +42,7 @@
     font-style: italic;
     src: url('../fonts/newsreader-italic.woff') format('woff');
     font-weight: 400;
-    font-display: swap;
+    font-display: optional;
 }
 
 @font-face {
@@ -50,7 +50,7 @@
     src: url('../fonts/libre-franklin-variable.woff') format('woff');
     font-weight: 400;
     font-style: normal;
-    font-display: swap;
+    font-display: optional;
 }
 
 @font-face {
@@ -58,14 +58,14 @@
     font-style: italic;
     src: url('../fonts/libre-franklin-italic.woff') format('woff');
     font-weight: 400;
-    font-display: swap;
+    font-display: optional;
 }
 
 @font-face {
   font-family: 'ccsymbols';
   src: url('../fonts/ccsymbols.woff2') format('woff2'),
        url('../fonts/ccsymbols.woff')  format('woff');
-  font-display: swap;
+  font-display: optional;
   font-style: normal;
   unicode-range: u+a9, u+229c,
                  u+1f10d-1f10f,

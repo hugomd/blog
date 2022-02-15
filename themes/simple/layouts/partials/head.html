@@ -44,6 +44,21 @@
   <link rel="preload" href="/css/extra.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="/css/extra.css"></noscript>
 
+  <!-- Fonts -->
+  {{ $newsreaderVariable := resources.Get "fonts/newsreader-variable.woff" }}
+  {{ $newsreaderItalic := resources.Get "fonts/newsreader-italic.woff" }}
+  {{ $libreFranklinVariable := resources.Get "fonts/libre-franklin-variable.woff" }}
+  {{ $libreFranklinItalic := resources.Get "fonts/libre-franklin-variable.woff" }}
+  {{ $ccSymbols := resources.Get "fonts/ccSymbols.woff" }}
+  {{ $pragmataPro := resources.Get "fonts/pragmatapro.woff2" }}
+
+  <link rel="preload" as="font" href="{{ $newsreaderVariable.Permalink | relURL }}">
+  <link rel="preload" as="font" href="{{ $newsreaderItalic.Permalink | relURL }}">
+  <link rel="preload" as="font" href="{{ $libreFranklinVariable.Permalink | relURL }}">
+  <link rel="preload" as="font" href="{{ $libreFranklinItalic.Permalink | relURL }}">
+  <link rel="preload" as="font" href="{{ $ccSymbols.Permalink | relURL }}">
+  <link rel="preload" as="font" href="{{ $pragmataPro.Permalink | relURL }}">
+
   {{ if .IsHome }}
     {{ $paginator := .Paginate (where .Site.RegularPages "Type" "post") }}
     {{ range $paginator.Pages }}
