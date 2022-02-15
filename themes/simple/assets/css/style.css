@@ -18,7 +18,7 @@
 @font-face {
     font-family: 'PragmataPro';
     src: url('../fonts/pragmatapro.woff2') format('woff2');
-    font-display: optional;
+    font-display: swap;
 }
 
 @font-face {
@@ -26,7 +26,7 @@
     src: url('../fonts/newsreader-variable.woff') format('woff');
     font-weight: 400;
     font-style: normal;
-    font-display: optional;
+    font-display: block;
 }
 
 @font-face {
@@ -34,7 +34,7 @@
     src: url('../fonts/newsreader-variable.woff') format('woff');
     font-weight: 700;
     font-style: normal;
-    font-display: optional;
+    font-display: block;
 }
 
 @font-face {
@@ -42,7 +42,7 @@
     font-style: italic;
     src: url('../fonts/newsreader-italic.woff') format('woff');
     font-weight: 400;
-    font-display: optional;
+    font-display: block;
 }
 
 @font-face {
@@ -50,7 +50,7 @@
     src: url('../fonts/libre-franklin-variable.woff') format('woff');
     font-weight: 400;
     font-style: normal;
-    font-display: fallback;
+    font-display: block;
 }
 
 @font-face {
@@ -58,7 +58,7 @@
     font-style: italic;
     src: url('../fonts/libre-franklin-italic.woff') format('woff');
     font-weight: 400;
-    font-display: fallback;
+    font-display: block;
 }
 
 @font-face {
