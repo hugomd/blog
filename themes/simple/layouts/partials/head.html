@@ -23,13 +23,16 @@
   <!-- head custom -->
   {{- partial "prepended_head.html" . }}
 
-  {{ $style := resources.Get "css/style.css" | minify | fingerprint}}
   {{ $syntax := resources.Get "css/syntax.css" | minify | fingerprint }}
   {{ $sidenote := resources.Get "css/sidenote.css" | minify | fingerprint }}
 
   <!-- Theme CSS -->
   <!-- Prefetch -->
-  <link rel="stylesheet" href="{{ $style.Permalink | relURL }}" integrity="{{ $style.Data.Integrity }}">
+  {{ with resources.Get "css/style.css" | minify }}
+  <style>
+    {{ .Content | safeCSS }}
+  </style>
+  {{ end }}
 
   <!-- Load async -->
   <link rel="preload" href="{{ $syntax.Permalink | relURL }}" as="style" onload="this.onload=null;this.rel='stylesheet'" integrity="{{ $syntax.Data.Integrity }}">
