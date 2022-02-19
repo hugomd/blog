@@ -220,6 +220,8 @@ h1, h2, h3, h4, h5 {
 .post-meta a, .post-footer a, .post-footer {
   text-decoration-color: var(--primary-color);
   text-decoration: none;
+  font-family: LibreFranklin;
+  font-size: 1rem;
 }
 
 .posts .read-more {
