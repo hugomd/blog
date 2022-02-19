@@ -4,3 +4,16 @@
 <li><a href="https://twitter.com/hugojmd">Twitter</a></li>
 <li><a href="{{ "/index.xml" | relURL }}">RSS</a></li>
 <li><a href="{{ "/friends" | relURL }}">Friends</a></li>
+<script>
+  function lnurlOr() {
+      if (window.webln != undefined) {
+          webln.enable().then(() => {webln.lnurl('sats@hu.md'); })
+      } else {
+          location.href="lightning:lnurl1dp68gurn8ghj76r49ekkgtewwajkcmpdddhx7amw9akxuatjd3cz76r4vahsjcases"
+      }
+  }
+  const ul = document.getElementById("footer-list");
+  const li = document.createElement("li");
+  li.innerHTML += `<button style="background:none;border:none;padding:0;" onclick="lnurlOr()">⚡️</button>`
+  ul.appendChild(li);
+</script>
