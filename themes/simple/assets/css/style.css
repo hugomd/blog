@@ -65,8 +65,8 @@
 
 @font-face {
   font-family: 'ccsymbols';
-  src: url('../fonts/ccsymbols.woff2') format('woff2'),
-       url('../fonts/ccsymbols.woff')  format('woff');
+  src: url(/fonts/ccsymbols.woff2) format('woff2'),
+       url(/fonts/ccsymbols.woff)  format('woff');
   font-display: swap;
   font-style: normal;
   unicode-range: u+a9, u+229c,
