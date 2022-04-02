@@ -12,6 +12,10 @@
   <meta name="robots" content="noodp" />
   <link rel="canonical" href="{{ .Permalink }}" />
 
+  {{- if not $.Params.images }}
+    <meta property="og:image" content="{{ "/images/avatar.jpg" | relURL }}" />
+  {{ end }}
+
   {{ block "title" . }}
     <title>
       {{ if .IsHome }}{{ $.Site.Title }}{{ with $.Site.Params.Subtitle }} —

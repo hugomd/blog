@@ -6,6 +6,7 @@ useRelativeCover: true
 description: "A few photos from my recent trip to Switzerland."
 cover: "cover.jpg"
 coverCaption: "Photo taken from the top of [Madrisa](https://www.madrisa.ch) in Switzerland."
+images: ["madrisa.jpg", "madrisa_east.jpg", "france.jpg", "the_circle.jpg"]
 ---
 
 ### Flying
