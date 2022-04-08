@@ -20,7 +20,7 @@
 .sidenote small {
   font-family: 'Libre Franklin';
   font-size: 0.9rem;
-  line-height: 1.8rem;
+  line-height: 1.3rem;
 }
 
 .sidenoteref a {
@@ -53,7 +53,7 @@
 
   .sidenote__button {
     color: var(--link-color);
-    text-decoration: underline;
+    background: var(--highlight);
     text-decoration-style: dotted;
     cursor: pointer;
   }
@@ -73,6 +73,10 @@
     --sidenote-width: 12.0rem;
     --sidenote-margin: 2.0rem;
     cursor: default;
+  }
+
+  .sidenote label {
+    white-space: nowrap;
   }
 
   .sidenote:hover,

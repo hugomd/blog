@@ -12,7 +12,7 @@
 
     {{ if .Params.tags }}
       <span class="post-tags functional">
-        &#9670;
+        &nbsp;
         {{ range .Params.tags }}
           <a href="{{ (urlize (printf "tags/%s" . )) | absURL }}/">#{{ . }}</a>&nbsp;
         {{ end }}

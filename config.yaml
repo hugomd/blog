@@ -2,7 +2,6 @@ baseURL: /
 languageCode: en-us
 defaultContentLanguage: en
 defaultContentLanguageInSubdir: false
-title: Hugo's Blog
 theme: simple
 paginate: 4
 enableGitInfo: true
@@ -27,19 +26,19 @@ params:
   editUrl: https://github.com/hugomd/blog/edit/develop/content/
   editOnGitHub: true
   replyEmail: blog@hu.md
-  hideReadMore: true
+  hideReadMore: false
 languages:
   en:
     languageName: English
     weight: 1
-    title: Hugo's Blog
+    title: Hugo’s Blog
     description: >-
       Software engineer, working at Cash App in Melbourne, Australia.
       Talk to me about coffee, French, skiing, or Kubernetes.
     keywords: ''
     menuMore: Show more
     writtenBy: Written by
-    readMore: Read more
+    readMore: Continue reading
     readOtherPosts: Read other posts
     newerPosts: ←  Newer posts
     olderPosts: Older posts →

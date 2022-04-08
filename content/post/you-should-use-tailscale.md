@@ -5,11 +5,7 @@ description: "I recently installed [Tailscale](https://tailscale.com/) on my [Um
 tags: ["homelab"]
 ---
 
-I recently installed [Tailscale](https://tailscale.com/) on my [Umbrel](https://getumbrel.com/) node, so I can access it remotely without going via Tor, because Tor is *so slow*.
-
-It's one of the few services I've used that I can say *just works*.
-
-They also have a reasonable [hobby tier](https://tailscale.com/pricing/).
+I recently installed [Tailscale](https://tailscale.com/) on my [Umbrel](https://getumbrel.com/) node, so I can access it remotely without going via Tor, because Tor is *so slow*. It's one of the few services I've used that I can say *just works*. They also have a reasonable [hobby tier](https://tailscale.com/pricing/).
 
 ## Tailscale and Umbrel
 1. Sign up [to Tailscale](https://tailscale.com/start)
