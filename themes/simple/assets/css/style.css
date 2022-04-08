@@ -426,6 +426,7 @@ article:first-child {
 
 .post-content {
   line-height: 1.8rem;
+  font-size: 1.25rem;
   position: relative;
 }
 
