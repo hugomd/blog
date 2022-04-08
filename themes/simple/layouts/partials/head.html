@@ -49,17 +49,15 @@
   <noscript><link rel="stylesheet" href="/css/extra.css"></noscript>
 
   <!-- Fonts -->
-  {{ $newsreaderVariable := resources.Get "fonts/newsreader-variable.woff" }}
-  {{ $newsreaderItalic := resources.Get "fonts/newsreader-italic.woff" }}
+  {{ $newsreaderVariable := resources.Get "fonts/newsreader-variable-v2.woff2" }}
+  {{ $newsreaderItalic := resources.Get "fonts/newsreader-italic-v2.woff2" }}
   {{ $libreFranklinVariable := resources.Get "fonts/libre-franklin-variable.woff" }}
-  {{ $libreFranklinItalic := resources.Get "fonts/libre-franklin-variable.woff" }}
   {{ $ccSymbols := resources.Get "fonts/ccsymbols.woff2" }}
   {{ $pragmataPro := resources.Get "fonts/pragmatapro.woff2" }}
 
   <link rel="preload" as="font" href="{{ $newsreaderVariable.Permalink | relURL }}">
   <link rel="preload" as="font" href="{{ $newsreaderItalic.Permalink | relURL }}">
   <link rel="preload" as="font" href="{{ $libreFranklinVariable.Permalink | relURL }}">
-  <link rel="preload" as="font" href="{{ $libreFranklinItalic.Permalink | relURL }}">
   <link rel="preload" as="font" href="{{ $ccSymbols.Permalink | relURL }}">
   <link rel="preload" as="font" href="{{ $pragmataPro.Permalink | relURL }}">
 
