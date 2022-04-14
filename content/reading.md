@@ -6,6 +6,7 @@ title: "Reading"
 
 ## Planned
 * [*The Design of Everyday Things*](https://en.wikipedia.org/wiki/The_Design_of_Everyday_Things) by Donald Norman
+* [*Children of Dune*](https://en.wikipedia.org/wiki/Children_of_Dune) by Frank Herbert
 
 ## In Progress
 * [*Sapiens: A Brief History of Humankind*](https://en.wikipedia.org/wiki/Sapiens:_A_Brief_History_of_Humankind) by Yuval Noah Harari

@@ -1,29 +1,27 @@
 ---
 title: "Now"
-date: 2021-05-20T16:47:24+10:00
+date: 2022-04-11T16:44:44+10:00
 aliases: "/now"
 ---
 
-<span class="post-meta">This page allows me to keep people updated on what I'm doing with my life, known as a [‘now’ page](https://nownownow.com/).</span>
+<span class="post-meta">This page allows me to keep people updated on what I’m doing with my life, known as a [<u>‘now’</u> page](https://nownownow.com/).</span>
 
-It's been almost a year since I updated this page. I'm still living in Melbourne, Australia, although in a different place.
+I'm living in Melbourne, Australia, although spending more time down at the beach than I used to.
 
-We've adopted a cat. Her name is {{% sidenote "Choufleur."%}}Which means “Cauliflower” in French.{{% /sidenote %}}
+Our cat is going well, and becoming even more cuddly now the weather is getting colder.
 
-## Writing
-- [100 days to Offload](/tags/100daystooffload/)
+With a lot of help and encouragement from [Will](https://will.sx), I've started growing salvias on our balcony, and hoping to grow more plants later in the year, likely some herbs.
 
+Life is good.
 
 ## Listening to
-### Podcasts
-I've stopped listening to so many podcasts, because I spend so little time commuting. Recently I've been listening to [Serial](https://serialpodcast.org), I finally understand the hype. I'm also still keeping up with [Charged Tech](https://char.gd/podcast).
-
 ### Music
-* Rubblebucket
-* Beirut
-* Mitski
-* Flaming Lips
-* Andrew Bird
+* Big Scary
+* Parcels
+* San Cisco
+* Courtney Barnett
+* Tune-Yards
 
 ## Previous Now Updates
+* [May 2021](/previously/may-2021/)
 * [April 2020](/previously/april-2020/)
