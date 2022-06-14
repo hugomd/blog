@@ -557,11 +557,11 @@ a[target="_blank"]:after {
   background: rgba(29, 161, 242, 0.1);
 }
 
-.twitter-quote p {
+blockquote p {
   margin-top: 0;
 }
 
-.twitter-quote p:last-child  {
+blockquote p:last-child  {
   margin-bottom: 0;
 }
 
