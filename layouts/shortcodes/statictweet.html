@@ -31,5 +31,5 @@
     {{ end }}
   {{ end }}
   <br />
-  <p>&mdash; {{ $json.user.name }} (@{{ $json.user.screen_name }}) <a href='https://twitter.com/{{ $json.user.screen_name }}/status/{{ $json.id_str }}'>{{ dateFormat "January 2, 2006" $json.created_at }}</a></p>
+  <p>&mdash; {{ $json.user.name }} (@{{ $json.user.screen_name }}) <a href='https://twitter.com/{{ $json.user.screen_name }}/status/{{ $json.id_str }}' target="_blank">{{ dateFormat "January 2, 2006" $json.created_at }}</a></p>
 </blockquote>

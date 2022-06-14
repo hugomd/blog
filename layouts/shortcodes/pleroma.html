@@ -14,5 +14,5 @@
   {{ end }}
 
   <br />
-  <p>&mdash; {{ $json.account.display_name }} (@{{ $json.account.acct }}) <a href='https://{{ $baseUrl }}/@{{ $json.account.acct }}/posts/{{ $id }}'>{{ dateFormat "January 2, 2006" $json.created_at }}</a></p>
+  <p>&mdash; {{ $json.account.display_name }} (@{{ $json.account.acct }}) <a target="_blank" href='https://{{ $baseUrl }}/@{{ $json.account.acct }}/posts/{{ $id }}'>{{ dateFormat "January 2, 2006" $json.created_at }}</a></p>
 </blockquote>
