@@ -611,11 +611,16 @@ blockquote p:last-child  {
   justify-content: space-between;
 }
 
+a.footnote-ref {
+  text-decoration: none;
+}
+
 /* Fix vertical alignment of supertext */
 sup, sub {
   vertical-align: baseline;
   position: relative;
   top: -0.4em;
+  font-size: 0.8rem;
 }
 
 sub { 
