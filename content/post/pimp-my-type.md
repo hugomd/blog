@@ -1,7 +1,7 @@
 ---
 title: "Making this blog easier to read"
 date: 2022-07-31T11:58:00+11:00
-description: “Noticed any typography changes recently?”
+description: "Noticed any typography changes recently?"
 ---
 
 Last month I was lucky enough to hop on a call with [Oliver Schöndorfer](https://twitter.com/glyphe). He runs the Pimp My Type [blog](https://pimpmytype.com) and [YouTube channel](https://www.youtube.com/c/pimpmytype).
