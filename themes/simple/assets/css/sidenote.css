@@ -32,20 +32,21 @@
 
   .sidenote__checkbox~.sidenote__content {
     /* Hidden, but accessible to browsers that don't do CSS (e.g. screenreaders, Pocket) */
-    position: absolute;
+    position: static;
     left: -99999px;
     top: auto;
+    display: none;
   }
 
   .sidenote__checkbox:checked~.sidenote__content {
     /* override hidden-but-accessible */
-    position: static;
+    position: relative;
     left: auto;
 
     /* Don't break up line containing the sidenote */
     float: inherit;
 
-    display: none;
+    display: block;
     width: calc(100% - 3em);
     margin: 0.8rem 0;
     padding: 0.8rem 1.6rem;
