@@ -39,13 +39,13 @@
 
   .sidenote__checkbox:checked~.sidenote__content {
     /* override hidden-but-accessible */
-    position: relative;
+    position: static;
     left: auto;
 
     /* Don't break up line containing the sidenote */
     float: inherit;
 
-    display: block;
+    display: none;
     width: calc(100% - 3em);
     margin: 0.8rem 0;
     padding: 0.8rem 1.6rem;
