@@ -503,6 +503,7 @@ pre {
   overflow: auto;
   white-space: pre;
   padding: 10px;
+  line-height: 0.9;
 }
 
 code {
