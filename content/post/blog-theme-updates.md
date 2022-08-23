@@ -14,7 +14,7 @@ Here's what has changed:
 - Increase font size _everywhere_
 - Use [Newsreader](https://fonts.google.com/specimen/Newsreader) for body text
 - Use <span class="functional">[Libre Franklin](https://fonts.google.com/specimen/Libre+Franklin)</span> as the functional text
-- Use <span style="font-family:pragmatapro;"><a href="https://fsd.it/shop/fonts/pragmatapro/">PragmataPro</a></span> for code
+- Use <span style="font-family:'Berkeley Mono';"><a href="https://berkeleygraphics.com/typefaces/berkeley-mono">Berkeley Mono</a></span> for code
 - Post metadata (date, tags, etc) now uses functional font
 - Increase line-height and decrease site width
 - Add an “Edit on GitHub” link to each post
