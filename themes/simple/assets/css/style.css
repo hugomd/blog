@@ -404,7 +404,8 @@ h3.archive__post-title {
 .content a, .content a:visited {
   color: var(--primary-color);
   text-decoration-color: var(--primary-color);
-  text-underline-offset: 0.1rem;
+  text-underline-offset: 0.2rem;
+  text-decoration-thickness: 1px;
 }
 
 .post-meta a, .post-meta a:visited, .post-content .meta a, .post-content .meta a:visited, .post-tags a, .post-tags a:visited {
@@ -463,6 +464,7 @@ article:first-child {
 .post-content a {
   text-decoration: underline;
   text-decoration-color: var(--primary-color);
+  text-decoration-thickness: 1px;
 }
 
 .post-meta a, .post-footer a, .post-footer {
