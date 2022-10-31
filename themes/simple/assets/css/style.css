@@ -5,6 +5,7 @@
   --light-gray: rgb(112, 112, 112);
   --color: #374151;
   --highlight: rgba(255, 255, 0, 0.3);
+  --filter: unset;
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -13,6 +14,7 @@
     --primary-color: rgb(213, 215, 216);
     --color: rgb(213, 215, 216);
     --light-gray: rgb(142, 142, 142);
+    --filter: invert(100%);
   }
 }
 
@@ -548,6 +550,7 @@ blockquote {
 a[target="_blank"]:after {
   content: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAQElEQVR42qXKwQkAIAxDUUdxtO6/RBQkQZvSi8I/pL4BoGw/XPkh4XigPmsUgh0626AjRsgxHTkUThsG2T/sIlzdTsp52kSS1wAAAABJRU5ErkJggg==");
   margin: 0 3px 0 5px;
+  filter: var(--filter);
 }
 
 .twitter-quote {
