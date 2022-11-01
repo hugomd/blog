@@ -2,7 +2,9 @@ baseURL: /
 languageCode: en-us
 defaultContentLanguage: en
 defaultContentLanguageInSubdir: false
-theme: simple
+theme: 
+  - simple
+  - hugo-shortcode-gallery
 paginate: 4
 enableGitInfo: true
 pygmentsUseClasses: true
@@ -12,11 +14,15 @@ caches:
   getjson:
     dir: ':resourceDir/json'
     maxAge: -1
+imaging:
+  exif:
+    includeFields: .*
 markup:
   goldmark:
     renderer:
       unsafe: true
 params:
+  galleryLoadJQuery: true
   showMenuItems: 4
   contentTypeName: post
   defaultTheme: light
@@ -57,6 +63,9 @@ languages:
         - identifier: about
           name: About
           url: /about/
+        - identifier: Photos
+          name: Photos
+          url: /photos/
         - identifier: archive
           name: Archive
           url: /archive/

@@ -1,3 +1,7 @@
 .cashapp a {
   --primary-color: #00d64b;
 }
+
+#swipebox-description {
+  font-family: 'Libre Franklin'
+}
