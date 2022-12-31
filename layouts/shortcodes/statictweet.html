@@ -1,4 +1,4 @@
-{{ $urlPre := "https://cdn.syndication.twimg.com/tweet?id="}}
+{{ $urlPre := "https://cdn.syndication.twimg.com/tweet-result?id="}}
 {{ $id := .Get 0 }}
 {{ $json := getJSON $urlPre $id }}
 {{ $text := .Page.RenderString $json.text }}
