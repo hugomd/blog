@@ -20,6 +20,9 @@ caches:
   getjson:
     dir: ':resourceDir/json'
     maxAge: -1
+  getresource:
+    dir: ':resourceDir/resources'
+    maxAge: -1
 imaging:
   exif:
     includeFields: .*
