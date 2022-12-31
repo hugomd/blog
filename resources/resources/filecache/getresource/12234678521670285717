@@ -1,0 +1,25 @@
+HTTP/2.0 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Expose-Headers: ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset
+Content-Security-Policy: default-src 'none'
+Content-Type: application/json; charset=utf-8
+Date: Sat, 31 Dec 2022 01:51:10 GMT
+Github-Authentication-Token-Expiration: 2023-01-30 00:52:31 UTC
+Referrer-Policy: origin-when-cross-origin, strict-origin-when-cross-origin
+Server: GitHub.com
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+Vary: Accept-Encoding, Accept, X-Requested-With
+X-Accepted-Oauth-Scopes: repo
+X-Content-Type-Options: nosniff
+X-Frame-Options: deny
+X-Github-Media-Type: github.v4; format=json
+X-Github-Request-Id: CC19:0D19:C16E58:CE162F:63AF958D
+X-Oauth-Scopes: user
+X-Ratelimit-Limit: 5000
+X-Ratelimit-Remaining: 4951
+X-Ratelimit-Reset: 1672453062
+X-Ratelimit-Resource: graphql
+X-Ratelimit-Used: 49
+X-Xss-Protection: 0
+
+{"data":{"user":{"sponsorshipsAsSponsor":{"totalCount":4,"nodes":[{"sponsorable":{"name":"Andreas Nedbal","avatarUrl":"https://avatars.githubusercontent.com/u/1774242?u=ad5012e8cabc70652301dfe424476ac8e017c964&v=4"}},{"sponsorable":{"name":"Christian Muehlhaeuser","avatarUrl":"https://avatars.githubusercontent.com/u/146378?u=a8f07db1dc640cc093fbe7ec95a1cb72fb648b19&v=4"}},{"sponsorable":{"name":"Neovim","avatarUrl":"https://avatars.githubusercontent.com/u/6471485?v=4"}},{"sponsorable":{"name":"Wesley Moore","avatarUrl":"https://avatars.githubusercontent.com/u/21787?u=761645705c88079bf3819d71c095e03479b6284a&v=4"}}]}}}}

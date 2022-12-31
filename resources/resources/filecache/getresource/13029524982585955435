@@ -1,0 +1,25 @@
+HTTP/2.0 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Expose-Headers: ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset
+Content-Security-Policy: default-src 'none'
+Content-Type: application/json; charset=utf-8
+Date: Sat, 31 Dec 2022 02:54:11 GMT
+Github-Authentication-Token-Expiration: 2023-01-30 00:52:31 UTC
+Referrer-Policy: origin-when-cross-origin, strict-origin-when-cross-origin
+Server: GitHub.com
+Strict-Transport-Security: max-age=31536000; includeSubdomains; preload
+Vary: Accept-Encoding, Accept, X-Requested-With
+X-Accepted-Oauth-Scopes: repo
+X-Content-Type-Options: nosniff
+X-Frame-Options: deny
+X-Github-Media-Type: github.v4; format=json
+X-Github-Request-Id: EFA2:75C2:7E6E96:87F574:63AFA453
+X-Oauth-Scopes: user
+X-Ratelimit-Limit: 5000
+X-Ratelimit-Remaining: 4973
+X-Ratelimit-Reset: 1672456802
+X-Ratelimit-Resource: graphql
+X-Ratelimit-Used: 27
+X-Xss-Protection: 0
+
+{"data":{"user":{"sponsorshipsAsSponsor":{"totalCount":4,"nodes":[{"sponsorable":{"name":"Andreas Nedbal","url":"https://github.com/pixeldesu"}},{"sponsorable":{"name":"Christian Muehlhaeuser","url":"https://github.com/muesli"}},{"sponsorable":{"name":"Neovim","url":"https://github.com/neovim"}},{"sponsorable":{"name":"Wesley Moore","url":"https://github.com/wezm"}}]}}}}
