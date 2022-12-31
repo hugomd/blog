@@ -10,6 +10,12 @@ enableGitInfo: true
 pygmentsUseClasses: true
 relativeURLs: true
 minify: true
+security:
+  funcs:
+    getenv:
+    - '^HUGO_'
+    - '^CI$'
+    - 'GITHUB_TOKEN'
 caches:
   getjson:
     dir: ':resourceDir/json'
