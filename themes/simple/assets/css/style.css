@@ -6,6 +6,7 @@
   --color: #374151;
   --highlight: rgba(255, 255, 0, 0.3);
   --filter: unset;
+  --code: #d81b60;
 }
 
 @media screen and (prefers-color-scheme: dark) {
@@ -510,12 +511,16 @@ pre {
 }
 
 code {
+  color: var(--code);
   font-family: 'Berkeley Mono';
   font-size: 1.05rem;
   overflow: auto;
   word-break: break-all;
   word-wrap: break-word;
   display: inline;
+  border: 1px solid var(--light-gray);
+  border-radius: 5px;
+  padding: 0.1rem 0.4rem;
 }
 
 img {
