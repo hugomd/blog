@@ -517,6 +517,7 @@ code {
   overflow: auto;
   word-break: break-all;
   word-wrap: break-word;
+  white-space: nowrap;
   display: inline;
   border: 1px solid var(--light-gray);
   border-radius: 5px;
