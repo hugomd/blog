@@ -20,6 +20,7 @@ If you like any of my projects, or posts on this blog, please do let me know via
   </figure>
 </center>
 
+
 # About this website
 
 This blog is built with a static site generator called [Hugo](https://gohugo.io/) and is hosted on [Cloudflare Pages](https://pages.cloudflare.com/) (I wrote about it [here](/post/moving-to-cloudflare-pages/)).
@@ -31,3 +32,11 @@ My domain was purchased through [host.md](https://host.md/) (formerly known as M
 I manage DNS for `hugo.md` via Cloudflare.
 
 I write my posts in [neovim](https://neovim.io/), and push them to my [blog repository](https://github.com/hugomd/blog) on GitHub, where they are automatically deployed.
+
+# Sponsoring
+
+I like to give back to projects I love, and the people working on them.
+
+Here is a list of people and projects I'm sponsoring on GitHub:
+
+{{< sponsoring >}}
