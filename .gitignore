@@ -1,3 +1,4 @@
 public/
 .DS_Store
 twitter-proxy/node_modules/
+.hugo_build.lock
