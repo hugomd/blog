@@ -1,0 +1,21 @@
+{{ $token := getenv "GITHUB_TOKEN" }}
+{{ $auth := print "Bearer " $token }}
+{{ $postResponse := resources.GetRemote "https://api.github.com/graphql"  (dict 
+    "method" "post"
+    "body" `{"query":"{ user(login: \"hugomd\") {sponsorshipsAsSponsor(first: 100) { totalCount, nodes { sponsorable { ... on Organization { name, url }, ... on User { name, url } } } } } }"}` 
+    "headers" (dict 
+        "Content-Type" "application/json"
+        "Authorization" $auth
+    )
+)}}
+
+{{ $data := $postResponse.Content | transform.Unmarshal }}
+<ul class="sponsors">
+{{ range $sponsored := $data.data.user.sponsorshipsAsSponsor.nodes }}
+  <li>
+    <a href='{{ $sponsored.sponsorable.url }}'>
+      {{ $sponsored.sponsorable.name }}
+    </a>
+  </li>
+{{ end }}
+</ul>
