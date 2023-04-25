@@ -510,7 +510,7 @@ pre {
   padding: 10px;
 }
 
-code {
+p code {
   color: var(--code);
   font-family: 'Berkeley Mono';
   font-size: 1.05rem;
