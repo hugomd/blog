@@ -21,4 +21,4 @@ $GOPATH/bin/openring \
   < openring_in.html \
   > ./layouts/partials/openring_out.html
 
-hugo --minify --baseURL=$BASE_URL
+npm run tinacms build && hugo --minify --baseURL=$BASE_URL
