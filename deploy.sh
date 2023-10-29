@@ -6,7 +6,7 @@ $GOPATH/bin/openring \
   -p 1 \
   -l 0 \
   -s https://kevq.uk/feed/ \
-  -s https://joelchrono12.ml/feed.xml \
+  -s https://joelchrono.xyz/feed.xml \
   -s https://mxb.dev/feed.xml \
   -s https://ndanes.com/feed.xml \
   -s https://renlord.com/index.xml \
@@ -21,4 +21,4 @@ $GOPATH/bin/openring \
   < openring_in.html \
   > ./layouts/partials/openring_out.html
 
-npm run tinacms build && hugo --minify --baseURL=$BASE_URL
+npm run tinacms build && hugo --minify --baseURL=$BASE_URL && rm public/admin/.gitignore
