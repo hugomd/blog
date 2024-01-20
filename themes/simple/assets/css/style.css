@@ -410,7 +410,7 @@ h3.archive__post-title {
 }
 
 .post-meta a, .post-meta a:visited, .meta a, .meta a:visited, .post-tags a, .post-tags a:visited {
-  color: var(--light-gray);
+  color: var(--light-gray) !important;
 }
 
 .meta, .post-meta, .archive__post-date, .post-tags {
@@ -470,10 +470,12 @@ article:first-child {
 }
 
 .post-meta a, .post-footer a, .post-footer {
-  text-decoration-color: var(--primary-color);
-  text-decoration: none;
   font-family: 'Libre Franklin';
   font-size: 1rem;
+  text-decoration: underline;
+  text-decoration-color: var(--blue);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3.2px;
 }
 
 .posts .read-more {
@@ -485,10 +487,6 @@ article:first-child {
   display: flex;
   justify-content: space-between;
   font-family: 'Libre Franklin';
-}
-
-.pagination a:link {
-  text-decoration: none;
 }
 
 .next {
