@@ -404,13 +404,12 @@ h3.archive__post-title {
 
 
 .content a, .content a:visited {
-  color: var(--primary-color);
-  text-decoration-color: var(--primary-color);
-  text-underline-offset: 0.2rem;
+  color: var(--blue);
+  text-decoration-color: var(--blue);
   text-decoration-thickness: 1px;
 }
 
-.post-meta a, .post-meta a:visited, .post-content .meta a, .post-content .meta a:visited, .post-tags a, .post-tags a:visited {
+.post-meta a, .post-meta a:visited, .meta a, .meta a:visited, .post-tags a, .post-tags a:visited {
   color: var(--light-gray);
 }
 
@@ -463,7 +462,7 @@ article:first-child {
   margin-bottom: 0;
 }
 
-.post-content a {
+.post-content a, .post-content a:visited {
   color: var(--blue);
   text-decoration: underline;
   text-decoration-color: var(--blue);
