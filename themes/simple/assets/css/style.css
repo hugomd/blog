@@ -4,6 +4,7 @@
   --secondary-color: rgb(0, 122, 255);
   --light-gray: rgb(112, 112, 112);
   --color: #374151;
+  --blue: #047bc2;
   --highlight: rgba(255, 255, 0, 0.3);
   --filter: unset;
   --code: #d81b60;
@@ -463,8 +464,9 @@ article:first-child {
 }
 
 .post-content a {
+  color: var(--blue);
   text-decoration: underline;
-  text-decoration-color: var(--primary-color);
+  text-decoration-color: var(--blue);
   text-decoration-thickness: 1px;
 }
 
