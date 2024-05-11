@@ -53,7 +53,7 @@
   }
 
   .sidenote__button {
-    color: var(--link-color);
+    color: var(--primary-color);
     background: var(--highlight);
     text-decoration-style: dotted;
     cursor: pointer;
