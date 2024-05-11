@@ -4,7 +4,7 @@
   --secondary-color: rgb(0, 122, 255);
   --light-gray: rgb(112, 112, 112);
   --color: #374151;
-  --blue: #047bc2;
+  --link-color: #047bc2;
   --highlight: rgba(255, 255, 0, 0.3);
   --filter: unset;
   --code: #d81b60;
@@ -17,6 +17,8 @@
     --color: rgb(213, 215, 216);
     --light-gray: rgb(142, 142, 142);
     --filter: invert(100%);
+    --link-color: #00B8D4;
+    --code: #98c379;
   }
 }
 
@@ -330,7 +332,7 @@ h3.archive__post-title {
 }
 
 .container {
-  max-width: 36rem;
+  max-width: 40rem;
   margin-left: auto;
   margin-right: auto;
   padding: 0 20px;
@@ -375,7 +377,7 @@ h3.archive__post-title {
   margin-left: 1rem;
 }
 
-.header a {
+.header a, .header a:visited {
   color: var(--primary-color);
   text-decoration: none;
   border-radius: .25rem;
@@ -404,16 +406,16 @@ h3.archive__post-title {
 
 
 .content a, .content a:visited {
-  color: var(--blue);
-  text-decoration-color: var(--blue);
+  color: var(--link-color);
+  text-decoration-color: var(--link-color);
   text-decoration-thickness: 1px;
 }
 
-.post-meta a, .post-meta a:visited, .meta a, .meta a:visited, .post-tags a, .post-tags a:visited {
-  color: var(--light-gray) !important;
+.post-meta a, .post-meta a:visited, .meta a, .meta a:visited, a:visited {
+  color: var(--light-gray);
 }
 
-.meta, .post-meta, .archive__post-date, .post-tags {
+.meta, .post-meta, .archive__post-date {
   font-family: 'Libre Franklin';
   margin-bottom: 0.5rem;
   font-size: 1rem;
@@ -456,6 +458,7 @@ article:first-child {
 
 .posts h1 a, .posts h1 a:visited, .post-title {
   color: var(--primary-color);
+  line-height: 2.5rem;
   border-bottom: none;
   text-decoration: none;
   background: none;
@@ -463,17 +466,18 @@ article:first-child {
 }
 
 .post-content a, .post-content a:visited {
-  color: var(--blue);
-  text-decoration: underline;
-  text-decoration-color: var(--blue);
+  color: var(--link-color);
+  text-decoration: none;
+  text-decoration-color: var(--link-color);
   text-decoration-thickness: 1px;
 }
 
 .post-meta a, .post-footer a, .post-footer {
   font-family: 'Libre Franklin';
   font-size: 1rem;
-  text-decoration: underline;
-  text-decoration-color: var(--blue);
+  color: var(--link-color);
+  text-decoration: none;
+  text-decoration-color: var(--link-color);
   text-decoration-thickness: 1px;
   text-underline-offset: 3.2px;
 }
@@ -512,7 +516,7 @@ pre {
 p code {
   color: var(--code);
   font-family: 'Berkeley Mono';
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   overflow: auto;
   word-break: break-all;
   word-wrap: break-word;
@@ -521,6 +525,7 @@ p code {
   border: 1px solid var(--light-gray);
   border-radius: 5px;
   padding: 0.1rem 0.4rem;
+  margin: 0.1rem;
 }
 
 img {
@@ -635,4 +640,13 @@ sup, sub {
 
 sub { 
   top: 0.4em; 
+}
+
+strong {
+    font-variation-settings: 'wght' 500;
+    border-color: rgba(189, 147, 249, 1);
+    display: block;
+    padding-left: 10px;
+    border-color: #1DA1F2;
+    border-left: 2px solid;
 }
