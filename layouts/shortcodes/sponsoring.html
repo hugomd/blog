@@ -14,7 +14,17 @@
 {{ range $sponsored := $data.data.user.sponsorshipsAsSponsor.nodes }}
   <li>
     <a href='{{ $sponsored.sponsorable.url }}'>
-      {{ $sponsored.sponsorable.name }}
+        {{ with $sponsored.sponsorable.name }}
+            {{ $sponsored.sponsorable.name }}
+        {{ else }}
+            {{ $url := $sponsored.sponsorable.url }}
+            {{ $urlParts := split $url "/" }}
+            {{ $lastPart := index $urlParts (sub (len $urlParts) 1) }}
+            {{ if eq $lastPart "" }}
+                {{ $lastPart = index $urlParts (sub (len $urlParts) 2) }}
+            {{ end }}
+            {{ $lastPart }}
+        {{ end }}
     </a>
   </li>
 {{ end }}
