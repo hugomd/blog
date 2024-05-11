@@ -10,6 +10,10 @@
   --code: #d81b60;
 }
 
+.dark-mode {
+    display: none;
+}
+
 @media screen and (prefers-color-scheme: dark) {
   :root {
     --bg-color: rgb(32, 33, 36);
@@ -19,6 +23,14 @@
     --filter: invert(100%);
     --link-color: #00B8D4;
     --code: #98c379;
+  }
+
+  .dark-mode {
+      display: block;
+  }
+
+  .light-mode {
+      display: none;
   }
 }
 

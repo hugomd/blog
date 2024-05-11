@@ -89,7 +89,8 @@ Now you can add an internal rewrite in settings, routing
 `*.internal.example.com` to the Tailscale IP address of the private machine that
 we noted down in the previous section:
 
-![](nextdns-screenshot.png)
+<img class="light-mode" src="nextdns-screenshot-light.png" />
+<img class="dark-mode" src="nextdns-screenshot-dark.png" />
 
 Now NextDNS should return the Tailscale IP address of your service:
 {{< highlight bash >}}
