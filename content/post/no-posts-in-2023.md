@@ -11,7 +11,7 @@ I didn't write a single post on this blog in 2023. I don't feel bad about it.
 
 A summary of the year:
 * I helped plan a wedding with my {{< sidenote "fiancée." 1 >}}She's now my wife.{{< /sidenote >}}
-* I invested more time in exercise, mostly {{<sidenote "rock climbing" 1>}}I did a *lot* of rock climbing, and I'm still loving it.{{< /sidenote >}} and yoga.
+* I invested more time in exercise, mostly {{<sidenote "rock climbing" 2>}}I did a *lot* of rock climbing, and I'm still loving it.{{< /sidenote >}} and yoga.
 * I learned more about photography.
 * I learned to surf.
 * I worked hard at my day job, and subsequently feel like I've accomplished.
