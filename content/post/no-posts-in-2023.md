@@ -4,7 +4,7 @@ date: 2024-05-11T21:12:11+10:00
 tags: ["personal", "thoughts"]
 description: "It was a big year."
 cover: "post/no-posts-in-2023/taipan-wall.jpg"
-coverCaption: "A photo of Taipan Wall, in North Gariwerd"
+coverCaption: "A photo of Taipan Wall, in North Gariwerd."
 ---
 
 I didn't write a single post on this blog in 2023. I don't feel bad about it.
