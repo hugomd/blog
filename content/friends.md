@@ -13,6 +13,7 @@ My friends have personal websites too, check them out:
 * [Josh Parnham](https://joshparnham.com)
 * [Nicholas Whittaker](https://nicholas.cloud/)
 * [Renlord Yang](http://renlord.com)
+* [Ricardo Mariano](https://ricmariano.com)
 * [Robert Koch](https://me.kochie.io)
 * [Ru Singh](https://rusingh.com/)
 * [Terence Huynh](https://terencehuynh.com)
