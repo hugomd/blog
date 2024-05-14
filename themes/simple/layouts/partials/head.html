@@ -55,11 +55,11 @@
   {{ $ccSymbols := resources.Get "fonts/ccsymbols.woff2" }}
   {{ $berkeleyMono := resources.Get "fonts/berkeleymono.woff2" }}
 
-  <link rel="preload" as="font" href="{{ $newsreaderVariable.Permalink | relURL }}">
-  <link rel="preload" as="font" href="{{ $newsreaderItalic.Permalink | relURL }}">
-  <link rel="preload" as="font" href="{{ $libreFranklinVariable.Permalink | relURL }}">
-  <link rel="preload" as="font" href="{{ $ccSymbols.Permalink | relURL }}">
-  <link rel="preload" as="font" href="{{ $berkeleyMono.Permalink | relURL }}">
+  <link rel="preload" as="font" href="{{ $newsreaderVariable.Permalink | relURL }}" crossorigin>
+  <link rel="preload" as="font" href="{{ $newsreaderItalic.Permalink | relURL }}" crossorigin>
+  <link rel="preload" as="font" href="{{ $libreFranklinVariable.Permalink | relURL }}" crossorigin>
+  <link rel="preload" as="font" href="{{ $ccSymbols.Permalink | relURL }}" crossorigin>
+  <link rel="preload" as="font" href="{{ $berkeleyMono.Permalink | relURL }}" crossorigin>
 
   {{ if .IsHome }}
     {{ $paginator := .Paginate (where .Site.RegularPages "Type" "post") }}
