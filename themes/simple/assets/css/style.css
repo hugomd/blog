@@ -344,7 +344,7 @@ h3.archive__post-title {
 }
 
 .container {
-  max-width: 40rem;
+  max-width: 800px;
   margin-left: auto;
   margin-right: auto;
   padding: 0 20px;
@@ -520,6 +520,7 @@ hr {
 
 pre {
   font-family: 'Berkeley Mono';
+  font-size: 1rem;
   overflow: auto;
   white-space: pre;
   padding: 10px;
