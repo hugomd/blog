@@ -9,7 +9,8 @@ paginate: 4
 enableGitInfo: true
 pygmentsUseClasses: true
 relativeURLs: true
-minify: true
+minify:
+  minifyOutput: true
 security:
   funcs:
     getenv:

@@ -1,0 +1,5 @@
+{{ $quicklink := resources.Get "js/quicklink.umd.js" }}
+<script src="{{ $quicklink.Permalink | relURL }}"></script>
+<script>
+  quicklink.listen();
+</script>
