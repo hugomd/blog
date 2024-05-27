@@ -6,8 +6,11 @@ tags: ["git"]
 ---
 
 1. Download `Kotlin.tmLanguage` from [here](https://github.com/vkostyukov/kotlin-sublime-package/blob/ce599a846ac9f86d4671a024d21220ca08e50f66/Kotlin.tmLanguage)
+
 2. Open Sublime Merge, click Preferences -> Browse Packages
+
 3. Create a folder called `Kotlin` and place `Kotlin.tmLanguage` within the folder
+
 4. Restart Sublime Merge and enjoy! 🎉
 
 

@@ -655,11 +655,14 @@ sub {
   top: 0.4em; 
 }
 
-strong {
-    font-variation-settings: 'wght' 500;
+.note {
     border-color: rgba(189, 147, 249, 1);
     display: block;
-    padding-left: 10px;
-    border-color: #1DA1F2;
-    border-left: 2px solid;
+    width: 100%;
+    border-color: rgba(255, 255, 100, 1);
+    background: rgba(255, 255, 100, 0.1);
+}
+
+strong {
+    font-variation-settings: 'wght' 500;
 }

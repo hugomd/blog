@@ -55,8 +55,10 @@ At this point you should have:
 * Tailscale installed on your development machine
 * Tailscale installed on the machine you'll be using to expose private services
 
-**Take note of your private machine's IP address, as we'll be setting DNS to
-route to this IP in the next section.**
+{{< note >}}
+Take note of your private machine's IP address, as we'll be setting DNS to
+route to this IP in the next section.
+{{< /note >}}
 
 {{< highlight bash >}}
 tailscale status
