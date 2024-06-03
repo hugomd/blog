@@ -13,7 +13,7 @@
   <link rel="canonical" href="{{ .Permalink }}" />
 
   {{- if not $.Params.images }}
-    <meta property="og:image" content="{{ "/images/avatar.jpg" | relURL }}" />
+    <meta property="og:image" content="{{ "/images/avatar.jpg" | absURL }}" />
   {{ end }}
 
   {{ block "title" . }}
