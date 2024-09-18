@@ -8,6 +8,7 @@
   --highlight: rgba(255, 255, 0, 0.3);
   --filter: unset;
   --code: #d81b60;
+  --menu: rgb(223 223 223);
 }
 
 .dark-mode {
@@ -296,14 +297,6 @@
 }
 
 @font-face {
-    font-family: 'Libre Franklin';
-    src: url(/fonts/libre-franklin-variable.woff) format('woff');
-    font-weight: 400;
-    font-style: normal;
-    font-display: block;
-}
-
-@font-face {
   font-family: 'ccsymbols';
   src: url(/fonts/ccsymbols.woff2) format('woff2'),
        url(/fonts/ccsymbols.woff)  format('woff');
@@ -314,12 +307,131 @@
                  u+1f16d-1f16f;
 }
 
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 200;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 300;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 300;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Innovator Grotesk VF';
+  font-style: normal;
+  font-weight: 800;
+  font-display: block;
+  src: url(/fonts/InnovatorGroteskVF-VF.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 html {
   background: var(--bg-color)
 }
 
 body {
-  font-family: 'Newsreader', serif, 'ccsymbols';
+  font-family: 'Innovator Grotesk VF', serif, 'ccsymbols';
   color: var(--primary-color);
   font-size: 1.15rem;
   line-height: 2rem;
@@ -340,7 +452,7 @@ h3.archive__post-title {
 }
 
 .functional {
-  font-family: 'Libre Franklin'
+  font-family: 'Innovator Grotesk VF'
 }
 
 .container {
@@ -379,14 +491,25 @@ h3.archive__post-title {
   padding-left: 0;
 }
 
-.menu li {
+.menu li a {
   display: block;
   list-style-type: none;
-  font-family: 'Libre Franklin', sans-serif, 'ccsymbols';
+  font-weight: 400;
+  font-family: 'Innovator Grotesk VF', sans-serif, 'ccsymbols';
+  padding: 5px 10px;
+  background-color: transparent;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, border-radius 0.2s ease;
+}
+
+.menu li a:hover {
+  background-color: #f7f7f7;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .menu li:not(:first-child) {
-  margin-left: 1rem;
+  margin-left: 0.2rem;
 }
 
 .header a, .header a:visited {
@@ -428,7 +551,7 @@ h3.archive__post-title {
 }
 
 .meta, .post-meta, .archive__post-date {
-  font-family: 'Libre Franklin';
+  font-family: 'Innovator Grotesk VF';
   margin-bottom: 0.5rem;
   font-size: 1rem;
   color: var(--light-gray);
@@ -485,7 +608,7 @@ article:first-child {
 }
 
 .post-meta a, .post-footer a, .post-footer {
-  font-family: 'Libre Franklin';
+  font-family: 'Innovator Grotesk VF';
   font-size: 1rem;
   color: var(--link-color);
   text-decoration: none;
@@ -502,7 +625,7 @@ article:first-child {
   margin-top: 3rem;
   display: flex;
   justify-content: space-between;
-  font-family: 'Libre Franklin';
+  font-family: 'Innovator Grotesk VF';
 }
 
 .next {
@@ -547,7 +670,8 @@ img {
 }
 
 figcaption {
-  font-family: 'Libre Franklin';
+  font-family: 'Innovator Grotesk VF';
+  font-style: italic;
   font-size: 1rem;
   color: var(--light-gray);
   font-weight: 300;
