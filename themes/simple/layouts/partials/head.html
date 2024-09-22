@@ -51,12 +51,10 @@
   <!-- Fonts -->
   {{ $newsreaderVariable := resources.Get "fonts/newsreader-variable-v2.woff2" }}
   {{ $newsreaderItalic := resources.Get "fonts/newsreader-italic-v2.woff2" }}
-  {{ $innovatorGrotesk := resources.Get "fonts/InnovatorGroteskVF-VF.woff2" }}
   {{ $libreFranklinVariable := resources.Get "fonts/libre-franklin-variable.woff" }}
   {{ $ccSymbols := resources.Get "fonts/ccsymbols.woff2" }}
   {{ $berkeleyMono := resources.Get "fonts/berkeleymono.woff2" }}
 
-  <link rel="preload" as="font" href="{{ $innovatorGrotesk.Permalink | relURL }}" crossorigin>
   <link rel="preload" as="font" href="{{ $newsreaderVariable.Permalink | relURL }}" crossorigin>
   <link rel="preload" as="font" href="{{ $newsreaderItalic.Permalink | relURL }}" crossorigin>
   <link rel="preload" as="font" href="{{ $libreFranklinVariable.Permalink | relURL }}" crossorigin>

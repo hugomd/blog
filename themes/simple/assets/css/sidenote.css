@@ -18,9 +18,9 @@
 }
 
 .sidenote small {
-  font-family: 'Newsreader';
-  font-size: 1rem;
-  line-height: 1.2rem;
+  font-family: 'Libre Franklin';
+  font-size: 0.9rem;
+  line-height: 1.3rem;
 }
 
 .sidenoteref a {
@@ -104,6 +104,6 @@
     width: var(--sidenote-width);
     color: var(--text-color);
     padding-left: 5px;
-    border-left: 2px solid var(--secondary-color);
+    border-left: 1px solid var(--light-gray);
   }
 }
