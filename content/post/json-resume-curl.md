@@ -4,7 +4,7 @@ title: "Responding to cURL with a JSON Resumé 📚"
 tags: ["tutorial", "curl", "json"]
 ---
 
-Over the past couple of months I've received numerous messages asking me how I've made this website respond to cURL requests with JSON (a little like [JSON Resumé](https://jsonresume.org)).  If you're out of the loop, you can either `curl hugo.md` or check out this GIF:
+Over the past couple of months I've received numerous messages asking me how I've made this website respond to cURL requests with JSON (a little like [JSON Resumé](https://jsonresume.org)).  If you're out of the loop, you can either `curl -L hugo.md` or check out this GIF:
 
 ![](screen-capture.gif)
 
