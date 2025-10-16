@@ -526,7 +526,7 @@ pre {
   padding: 10px;
 }
 
-p code {
+:not(pre) > code {
   color: var(--code);
   font-family: 'Berkeley Mono';
   font-size: 0.95rem;
