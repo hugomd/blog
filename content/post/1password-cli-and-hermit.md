@@ -1,5 +1,6 @@
 ---
 title: "Secret environment variables with Hermit and 1Password"
+description: "How Hermit and the 1Password CLI work together to inject per-machine secrets without storing them in plain text."
 date: 2025-10-16T22:49:39+11:00
 draft: false
 tags: [development]
