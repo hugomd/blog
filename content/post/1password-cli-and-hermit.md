@@ -6,9 +6,9 @@ draft: false
 tags: [development]
 ---
 
-This post is a quick {{<sidenote "TIL" >}}"Today I Learned"{{< /sidenote >}} for posterity.
+This post is a quick {{<sidenote "TIL" 1 >}}"Today I Learned"{{< /sidenote >}} for posterity.
 
-I'm building a {{<sidenote "side project" >}}It's called [FeedSync](https://feedsync.net), and it solves a _very_ niche problem: subscribing to RSS feeds, and piping new entries into Discord.<br /><br /> I'd love it if you tried it out ❤️{{< /sidenote >}}, and I'm contributing from two machines: my MacBook Pro, and my Linux desktop.
+I'm building a {{<sidenote "side project" 2 >}}It's called [FeedSync](https://feedsync.net), and it solves a _very_ niche problem: subscribing to RSS feeds, and piping new entries into Discord.<br /><br /> I'd love it if you tried it out ❤️{{< /sidenote >}}, and I'm contributing from two machines: my MacBook Pro, and my Linux desktop.
 
 ### The problem
 1. I need secrets on both machines.
