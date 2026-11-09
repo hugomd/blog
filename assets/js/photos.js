@@ -70,7 +70,7 @@ function render() {
   // standalone photos, in the manifest's newest-first order.
   state.photos = isAlbum ? (album?.photoIds || []).map(id => byID.get(id)).filter(Boolean) : photos;
   stream.setAttribute('aria-label', isAlbum ? `${album?.title || 'Album'} photographs` : 'Photostream');
-  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" aria-label="Open ${escape(p.alt)}" data-photo="${i}"><img src="${escape(p.thumbnail)}" width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < 4 ? 'eager' : 'lazy'}"></button>`).join('');
+  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="Open ${escape(p.alt)}" data-photo="${i}"><img src="${escape(p.thumbnail)}" width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < 4 ? 'eager' : 'lazy'}"></button>`).join('');
   if (!state.photos.length) message(isAlbum ? album ? 'No photographs in this album yet.' : 'This album isn’t currently published.' : 'No photographs published yet. Check back soon.');
 }
 function message(text) { $('#status').textContent = text; $('#status').hidden = false; }
