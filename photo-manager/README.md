@@ -27,6 +27,12 @@ volume. Images **and all manifests** live in R2 in production.
 - **Save photo / Save album** changes the private working catalog only.
   **Publish changes** confirms and publishes all ready photos/albums together.
   Public albums omit draft photos and choose a public fallback cover if needed.
+- **Delete photo** is separate from removing album membership. Use Delete in
+  an album row or the photo editor, then confirm the named photo. It removes
+  the private original and all resized images from both buckets, removes the
+  photo from every album, and selects replacement covers where necessary.
+  The current public index is updated immediately without publishing unrelated
+  drafts; no separate Publish is needed. Deletion cannot be undone here.
 
 This service publishes a data contract, not the blog's public gallery pages.
 The existing Hugo gallery and ignored photostream prototype are unchanged.
@@ -70,11 +76,22 @@ rule on the index. Configure public-bucket CORS to allow `GET`/`HEAD` from the
 blog origin when its frontend starts fetching the manifest cross-origin.
 
 **Unpublishing is not erasure.** It removes a photo/album from the next index,
-not historical releases, cached copies or existing public image URLs. There is
-deliberately no permanent-delete button in this first version. Handle privacy
-erasure explicitly in storage/CDN and maintain an independent backup of the
-private bucket/catalog. Rollback can promote a chosen prior release back to
-`index.json`, after coordinating with the sole writer and using an ETag condition.
+not historical releases, cached copies or existing public image URLs.
+**Delete photo** additionally deletes stored image files, but is not a promise
+of privacy erasure: historical release metadata, CDN/browser copies (potentially
+cached for a year), independent backups and external copies remain. Purge the
+exact public image/index URLs and remove relevant historical releases separately
+when privacy erasure is needed. Maintain an independent private-bucket backup.
+
+Deletion persists a `deleting` marker before changing the live index or removing
+files. Interrupted cleanup leaves the photo visible as **Deletion incomplete**;
+reload and use **Retry deletion** to finish, including after a restart. Such
+photos cannot be edited or republished. Files already removed are safe to retry;
+the photo leaves the working catalog only after all object deletions succeed.
+No R2 multi-object transaction or automatic background retry is assumed.
+Rollback must not blindly restore a historical manifest referencing deleted
+photos; those files no longer exist. Coordinate rollback with the sole writer
+and condition the index write on its ETag.
 
 ## Local development
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -32,6 +33,15 @@ func TestR2ConditionalCatalogWrites(t *testing.T) {
 			}
 			w.Header().Set("ETag", value.ETag)
 			w.Write(value.Body)
+			return
+		}
+		if r.Method == "DELETE" {
+			if strings.HasSuffix(r.URL.Path, "/forbidden") {
+				s3Error(403, "AccessDenied")
+				return
+			}
+			delete(objects, r.URL.Path)
+			w.WriteHeader(204)
 			return
 		}
 		if r.Method != "PUT" {
@@ -94,5 +104,17 @@ func TestR2ConditionalCatalogWrites(t *testing.T) {
 	}
 	if string(final.Body) != "first writer" && string(final.Body) != "second writer" {
 		t.Fatalf("Wrong stored body: %q", final.Body)
+	}
+	if err := store.Delete(ctx, "private", "catalog.json"); err != nil {
+		t.Fatal(err)
+	}
+	if value, err := store.Read(ctx, "private", "catalog.json"); err != nil || value != nil {
+		t.Fatalf("R2 object still exists after deletion: %v", err)
+	}
+	if err := store.Delete(ctx, "private", "catalog.json"); err != nil {
+		t.Fatalf("Deletion should tolerate an already removed object: %v", err)
+	}
+	if err := store.Delete(ctx, "public", "forbidden"); err == nil {
+		t.Fatal("Delete permission failure was ignored")
 	}
 }

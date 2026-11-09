@@ -334,14 +334,168 @@ func TestAlbumsDoNotOwnThePhotostream(t *testing.T) {
 
 type failingStorage struct {
 	storage
-	fail bool
+	fail    bool
+	failure func(method, bucket, key string, body []byte) bool
 }
 
 func (s *failingStorage) Write(ctx context.Context, bucket, key string, body []byte, contentType, cache string, expected *string) error {
-	if s.fail && bucket == "public" && strings.HasSuffix(key, "/1280.jpg") {
+	if (s.fail && bucket == "public" && strings.HasSuffix(key, "/1280.jpg")) || (s.failure != nil && s.failure("PUT", bucket, key, body)) {
 		return errors.New("simulated storage outage")
 	}
 	return s.storage.Write(ctx, bucket, key, body, contentType, cache, expected)
+}
+
+func (s *failingStorage) Delete(ctx context.Context, bucket, key string) error {
+	if s.failure != nil && s.failure("DELETE", bucket, key, nil) {
+		return errors.New("simulated storage outage")
+	}
+	return s.storage.Delete(ctx, bucket, key)
+}
+
+func TestDeletePhotoRemovesFilesAndMembershipsWithoutPublishingDrafts(t *testing.T) {
+	store := &localStorage{root: t.TempDir()}
+	b := newBrowser(t, store)
+	for range 3 {
+		b.raw("POST", "/api/photos", smallPNG(t), 200)
+	}
+	deleted, kept, draft := b.state.Catalog.Photos[0], b.state.Catalog.Photos[1], b.state.Catalog.Photos[2]
+	for _, p := range []photo{deleted, kept} {
+		p.Alt, p.Published = "Original published caption", true
+		b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	}
+	for i, ids := range [][]string{{draft.ID, deleted.ID, kept.ID}, {kept.ID, deleted.ID}, {deleted.ID}} {
+		b.request("POST", "/api/albums", map[string]string{"title": fmt.Sprintf("Album %d", i)}, 200)
+		item := b.state.Catalog.Albums[i]
+		cover := deleted.ID
+		if i == 1 {
+			cover = kept.ID
+		}
+		b.request("PUT", "/api/albums/"+item.ID, map[string]any{"title": item.Title, "slug": fmt.Sprintf("album-%d", i), "published": true, "photoIds": ids, "coverId": cover}, 200)
+	}
+	b.request("POST", "/api/publish", nil, 200)
+	// These ready-but-unpublished edits must NOT be published by deletion.
+	kept.Alt, kept.Published = "Unpublished change", true
+	b.request("PATCH", "/api/photos/"+kept.ID, edit(kept, b.state.Catalog.Albums[0].ID, b.state.Catalog.Albums[1].ID), 200)
+	draft.Alt, draft.Published = "Still not live", true
+	b.request("PATCH", "/api/photos/"+draft.ID, edit(draft, b.state.Catalog.Albums[0].ID), 200)
+	stale := b.state.ETag
+	b.request("POST", "/api/albums", map[string]string{"title": "Unpublished album"}, 200)
+	current := b.state.ETag
+	b.state.ETag = stale
+	b.request("DELETE", "/api/photos/"+deleted.ID, nil, 409)
+	b.state.ETag = current
+	if value, err := store.Read(t.Context(), "private", "originals/"+deleted.ID); err != nil || value == nil {
+		t.Fatalf("Stale delete touched the original: %v", err)
+	}
+	b.request("DELETE", "/api/photos/"+strings.Repeat("0", 32), nil, 404)
+	b.request("DELETE", "/api/photos/"+deleted.ID, nil, 200)
+	if len(b.state.Catalog.Photos) != 2 || b.state.Catalog.Photos[0].ID != kept.ID || b.state.Catalog.Photos[1].ID != draft.ID {
+		t.Fatalf("Deletion affected unrelated library photos: %+v", b.state.Catalog.Photos)
+	}
+	for i, expected := range [][]string{{draft.ID, kept.ID}, {kept.ID}, {}, {}} {
+		item := b.state.Catalog.Albums[i]
+		if !reflect.DeepEqual(item.PhotoIDs, expected) || (i < 2 && item.CoverID != expected[0]) || (i >= 2 && item.CoverID != "") {
+			t.Fatalf("Wrong private album membership/cover: %+v", item)
+		}
+	}
+	var live catalog
+	if err := json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live); err != nil {
+		t.Fatal(err)
+	}
+	if len(live.Photos) != 1 || live.Photos[0].ID != kept.ID || live.Photos[0].Alt != "Original published caption" || len(live.Albums) != 3 {
+		t.Fatalf("Deletion published unrelated drafts or retained deleted photo: %+v", live)
+	}
+	for i, item := range live.Albums {
+		expected, cover := []string{}, ""
+		if i < 2 {
+			expected, cover = []string{kept.ID}, kept.ID
+		}
+		if !reflect.DeepEqual(item.PhotoIDs, expected) || item.CoverID != cover {
+			t.Fatalf("Wrong live album membership/cover: %+v", item)
+		}
+	}
+	for _, bucket := range []string{"private", "public"} {
+		for _, size := range []int{640, 1280, 2560} {
+			key := fmt.Sprintf("photos/%s/%d.jpg", deleted.ID, size)
+			if value, err := store.Read(t.Context(), bucket, key); err != nil || value != nil {
+				t.Fatalf("Deleted image still stored: %s/%s: %v", bucket, key, err)
+			}
+			key = fmt.Sprintf("photos/%s/%d.jpg", kept.ID, size)
+			if value, err := store.Read(t.Context(), bucket, key); err != nil || value == nil {
+				t.Fatalf("Unrelated image lost: %s/%s: %v", bucket, key, err)
+			}
+		}
+	}
+	if value, err := store.Read(t.Context(), "private", "originals/"+deleted.ID); err != nil || value != nil {
+		t.Fatalf("Original not deleted: %v", err)
+	}
+	b.request("GET", "/api/photos/"+deleted.ID+"/image", nil, 404)
+	b.request("GET", "/media/photos/"+deleted.ID+"/2560.jpg", nil, 404)
+	// An unpublished photo is deletable too, including with no public derivative.
+	b.request("DELETE", "/api/photos/"+draft.ID, nil, 200)
+	b.request("DELETE", "/api/photos/"+deleted.ID, nil, 404)
+}
+
+func TestDeletePhotoResumesAfterStorageFailureAndRestart(t *testing.T) {
+	for _, stage := range []string{"intent", "index", "public image", "private image", "original", "final catalog"} {
+		t.Run(stage, func(t *testing.T) {
+			store := &failingStorage{storage: &localStorage{root: t.TempDir()}}
+			b := newBrowser(t, store)
+			b.raw("POST", "/api/photos", smallPNG(t), 200)
+			p := b.state.Catalog.Photos[0]
+			p.Alt, p.Published = "Delete this synthetic photo", true
+			b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+			b.request("POST", "/api/publish", nil, 200)
+			store.failure = func(method, bucket, key string, body []byte) bool {
+				switch stage {
+				case "intent":
+					return method == "PUT" && bucket == "private" && key == "catalog.json"
+				case "index":
+					return method == "PUT" && bucket == "public" && key == "index.json"
+				case "public image", "private image":
+					return method == "DELETE" && bucket == strings.Fields(stage)[0] && key == "photos/"+p.ID+"/1280.jpg"
+				case "original":
+					return method == "DELETE" && key == "originals/"+p.ID
+				case "final catalog":
+					return method == "PUT" && bucket == "private" && key == "catalog.json" && !bytes.Contains(body, []byte(`"deleting": true`))
+				}
+				return false
+			}
+			b.request("DELETE", "/api/photos/"+p.ID, nil, 500)
+			b.server.Close()
+			b = newBrowser(t, store)
+			if len(b.state.Catalog.Photos) != 1 || b.state.Catalog.Photos[0].Deleting != (stage != "intent") {
+				t.Fatalf("Lost deletion recovery state: %+v", b.state.Catalog.Photos)
+			}
+			if stage == "intent" || stage == "index" {
+				b.request("GET", "/media/photos/"+p.ID+"/640.jpg", nil, 200)
+			}
+			store.failure = nil
+			if stage != "intent" {
+				b.request("PATCH", "/api/photos/"+p.ID, edit(p), 409)
+				b.request("POST", "/api/publish", nil, 200)
+				var live catalog
+				json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+				if len(live.Photos) != 0 {
+					t.Fatal("Publishing resurrected a partially deleted photo")
+				}
+			}
+			b.request("DELETE", "/api/photos/"+p.ID, nil, 200)
+			if len(b.state.Catalog.Photos) != 0 {
+				t.Fatal("Retry did not finish deletion")
+			}
+			for _, bucket := range []string{"private", "public"} {
+				for _, key := range []string{"photos/" + p.ID + "/640.jpg", "photos/" + p.ID + "/1280.jpg", "photos/" + p.ID + "/2560.jpg"} {
+					if value, err := store.Read(t.Context(), bucket, key); err != nil || value != nil {
+						t.Fatalf("Retry left image %s/%s: %v", bucket, key, err)
+					}
+				}
+			}
+			if value, err := store.Read(t.Context(), "private", "originals/"+p.ID); err != nil || value != nil {
+				t.Fatalf("Retry left original: %v", err)
+			}
+		})
+	}
 }
 
 func TestFailedPublicationDoesNotReplaceLiveIndex(t *testing.T) {

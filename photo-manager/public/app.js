@@ -3,6 +3,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 const state = { catalog: { photos: [], albums: [] }, etag: 'new', publishedRevision: null };
 let busy = false, dirty = false, conflicted = false, filter = 'all', search = '';
 const editor = $('#editor');
+const deletion = $('#delete-confirmation');
 const image = id => `/api/photos/${encodeURIComponent(id)}/image`;
 const photoById = id => state.catalog.photos.find(photo => photo.id === id);
 const albumIds = id => state.catalog.albums.filter(album => album.photoIds.includes(id)).map(album => album.id);
@@ -16,7 +17,7 @@ async function api(path, { method = 'GET', body, headers = {} } = {}) {
   const result = await response.json();
   if (!response.ok) {
     if (response.status === 409) conflicted = true;
-    if (response.status === 401 && path !== '/login') { editor.close(); $('#studio').hidden = true; $('#login').hidden = false; }
+    if (response.status === 401 && path !== '/login') { deletion.close(); editor.close(); $('#studio').hidden = true; $('#login').hidden = false; }
     throw new Error(result.error || 'The request failed. Reload before retrying.');
   }
   return result;
@@ -25,7 +26,7 @@ async function api(path, { method = 'GET', body, headers = {} } = {}) {
 function showError(error) {
   $('#error span').textContent = error.message; $('#error').hidden = false;
   if ($('#studio').hidden) $('#login-error').textContent = error.message;
-  if (editor.open) {
+  if (editor.open || deletion.open) {
     $('#dialog-error')?.remove();
     const notice = document.createElement('p');
     notice.id = 'dialog-error'; notice.className = 'error'; notice.setAttribute('role', 'alert'); notice.textContent = error.message;
@@ -33,12 +34,12 @@ function showError(error) {
       const reload = document.createElement('button'); reload.textContent = 'Reload library'; reload.dataset.reload = '';
       reload.onclick = () => $('#reload').click(); notice.append(reload);
     }
-    $('#editor-body').prepend(notice); notice.scrollIntoView({ block: 'nearest' });
+    $(deletion.open ? '#delete-body' : '#editor-body').prepend(notice); notice.scrollIntoView({ block: 'nearest' });
   }
 }
 function status(message) { $('#status').textContent = message; }
 function refreshButtons() {
-  document.querySelectorAll('button').forEach(button => { button.disabled = busy || button.hasAttribute('data-boundary') || (conflicted && button.id !== 'reload' && button.id !== 'close-editor' && !button.hasAttribute('data-reload')); });
+  document.querySelectorAll('button').forEach(button => { button.disabled = busy || button.hasAttribute('data-boundary') || (conflicted && button.id !== 'reload' && button.id !== 'close-editor' && button.id !== 'cancel-delete' && !button.hasAttribute('data-reload')); });
   $('#publish').disabled = busy || conflicted || state.publishedRevision === state.catalog.revision;
 }
 async function work(task) {
@@ -72,7 +73,7 @@ function renderPhotos() {
   });
   $('#main').innerHTML = `<div class="page-heading"><div><p class="eyebrow">A FEW PLACES, A FEW MOMENTS</p><h1>All photos</h1><p>Your photostream starts here. Albums are entirely optional.</p></div><button class="primary" data-upload>＋ Upload photos</button></div>
     <div class="toolbar"><label class="search"><span class="hint">Search your library</span><input id="search" type="search" placeholder="Names, captions, tags…" value="${escape(search)}"></label><label><span class="hint">Show</span><select id="filter"><option value="all">All photos</option><option value="draft">Drafts</option><option value="ready">Ready to publish</option><option value="standalone">Not in an album</option></select></label></div>
-    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="Edit ${escape(photo.alt || photo.filename)}"><div class="photo-frame"><img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy"></div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${badge(photo.published)}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><span class="brand-mark" aria-hidden="true">◧</span><h2>${state.catalog.photos.length ? 'Nothing here just yet.' : 'Make room for a few moments.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop your JPEGs or PNGs anywhere here, or choose a few to upload. Every photo starts as a private draft.'}</p><button data-upload>Choose photos →</button></div>`}`;
+    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="${photo.deleting ? 'Retry deletion of' : 'Edit'} ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${photo.deleting ? '<span class="badge draft">Deletion incomplete</span>' : badge(photo.published)}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><span class="brand-mark" aria-hidden="true">◧</span><h2>${state.catalog.photos.length ? 'Nothing here just yet.' : 'Make room for a few moments.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop your JPEGs or PNGs anywhere here, or choose a few to upload. Every photo starts as a private draft.'}</p><button data-upload>Choose photos →</button></div>`}`;
   $('#filter').value = filter;
   $('#filter').onchange = event => { filter = event.target.value; renderPhotos(); };
   $('#search').oninput = event => {
@@ -85,7 +86,7 @@ function renderPhotos() {
 function renderAlbums() {
   $('#main').innerHTML = `<div class="page-heading"><div><p class="eyebrow">COLLECTIONS, NOT CONTAINERS</p><h1>Albums</h1><p>A story, a place, a weekend. Give a few photos a home together.</p></div><button class="primary" id="create-album">＋ New album</button></div>
   ${state.catalog.albums.length ? `<div class="grid album-grid">${state.catalog.albums.map(album => {
-    const cover = photoById(album.coverId || album.photoIds[0]);
+    const cover = [album.coverId, ...album.photoIds].map(photoById).find(photo => photo && !photo.deleting);
     return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `<img src="${image(cover.id)}" alt="${escape(cover.alt)}" loading="lazy">` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${album.photoIds.length} photographs · /${escape(album.slug)}/</div></a>`;
   }).join('')}</div>` : '<div class="empty"><h2>Start a collection.</h2><p>Your photos don’t need an album to appear in the photostream. Create one when you have a story to tell.</p></div>'}`;
   $('#create-album').onclick = () => {
@@ -106,13 +107,13 @@ function renderAlbum(id) {
   $('#main').innerHTML = `<a class="back" href="#albums">← All albums</a><div class="page-heading"><div><p class="eyebrow">EDIT COLLECTION</p><h1>${escape(album.title)}</h1><p>Save your edits, then publish when everything feels right.</p></div>${badge(album.published)}</div>
     <form id="album-form"><div class="album-form"><label>Title<input name="title" value="${escape(album.title)}" maxlength="150" required></label><label>URL slug<input name="slug" value="${escape(album.slug)}" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="100" required><small>Used for the album page’s address.</small></label><label class="wide">Description<textarea name="description" maxlength="4000">${escape(album.description)}</textarea></label><label class="check wide"><input name="published" type="checkbox" ${album.published ? 'checked' : ''}>Include this album in the next publication</label></div>
     <div class="section-heading"><h2>Photographs <span class="muted">${album.photoIds.length}</span></h2><button type="button" id="choose-photos">＋ Choose photos</button></div>
-    <p class="hint">Order is top to bottom. Draft photos stay private, even when the album is published.</p><ol class="ordered-list" id="ordered-list"></ol>
+    <p class="hint">Order is top to bottom. − removes a photo from this album only. Delete permanently removes it from the library and every album.</p><ol class="ordered-list" id="ordered-list"></ol>
     <div class="editor-footer"><button type="button" class="danger" id="delete-album">Remove album</button><button class="primary" type="submit">Save album</button></div></form>`;
   let order = [...album.photoIds], cover = album.coverId;
   function renderOrder() {
     $('#ordered-list').innerHTML = order.map((id, i) => {
       const photo = photoById(id);
-      return `<li><img src="${image(id)}" alt="${escape(photo.alt)}"><div class="order-title"><p>${escape(photo.caption || photo.filename)}</p><small>${photo.published ? 'Ready to publish' : 'Draft · not publicly visible'}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move photo ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move photo ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove photo ${i + 1} from album">−</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
+      return `<li>${photo.deleting ? '' : `<img src="${image(id)}" alt="${escape(photo.alt)}">`}<div class="order-title"><p>${escape(photo.caption || photo.filename)}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.published ? 'Ready to publish' : 'Draft · not publicly visible'}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move photo ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move photo ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove photo ${i + 1} from album" title="Remove from album; keep in library">−</button><button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
     }).join('') || '<p class="muted">No photographs selected yet.</p>';
     $('#ordered-list').onclick = event => {
       const move = event.target.closest('[data-move]'), remove = event.target.closest('[data-remove]');
@@ -132,7 +133,7 @@ function renderAlbum(id) {
     });
   };
   $('#choose-photos').onclick = () => {
-    openDialog(`<form id="choose-form" class="simple-dialog"><p class="eyebrow">CURATE YOUR COLLECTION</p><h2 id="dialog-title">Choose photographs</h2><p class="muted">Photos can belong to more than one album.</p><div class="grid">${state.catalog.photos.map(photo => `<label class="choice"><img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy"><input type="checkbox" name="photo" value="${photo.id}" ${order.includes(photo.id) ? 'checked' : ''}><span>${escape(photo.caption || photo.filename)}</span></label>`).join('') || '<p class="muted">Upload some photos first.</p>'}</div><div class="editor-footer"><span class="hint">Changes are applied when you save the album.</span><button class="primary">Use selected photos</button></div></form>`, false);
+    openDialog(`<form id="choose-form" class="simple-dialog"><p class="eyebrow">CURATE YOUR COLLECTION</p><h2 id="dialog-title">Choose photographs</h2><p class="muted">Photos can belong to more than one album.</p><div class="grid">${state.catalog.photos.filter(photo => !photo.deleting).map(photo => `<label class="choice"><img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy"><input type="checkbox" name="photo" value="${photo.id}" ${order.includes(photo.id) ? 'checked' : ''}><span>${escape(photo.caption || photo.filename)}</span></label>`).join('') || '<p class="muted">Upload photos or finish pending deletions first.</p>'}</div><div class="editor-footer"><span class="hint">Changes are applied when you save the album.</span><button class="primary">Use selected photos</button></div></form>`, false);
     $('#choose-form').onsubmit = event => {
       event.preventDefault();
       const selected = new FormData(event.target).getAll('photo');
@@ -162,11 +163,12 @@ function closeEditor() {
 
 function editPhoto(id) {
   const photo = photoById(id);
+  if (photo.deleting) { confirmDeletePhoto(id); return; }
   openDialog(`<div class="photo-editor"><div class="editor-image"><img src="${image(id)}" alt="${escape(photo.alt)}"></div><form id="photo-form" class="editor-fields"><p class="eyebrow">PHOTO DETAILS</p><h2 id="dialog-title">A little context.</h2><p class="muted">${escape(photo.filename)} · ${photo.width} × ${photo.height}</p>
     <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Describe what’s in the photo. Required before publishing.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
     <fieldset><legend>Albums · optional</legend>${state.catalog.albums.map(album => `<label class="check"><input type="checkbox" name="album" value="${album.id}" ${album.photoIds.includes(id) ? 'checked' : ''}>${escape(album.title)}</label>`).join('') || '<span class="hint">No albums yet. Standalone photos work just fine.</span>'}</fieldset>
     <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Include this photo in the next publication</label><p class="hint">Unchecking removes it from the next manifest, but previously public image URLs and old releases remain accessible.</p>
-    <dl class="exif">${Object.entries(photo.exif).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web images.</p><button class="primary" type="submit">Save photo</button></form></div>`);
+    <dl class="exif">${Object.entries(photo.exif).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web images.</p><div class="editor-footer"><button type="button" class="danger" data-delete-photo="${id}">Delete photo</button><button class="primary" type="submit">Save photo</button></div></form></div>`);
   $('#photo-form').onsubmit = event => {
     event.preventDefault();
     const form = new FormData(event.target);
@@ -177,8 +179,26 @@ function editPhoto(id) {
   };
 }
 
+function confirmDeletePhoto(id) {
+  const photo = photoById(id);
+  $('#delete-body').innerHTML = `<p class="eyebrow">PERMANENT DELETION</p><h2 id="delete-title">${photo.deleting ? 'Finish deleting this photo?' : 'Delete this photo?'}</h2><p><strong>${escape(photo.filename)}</strong>${photo.caption ? ` · ${escape(photo.caption)}` : ''}</p><p id="delete-description">This deletes the original and resized files from storage and removes the photo from your library, every album, and the current public manifest. This cannot be undone.</p><p class="muted">Other drafts won’t be published. Previously cached copies and metadata in historical releases may remain; CDN/privacy erasure needs separate cleanup.</p>${photo.deleting ? '<p class="hint">A previous deletion was interrupted. Retry to finish removing any remaining files.</p>' : ''}${dirty ? '<p class="hint">Unsaved edits will be discarded if you delete.</p>' : ''}<div class="editor-footer"><button id="cancel-delete" autofocus>Cancel</button><button class="danger" id="confirm-delete">${photo.deleting ? 'Retry deletion' : 'Delete permanently'}</button></div>`;
+  deletion.showModal(); $('#cancel-delete').focus();
+  $('#cancel-delete').onclick = () => { if (!busy) deletion.close(); };
+  $('#confirm-delete').onclick = () => work(async () => {
+    status('Deleting photo and stored files…');
+    try {
+      Object.assign(state, await api(`/photos/${id}`, { method: 'DELETE' }));
+    } catch (error) {
+      conflicted = true; // Cleanup may have partly completed; reload before retrying.
+      throw error;
+    }
+    dirty = false; deletion.close(); editor.close(); render(); status('Photo and stored files deleted. Removed from every album.');
+  });
+}
+deletion.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+
 async function upload(files) {
-  if (!files.length || busy || conflicted || editor.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
+  if (!files.length || busy || conflicted || editor.open || deletion.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
   dirty = false;
   await work(async () => {
     $('#upload-progress').hidden = false;
@@ -196,9 +216,10 @@ async function upload(files) {
 
 $('#files').onchange = event => upload(event.target.files);
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-upload],[data-photo]');
+  const target = event.target.closest('[data-upload],[data-photo],[data-delete-photo]');
   if (!target || busy || conflicted) return;
   if (target.hasAttribute('data-upload')) $('#files').click();
+  else if (target.hasAttribute('data-delete-photo')) confirmDeletePhoto(target.dataset.deletePhoto);
   else editPhoto(target.dataset.photo);
 });
 document.addEventListener('dragover', event => { if (event.dataTransfer.types.includes('Files')) event.preventDefault(); });

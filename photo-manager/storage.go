@@ -31,6 +31,7 @@ type object struct {
 type storage interface {
 	Read(context.Context, string, string) (*object, error)
 	Write(context.Context, string, string, []byte, string, string, *string) error
+	Delete(context.Context, string, string) error
 }
 
 type r2Storage struct {
@@ -83,6 +84,11 @@ func (s *r2Storage) Write(ctx context.Context, bucket, key string, body []byte, 
 	return err
 }
 
+func (s *r2Storage) Delete(ctx context.Context, bucket, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key})
+	return err
+}
+
 // Development-only adapter. Production has no disk database or persistent volume.
 type localStorage struct {
 	root string
@@ -109,6 +115,19 @@ func (s *localStorage) Read(ctx context.Context, bucket, key string) (*object, e
 		return nil, err
 	}
 	return &object{Body: body, ETag: fmt.Sprintf("\"%x\"", sha256.Sum256(body))}, nil
+}
+
+func (s *localStorage) Delete(ctx context.Context, bucket, key string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	filename, err := s.filename(bucket, key)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(filename); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 func (s *localStorage) Write(ctx context.Context, bucket, key string, body []byte, contentType, cache string, expected *string) error {

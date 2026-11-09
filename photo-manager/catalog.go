@@ -19,6 +19,7 @@ type photo struct {
 	Caption      string            `json:"caption"`
 	Tags         []string          `json:"tags"`
 	Published    bool              `json:"published"`
+	Deleting     bool              `json:"deleting,omitempty"`
 	UploadedAt   string            `json:"uploadedAt"`
 	CapturedDate string            `json:"capturedDate"`
 	Width        int               `json:"width"`
@@ -106,7 +107,7 @@ func (a *app) publish(ctx context.Context, c catalog) error {
 	release := catalog{Version: 1, Revision: c.Revision, PublishedAt: now(), Photos: []photo{}, Albums: []album{}}
 	published := map[string]bool{}
 	for _, p := range c.Photos {
-		if !p.Published {
+		if !p.Published || p.Deleting {
 			continue
 		}
 		if p.Alt == "" {
@@ -163,6 +164,32 @@ func (a *app) publish(ctx context.Context, c catalog) error {
 		return err
 	}
 	return a.store.Write(ctx, "public", "index.json", body, "application/json", "public, max-age=30, must-revalidate", &etag)
+}
+
+func (c *catalog) removePhoto(id string) {
+	photos := []photo{}
+	for _, p := range c.Photos {
+		if p.ID != id {
+			photos = append(photos, p)
+		}
+	}
+	c.Photos = photos
+	for i := range c.Albums {
+		item := &c.Albums[i]
+		ids := []string{}
+		for _, existing := range item.PhotoIDs {
+			if existing != id {
+				ids = append(ids, existing)
+			}
+		}
+		item.PhotoIDs = ids
+		if item.CoverID == id {
+			item.CoverID = ""
+			if len(ids) > 0 {
+				item.CoverID = ids[0]
+			}
+		}
+	}
 }
 
 func contains(values []string, value string) bool {

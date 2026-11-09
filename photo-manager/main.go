@@ -296,6 +296,9 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 			if p.ID != r.PathValue("id") {
 				continue
 			}
+			if p.Deleting {
+				return &requestError{409, "This photo is being deleted. Reload and retry deletion."}
+			}
 			p.Alt, p.Caption, p.Tags, p.Published, p.CapturedDate = input.Alt, input.Caption, tags, input.Published, input.CapturedDate
 			c.Photos[i] = p
 			for i := range c.Albums {
@@ -321,6 +324,70 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 		}
 		return &requestError{404, "Photo not found."}
 	})
+}
+
+func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	ctx, id := r.Context(), r.PathValue("id")
+	c, etag, err := a.load(ctx, "private", "catalog.json")
+	if err != nil {
+		return err
+	}
+	if err := checkETag(r, etag); err != nil {
+		return err
+	}
+	found := false
+	for i := range c.Photos {
+		if c.Photos[i].ID == id {
+			found = true
+			// Persist intent before any destructive writes. A retry after a failed
+			// delete or restart resumes cleanup without allowing republication.
+			if !c.Photos[i].Deleting {
+				c.Photos[i].Deleting = true
+				etag, err = a.save(ctx, &c, etag)
+				if err != nil {
+					return err
+				}
+			}
+			break
+		}
+	}
+	if !found {
+		return &requestError{404, "Photo not found."}
+	}
+	// Change only the live photo and its memberships, never publish other drafts.
+	live, liveETag, err := a.load(ctx, "public", "index.json")
+	if err != nil {
+		return err
+	}
+	if liveETag != "" {
+		live.removePhoto(id)
+		body, err := encode(live)
+		if err != nil {
+			return err
+		}
+		if err := a.store.Write(ctx, "public", "index.json", body, "application/json", "public, max-age=30, must-revalidate", &liveETag); err != nil {
+			return err
+		}
+	}
+	for _, bucket := range []string{"public", "private"} {
+		for _, size := range []int{640, 1280, 2560} {
+			if err := a.store.Delete(ctx, bucket, fmt.Sprintf("photos/%s/%d.jpg", id, size)); err != nil {
+				return err
+			}
+		}
+	}
+	if err := a.store.Delete(ctx, "private", "originals/"+id); err != nil {
+		return err
+	}
+	c.removePhoto(id)
+	next, err := a.save(ctx, &c, etag)
+	if err != nil {
+		return err
+	}
+	respond(w, 200, map[string]any{"catalog": c, "etag": next})
+	return nil
 }
 
 func (a *app) createAlbum(w http.ResponseWriter, r *http.Request) error {
@@ -404,6 +471,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/photos", a.handler(a.upload))
 	mux.HandleFunc("GET /api/photos/{id}/image", a.handler(a.previewImage))
 	mux.HandleFunc("PATCH /api/photos/{id}", a.handler(a.editPhoto))
+	mux.HandleFunc("DELETE /api/photos/{id}", a.handler(a.deletePhoto))
 	mux.HandleFunc("POST /api/albums", a.handler(a.createAlbum))
 	mux.HandleFunc("PUT /api/albums/{id}", a.handler(a.editAlbum))
 	mux.HandleFunc("DELETE /api/albums/{id}", a.handler(func(w http.ResponseWriter, r *http.Request) error {
