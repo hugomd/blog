@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ .Title }} · {{ .Site.Title }}</title>
-  <meta name="description" content="{{ .Description | default "A few places, a few moments. Photographs and albums from Hugo." }}">
+  {{ with .Description }}<meta name="description" content="{{ . }}">{{ end }}
   <meta name="theme-color" content="#000000">
   <link rel="canonical" href="{{ .Permalink }}">
   <link rel="icon" href="{{ "img/favicon.png" | relURL }}">
@@ -23,8 +23,8 @@
     </section>
     <p id="status" class="status loading" role="status">Loading photographs…</p>
     <button id="retry" class="control retry" hidden>Try again</button>
-    <div class="stream skeleton" id="skeleton" aria-hidden="true"><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span></div>
-    <div class="stream" id="stream" aria-label="Photostream" aria-busy="true"></div>
+    <div class="stream list skeleton" id="skeleton" aria-hidden="true"><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span></div>
+    <div class="stream list" id="stream" aria-label="Photostream" aria-busy="true"></div>
     <div class="albums" id="albums" aria-label="Albums" aria-busy="true" hidden></div>
     <noscript><style>#skeleton{display:none}</style><p class="status">Enable JavaScript to load the published photographs and albums.</p></noscript>
   </main>

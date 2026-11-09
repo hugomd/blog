@@ -38,9 +38,11 @@ async function load() {
 
 function albumURL(slug) { return `${$('#nav-stream').getAttribute('href').split('#')[0]}#album/${encodeURIComponent(slug)}`; }
 function render() {
-  if (!state.catalog) return;
   const route = location.hash.slice(1) || (document.body.dataset.album ? `album/${encodeURIComponent(document.body.dataset.album)}` : 'stream');
   const isAlbums = route === 'albums', isAlbum = route.startsWith('album/');
+  stream.classList.toggle('list', !isAlbums && !isAlbum);
+  $('#skeleton').classList.toggle('list', !isAlbums && !isAlbum);
+  if (!state.catalog) return;
   const photos = state.catalog.photos.filter(p => !p.archived && !p.deleting);
   const byID = new Map(photos.map(p => [p.id, p]));
   const album = isAlbum ? state.catalog.albums.find(a => `album/${encodeURIComponent(a.slug)}` === route) : null;
@@ -70,7 +72,7 @@ function render() {
   // standalone photos, in the manifest's newest-first order.
   state.photos = isAlbum ? (album?.photoIds || []).map(id => byID.get(id)).filter(Boolean) : photos;
   stream.setAttribute('aria-label', isAlbum ? `${album?.title || 'Album'} photographs` : 'Photostream');
-  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="Open ${escape(p.alt)}" data-photo="${i}"><img src="${escape(p.thumbnail)}" width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < 4 ? 'eager' : 'lazy'}"></button>`).join('');
+  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="Open ${escape(p.alt)}" data-photo="${i}"><img src="${escape(p.thumbnail)}" ${isAlbum ? '' : `srcset="${escape(p.thumbnail)} 640w, ${escape(p.src)} 2560w" sizes="(max-width:700px) 100vw, (max-width:900px) 50vw, 33vw"`} width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < (isAlbum ? 4 : 3) ? 'eager' : 'lazy'}"></button>`).join('');
   if (!state.photos.length) message(isAlbum ? album ? 'No photographs in this album yet.' : 'This album isn’t currently published.' : 'No photographs published yet. Check back soon.');
 }
 function message(text) { $('#status').textContent = text; $('#status').hidden = false; }
@@ -164,4 +166,5 @@ addEventListener('hashchange', async () => {
   if (viewer.open) await close();
   render();
 });
+render();
 load();
