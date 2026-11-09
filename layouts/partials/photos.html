@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .Title }} · {{ .Site.Title }}</title>
+  <meta name="description" content="{{ .Description | default "A few places, a few moments. Photographs and albums from Hugo." }}">
+  <meta name="theme-color" content="#000000">
+  <link rel="canonical" href="{{ .Permalink }}">
+  <link rel="icon" href="{{ "img/favicon.png" | relURL }}">
+  {{ $font := resources.Get "fonts/newsreader-variable-v2.woff2" }}
+  <style>@font-face{font-family:Newsreader;src:url('{{ $font.RelPermalink }}') format('woff2');font-weight:200 800;font-display:swap}</style>
+  <link rel="stylesheet" href="{{ "css/photos.css" | relURL }}">
+  <script type="module" src="{{ "js/photos.js" | relURL }}"></script>
+</head>
+<body data-manifest="https://photos.hugo.md/index.json" data-album="{{ .Params.photoAlbum }}">
+  <a class="skip" href="#main">Skip to photographs</a>
+  <header>
+    <a class="brand" href="{{ "/" | relURL }}">Hugo’s Blog</a>
+    <nav aria-label="Blog"><a href="{{ "about/" | relURL }}">About</a><a href="{{ "archive/" | relURL }}">Archive</a><a href="{{ "photos/" | relURL }}" aria-current="page">Photos</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <section class="intro">
+      <div><a id="back" href="{{ "photos/" | relURL }}#albums" hidden>← All albums</a><h1 id="title">Photos</h1><p id="description">A few places, a few moments.</p></div>
+      <nav class="views" aria-label="Photo views"><a id="nav-stream" href="{{ "photos/" | relURL }}">Photostream</a><a id="nav-albums" href="{{ "photos/" | relURL }}#albums">Albums</a></nav>
+    </section>
+    <p id="status" class="status" role="status">Loading photographs…</p>
+    <button id="retry" class="control retry" hidden>Try again</button>
+    <div class="stream" id="stream" aria-label="Photostream"></div>
+    <div class="albums" id="albums" aria-label="Albums" hidden></div>
+    <noscript><p class="status">Enable JavaScript to load the published photographs and albums.</p></noscript>
+  </main>
+  <footer><a href="{{ "/" | relURL }}">← Back to the blog</a><span>Photographs by Hugo</span></footer>
+  <dialog id="viewer" aria-label="Photo viewer">
+    <div class="toolbar"><button class="control" id="close" aria-label="Close photo">✕ Close</button><div class="tools"><span id="count" class="meta" aria-live="polite"></span><button class="control" id="details" aria-pressed="false" aria-controls="info">ⓘ Info</button></div></div>
+    <img id="zoom" class="zoom" alt="">
+    <button class="control arrow" id="previous" aria-label="Previous photo">←</button><button class="control arrow" id="next" aria-label="Next photo">→</button>
+    <aside id="info" class="info" aria-label="Photo information" hidden></aside>
+    <p id="caption" class="caption"></p>
+  </dialog>
+</body>
+</html>

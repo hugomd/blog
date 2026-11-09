@@ -35,9 +35,9 @@ volume. Images **and all manifests** live in R2 in production.
   drafts; no separate Publish is needed. Deletion cannot be undone here.
 
 This service publishes a data contract, not the blog's public gallery pages.
-The existing Hugo gallery and ignored photostream prototype are unchanged.
-Connecting the public photostream and album pages to the R2 index is a separate
-integration step.
+The Hugo `/photos/` page reads the public R2 index at runtime for its photostream
+and albums. Publishing here updates the public page without rebuilding the blog.
+Only published photos are shown; private drafts have no repository fallback.
 
 ## Storage and failure behavior
 

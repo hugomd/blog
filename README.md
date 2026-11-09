@@ -47,5 +47,19 @@ Hosted assets are stored in [`/content`](./content), and get served on `/`, e.g.
 The standalone [Go photo manager](photo-manager/README.md) uploads and processes
 photos, manages optional albums, and publishes an R2-backed manifest. Its
 deployment configuration belongs in `hugomd/jegigrat-k3s`; it is independent of
-the Hugo build. The existing public blog gallery has not yet been switched to
-consume that manifest.
+the Hugo build.
+
+The public `/photos/` page fetches `https://photos.hugo.md/index.json` at runtime:
+the photostream includes every published photo (including photos without an
+album), and Albums preserves each album's curated order. Album links use
+`/photos/#album/<slug>`; the existing New York URL opens the `new-york-2022`
+album from the same manifest. Photos remain on R2, with no build-time download
+or blog redeployment needed after publishing. Only the public manifest is read;
+drafts never fall back to repository images. A missing manifest shows an empty
+gallery, and other request failures offer a retry.
+
+The public R2 bucket needs GET/HEAD CORS access for `https://hugo.md` and
+`https://hu.md`. Private-bucket access is never enabled. The public page uses
+rounded, edge-to-edge photographs on black, a thumbnail-origin zoom viewer,
+keyboard navigation, reduced-motion support, and optional camera information
+and tags. It has no frontend dependencies or build step.
