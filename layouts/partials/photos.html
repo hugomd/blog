@@ -10,8 +10,10 @@
   <link rel="icon" href="{{ "img/favicon.png" | relURL }}">
   {{ $font := resources.Get "fonts/newsreader-variable-v2.woff2" }}
   <style>@font-face{font-family:Newsreader;src:url('{{ $font.RelPermalink }}') format('woff2');font-weight:200 800;font-display:swap}</style>
-  <link rel="stylesheet" href="{{ "css/photos.css" | relURL }}">
-  <script type="module" src="{{ "js/photos.js" | relURL }}"></script>
+  {{ $style := resources.Get "css/photos.css" | fingerprint }}
+  {{ $script := resources.Get "js/photos.js" | fingerprint }}
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}">
+  <script type="module" src="{{ $script.RelPermalink }}"></script>
 </head>
 <body data-manifest="https://photos.hugo.md/index.json" data-album="{{ .Params.photoAlbum }}">
   <a class="skip" href="#main">Skip to photographs</a>
