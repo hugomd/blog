@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SECONDS=0
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+# The generated launcher uses direct GitHub downloads to bootstrap. Use the
+# public release API here because those direct downloads time out in orbs.
+hermit_state_dir="${HERMIT_STATE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/hermit}"
+hermit_exe="${HERMIT_EXE:-$hermit_state_dir/pkg/hermit@stable/hermit}"
+if [[ ! -x "$hermit_exe" ]]; then
+  echo "Bootstrapping Hermit from the public GitHub release API"
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64) arch=amd64 ;;
+    aarch64) arch=arm64 ;;
+  esac
+  asset_url="$(curl -fsSL --connect-timeout 10 --max-time 60 \
+    https://api.github.com/repos/cashapp/hermit/releases/tags/stable \
+    | jq -er --arg name "hermit-linux-$arch.gz" '.assets[] | select(.name == $name) | .url')"
+  install_dir="$(mktemp -d)"
+  trap 'rm -rf "$install_dir"' EXIT
+  curl -fsSL --connect-timeout 10 --max-time 60 -H 'Accept: application/octet-stream' \
+    "$asset_url?download=1" -o "$install_dir/hermit.gz"
+  gzip -dc "$install_dir/hermit.gz" > "$install_dir/hermit"
+  mkdir -p "$(dirname "$hermit_exe")"
+  install -m 0755 "$install_dir/hermit" "$hermit_exe"
+fi
+
+echo "Installing the repository's pinned Hermit packages"
+./bin/hermit install
+echo "Hermit packages ready (${SECONDS}s)"
+
+openring_version=v0.0.0-20260213085203-e4f5a02691c4
+openring_binary="$repo_root/.hermit/go/bin/openring"
+installed_openring_version="$(./bin/go version -m "$openring_binary" 2>/dev/null | awk '$1 == "mod" && $2 == "git.sr.ht/~sircmpwn/openring" { print $3 }' || true)"
+if [[ "$installed_openring_version" != "$openring_version" ]]; then
+  echo "Building openring $openring_version with Hermit's Go compiler"
+  ./bin/go install "git.sr.ht/~sircmpwn/openring@$openring_version"
+else
+  echo "openring $openring_version already installed"
+fi
+echo "openring ready (${SECONDS}s)"
+
+# Amp and supervised services use new non-interactive login shells. Export the
+# complete Hermit environment there, but only inside this repository.
+profile_marker="# hugomd/blog Hermit environment"
+if ! grep -Fqx "$profile_marker" "$HOME/.bash_profile" 2>/dev/null; then
+  cat >> "$HOME/.bash_profile" <<EOF
+
+$profile_marker
+if [[ "\${PWD}/" == "$repo_root/"* && "\${HERMIT_ENV:-}" != "$repo_root" ]]; then
+  eval "\$("$repo_root/bin/hermit" env --activate)"
+fi
+EOF
+fi
+
+./bin/hugo version
+./bin/go version
+echo "Orb setup ready (${SECONDS}s total)"

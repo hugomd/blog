@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# No services or per-user authentication need restoring for this static site.
+for tool in hugo go openring; do
+  if ! command -v "$tool" >/dev/null; then
+    echo "Missing $tool; run .agents/setup to repair this orb" >&2
+    exit 1
+  fi
+done
+echo "Blog toolchain ready"
