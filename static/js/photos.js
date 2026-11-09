@@ -36,7 +36,7 @@ async function load() {
   }
 }
 
-function albumURL(slug) { return `${$('#nav-stream').getAttribute('href')}#album/${encodeURIComponent(slug)}`; }
+function albumURL(slug) { return `${$('#nav-stream').getAttribute('href').split('#')[0]}#album/${encodeURIComponent(slug)}`; }
 function render() {
   if (!state.catalog) return;
   const route = location.hash.slice(1) || (document.body.dataset.album ? `album/${encodeURIComponent(document.body.dataset.album)}` : 'stream');
@@ -44,13 +44,15 @@ function render() {
   const photos = state.catalog.photos.filter(p => !p.archived && !p.deleting);
   const byID = new Map(photos.map(p => [p.id, p]));
   const album = isAlbum ? state.catalog.albums.find(a => `album/${encodeURIComponent(a.slug)}` === route) : null;
-  $('#nav-stream').toggleAttribute('aria-current', !isAlbums && !isAlbum);
-  $('#nav-albums').toggleAttribute('aria-current', isAlbums || isAlbum);
-  $('#back').hidden = !isAlbum;
-  $('#title').textContent = isAlbums ? 'Albums' : isAlbum ? album?.title || 'Album unavailable' : 'Photostream';
-  $('#description').hidden = !isAlbums && !isAlbum;
-  $('#description').textContent = isAlbums ? 'A story, a place, a weekend.' : isAlbum ? album?.description || '' : '';
-  document.title = `${$('#title').textContent} · Hugo’s Blog`;
+  const title = isAlbums ? 'Albums' : isAlbum ? album?.title || 'Album unavailable' : 'Photostream';
+  $('#nav-stream').setAttribute('aria-current', !isAlbums && !isAlbum ? 'page' : 'false');
+  $('#nav-albums').setAttribute('aria-current', isAlbums || isAlbum ? 'page' : 'false');
+  $('#album-intro').hidden = !isAlbum;
+  $('#title').textContent = title;
+  $('#description').hidden = !isAlbum || !album?.description;
+  $('#description').textContent = isAlbum ? album?.description || '' : '';
+  $('#main').setAttribute('aria-label', title);
+  document.title = `${title} · Hugo’s Blog`;
   stream.hidden = isAlbums;
   $('#albums').hidden = !isAlbums;
   $('#status').hidden = true;
@@ -106,7 +108,7 @@ function renderViewer(changePhoto = false) {
   $('#details').setAttribute('aria-pressed', state.info);
   info.hidden = !state.info;
   const fields = { ...p.exif, ...(p.capturedDate ? { 'Capture date': p.capturedDate } : {}), Dimensions: `${p.width} × ${p.height}` };
-  info.innerHTML = `<h2>Behind the photo</h2><dl>${Object.entries(fields).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl>${p.tags?.length ? `<div class="tags" aria-label="Tags">${p.tags.map(tag => `<span class="tag">${escape(tag)}</span>`).join('')}</div>` : ''}`;
+  info.innerHTML = `<dl>${Object.entries(fields).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl>${p.tags?.length ? `<div class="tags" aria-label="Tags">${p.tags.map(tag => `<span class="tag">${escape(tag)}</span>`).join('')}</div>` : ''}`;
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
   place();
 }
