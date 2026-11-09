@@ -1,0 +1,147 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log"
+	"net/http"
+	"time"
+)
+
+type publication struct {
+	ID          string `json:"id"`
+	Revision    int    `json:"revision"`
+	CatalogETag string `json:"catalogETag"`
+	State       string `json:"state"`
+	Completed   int    `json:"completed"`
+	Total       int    `json:"total"`
+	Error       string `json:"error,omitempty"`
+}
+
+func (a *app) publicationStatus() publication {
+	a.publicationMu.RLock()
+	defer a.publicationMu.RUnlock()
+	job := a.publication
+	if job.State == "" {
+		job.State = "idle"
+	}
+	return job
+}
+
+func (a *app) setPublication(job publication) {
+	a.publicationMu.Lock()
+	a.publication = job
+	a.publicationMu.Unlock()
+}
+
+func (a *app) savePublication(ctx context.Context, job publication) error {
+	body, err := encode(job)
+	if err != nil {
+		return err
+	}
+	return a.store.Write(ctx, "private", "publication.json", body, "application/json", "no-store", nil)
+}
+
+// Fail promptly rather than leaving mutation requests queued behind a long copy.
+func (a *app) lockCatalog() error {
+	if a.publicationStatus().State == "running" || !a.mu.TryLock() {
+		return &requestError{423, "Another change is in progress. Wait and retry."}
+	}
+	return nil
+}
+
+func (a *app) startPublication(w http.ResponseWriter, r *http.Request) error {
+	job := a.publicationStatus()
+	if job.State == "running" && job.CatalogETag == r.Header.Get("If-Match") {
+		respond(w, http.StatusAccepted, map[string]any{"publication": job})
+		return nil
+	}
+	if err := a.lockCatalog(); err != nil {
+		return err
+	}
+	defer a.mu.Unlock()
+	c, etag, err := a.load(r.Context(), "private", "catalog.json")
+	if err != nil {
+		return err
+	}
+	if err := checkETag(r, etag); err != nil {
+		return err
+	}
+	for _, p := range c.Photos {
+		if c.photoReady(p) && p.Alt == "" {
+			return badRequest("Add alt text to every published photo.")
+		}
+	}
+	if etag == "" {
+		etag = "new"
+	}
+	job = publication{ID: identifier(), Revision: c.Revision, CatalogETag: etag, State: "running"}
+	if err := a.savePublication(r.Context(), job); err != nil {
+		return err
+	}
+	a.setPublication(job)
+	a.launchPublication()
+	respond(w, http.StatusAccepted, map[string]any{"publication": job})
+	return nil
+}
+
+// The private job record survives a pod replacement; never depend on the browser.
+func (a *app) resumePublication() error {
+	value, err := a.store.Read(a.background, "private", "publication.json")
+	if err != nil || value == nil {
+		return err
+	}
+	var job publication
+	if err := json.Unmarshal(value.Body, &job); err != nil {
+		return err
+	}
+	a.setPublication(job)
+	if job.State == "running" {
+		a.launchPublication()
+	}
+	return nil
+}
+
+func (a *app) launchPublication() {
+	a.workers.Go(func() {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		ctx, cancel := context.WithTimeout(a.background, 30*time.Minute)
+		defer cancel()
+		job := a.publicationStatus()
+		c, etag, err := a.load(ctx, "private", "catalog.json")
+		if etag == "" {
+			etag = "new"
+		}
+		if err == nil && (etag != job.CatalogETag || c.Revision != job.Revision) {
+			err = errConflict
+		}
+		if err == nil {
+			err = a.publish(ctx, c, func(completed, total int) {
+				a.publicationMu.Lock()
+				a.publication.Completed, a.publication.Total = completed, total
+				a.publicationMu.Unlock()
+			})
+		}
+		if a.background.Err() != nil {
+			// Leave the durable running marker for the next process to resume.
+			return
+		}
+		job = a.publicationStatus()
+		job.State = "succeeded"
+		if err != nil {
+			job.State = "failed"
+			job.Error = "Publication failed. Reload the library and retry; the previous live index is retained unless its final write completed."
+			if errors.Is(err, errConflict) {
+				job.Error = "The library or live index changed. Reload before publishing again."
+			}
+			log.Printf("Publication failed: %T", err)
+		}
+		if err := a.savePublication(ctx, job); err != nil {
+			// A completed index remains valid even if this status write fails.
+			log.Printf("Cannot save publication outcome: %T", err)
+		}
+		a.setPublication(job)
+	})
+}

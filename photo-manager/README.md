@@ -18,15 +18,34 @@ volume. Images **and all manifests** live in R2 in production.
   owner names, XMP and embedded previews are not published. Original files,
   including any original GPS data, remain private.
 - Add alt text, a caption and comma-separated tags. Alt text is required to
-  mark a photo ready for publication. Albums are optional, and a photo can
-  appear in multiple albums without duplication in the photostream.
+  publish a photo. Photos in any published album are automatically ready;
+  the per-photo **Publish independently of albums** setting is for standalone
+  publication. Remove a photo from every published album and clear its
+  independent setting to return it to draft. A photo can appear in multiple
+  albums without duplication in the photostream.
 - Albums have titles, URL slugs, descriptions, covers and explicit photo order.
   Use the arrow buttons to reorder photos; remove an album without deleting
   its photos. The photostream orders all published photos by upload time,
   newest first, independent of album membership or later edits.
 - **Save photo / Save album** changes the private working catalog only.
   **Publish changes** confirms and publishes all ready photos/albums together.
-  Public albums omit draft photos and choose a public fallback cover if needed.
+  Published albums include their non-archived photos without a separate photo
+  opt-in. Draft albums alone do not make their photos public. Missing alt text
+  blocks publication; archived/deleting photos are excluded and covers fall back.
+- Publication runs in the background with image-copy progress. You can browse,
+  reload or close the page; edits, uploads, archive and delete are locked until
+  it finishes. A pod replacement resumes the saved job. Failures expose a retry
+  action; reload first if another writer changed the catalog or public index.
+- **Archive photo** keeps originals, derivatives, metadata and private album
+  memberships/order, but removes the photo from the current public index and
+  every stored historical release, including album references and covers.
+  This takes effect immediately, without publishing other drafts. Find archived
+  photos using **Archived** in the sidebar; **Restore photo** returns one to
+  the active library without changing the live index. Restored photos in a
+  published album become ready for the next publication; otherwise they are
+  drafts. Private album editors retain and
+  label archived entries; public albums exclude them and use a fallback cover.
+  Archiving is not privacy erasure: public image URLs and cached copies remain.
 - **Delete photo** is separate from removing album membership. Use Delete in
   an album row or the photo editor, then confirm the named photo. It removes
   the private original and all resized images from both buckets, removes the
@@ -46,11 +65,13 @@ Private bucket (never enable public access):
 - `originals/<id>`: untouched originals, including original metadata.
 - `photos/<id>/{640,1280,2560}.jpg`: private preview/ready-to-publish images.
 - `catalog.json`: versioned-schema working catalog, including drafts and albums.
+- `publication.json`: latest job identity, catalog ETag/revision and outcome.
+  Intermediate progress is in memory; a restarted job recounts its copies.
 
 Public bucket:
 
 - `photos/<id>/{640,1280,2560}.jpg`: approved web images only.
-- `releases/<id>.json`: immutable historical public snapshots.
+- `releases/<id>.json`: historical public snapshots, redacted when archiving.
 - `index.json`: the currently published snapshot, containing `version`,
   `revision`, `publishedAt`, `photos` and `albums`. Photos contain `id`, `alt`,
   `caption`, `tags`, `capturedDate`, `uploadedAt`, dimensions, allowlisted `exif`,
@@ -64,14 +85,34 @@ connection can leave a write's outcome unknown: reload to check, rather than
 blindly retrying an upload. Failed private uploads can leave unreferenced
 originals/derivatives; there is no automatic garbage collector.
 
+Publishing uses native R2 `CopyObject`, retaining the private source, rather than
+downloading JPEGs into Go and uploading them again. Credentials need source read
+and destination write access. At most four derivative copies run concurrently;
+photos already in the current index are not recopied. Only re-encoded derivatives
+are copied, never originals. Library thumbnails use 640px previews; photo details
+keep 1280px previews. Both endpoints remain authenticated and `no-store`.
+
+`POST /api/publish` validates `If-Match`, persists a job, and returns **202** with
+`publication`. Authenticated `GET /api/publication` exposes `idle`, `running`,
+`succeeded` or `failed`, the revision, and completed/total derivative counts.
+Repeated submissions for the same active catalog return that job. Mutations
+return **423** while it runs instead of queuing behind storage requests. The UI
+polls once per second and keeps browsing available. Jobs have a 30-minute limit;
+process shutdown leaves the durable running marker for startup recovery. Recovery
+requires the same catalog ETag/revision; it never publishes a changed catalog.
+A lost final-index response can make the outcome uncertain: reload and inspect
+the live revision before retrying. Do not roll back to a synchronous publisher
+while a background job is pending.
+
 Catalog updates use ETag compare-and-swap, preventing stale tabs from silently
 overwriting each other. Keep **one writer deployment, one replica, Recreate**;
 do not run other catalog writers or scale replicas. Serialization and the
 publish sequence are intentionally single-process. ETags are not a distributed
 transaction across different keys.
 
-The index has a 30-second public cache lifetime; immutable images/releases have
-a one-year cache lifetime. Do not put an overriding “cache everything forever”
+The index and new releases have a 30-second public cache lifetime; immutable
+images have a one-year cache lifetime. Older releases may already be cached for
+a year. Rewriting them does not invalidate those copies. Do not put an overriding “cache everything forever”
 rule on the index. Configure public-bucket CORS to allow `GET`/`HEAD` from the
 blog origin when its frontend starts fetching the manifest cross-origin.
 
@@ -82,6 +123,15 @@ of privacy erasure: historical release metadata, CDN/browser copies (potentially
 cached for a year), independent backups and external copies remain. Purge the
 exact public image/index URLs and remove relevant historical releases separately
 when privacy erasure is needed. Maintain an independent private-bucket backup.
+
+Archive requires object listing permission on the public bucket. It persists
+`archived` and `archiving` before redacting manifests with conditional ETag
+writes. If any listing/read/write fails, reload and use **Retry archive** in
+Archived. Pending photos cannot be edited or restored; publishing excludes them.
+Files are never deleted by archive, and the private working catalog deliberately
+retains their metadata. Historical redaction is not an atomic multi-object
+transaction; a failure can leave some older manifests unchanged until retry.
+Do not roll back to an app version that does not understand archived photos.
 
 Deletion persists a `deleting` marker before changing the live index or removing
 files. Interrupted cleanup leaves the photo visible as **Deletion incomplete**;

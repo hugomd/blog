@@ -15,22 +15,19 @@
 </head>
 <body data-manifest="https://photos.hugo.md/index.json" data-album="{{ .Params.photoAlbum }}">
   <a class="skip" href="#main">Skip to photographs</a>
-  <header>
-    <a class="brand" href="{{ "/" | relURL }}">Hugo’s Blog</a>
-    <nav aria-label="Blog"><a href="{{ "about/" | relURL }}">About</a><a href="{{ "archive/" | relURL }}">Archive</a><a href="{{ "photos/" | relURL }}" aria-current="page">Photos</a></nav>
-  </header>
   <main id="main" tabindex="-1">
     <section class="intro">
-      <div><a id="back" href="{{ "photos/" | relURL }}#albums" hidden>← All albums</a><h1 id="title">Photos</h1><p id="description">A few places, a few moments.</p></div>
+      <div><a id="back" href="{{ "photos/" | relURL }}#albums" hidden>← All albums</a><h1 id="title">Photostream</h1><p id="description" hidden></p></div>
       <nav class="views" aria-label="Photo views"><a id="nav-stream" href="{{ "photos/" | relURL }}">Photostream</a><a id="nav-albums" href="{{ "photos/" | relURL }}#albums">Albums</a></nav>
     </section>
-    <p id="status" class="status" role="status">Loading photographs…</p>
+    <p id="status" class="status loading" role="status">Loading photographs…</p>
     <button id="retry" class="control retry" hidden>Try again</button>
-    <div class="stream" id="stream" aria-label="Photostream"></div>
-    <div class="albums" id="albums" aria-label="Albums" hidden></div>
-    <noscript><p class="status">Enable JavaScript to load the published photographs and albums.</p></noscript>
+    <div class="stream skeleton" id="skeleton" aria-hidden="true"><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span></div>
+    <div class="stream" id="stream" aria-label="Photostream" aria-busy="true"></div>
+    <div class="albums" id="albums" aria-label="Albums" aria-busy="true" hidden></div>
+    <noscript><style>#skeleton{display:none}</style><p class="status">Enable JavaScript to load the published photographs and albums.</p></noscript>
   </main>
-  <footer><a href="{{ "/" | relURL }}">← Back to the blog</a><span>Photographs by Hugo</span></footer>
+  <a class="blog-back" href="{{ "/" | relURL }}">← Back to the blog</a>
   <dialog id="viewer" aria-label="Photo viewer">
     <div class="toolbar"><button class="control" id="close" aria-label="Close photo">✕ Close</button><div class="tools"><span id="count" class="meta" aria-live="polite"></span><button class="control" id="details" aria-pressed="false" aria-controls="info">ⓘ Info</button></div></div>
     <img id="zoom" class="zoom" alt="">

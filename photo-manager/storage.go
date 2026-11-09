@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	"github.com/aws/smithy-go/encoding/httpbinding"
 )
 
 var errConflict = errors.New("the library changed; reload before saving again")
@@ -29,8 +31,10 @@ type object struct {
 }
 
 type storage interface {
+	List(context.Context, string, string) ([]string, error)
 	Read(context.Context, string, string) (*object, error)
 	Write(context.Context, string, string, []byte, string, string, *string) error
+	Copy(context.Context, string, string, string, string, string) error
 	Delete(context.Context, string, string) error
 }
 
@@ -84,15 +88,70 @@ func (s *r2Storage) Write(ctx context.Context, bucket, key string, body []byte, 
 	return err
 }
 
+// Copy keeps derivative bytes within R2 and replaces private metadata with the
+// destination's content type and cache policy. The SDK sends CopySource verbatim.
+func (s *r2Storage) Copy(ctx context.Context, sourceBucket, destinationBucket, key, contentType, cache string) error {
+	source := httpbinding.EscapePath(s.buckets[sourceBucket]+"/"+key, false)
+	_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket: aws.String(s.buckets[destinationBucket]), Key: &key, CopySource: &source,
+		MetadataDirective: types.MetadataDirectiveReplace,
+		ContentType:       &contentType, CacheControl: &cache,
+	})
+	return err
+}
+
 func (s *r2Storage) Delete(ctx context.Context, bucket, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key})
 	return err
+}
+
+func (s *r2Storage) List(ctx context.Context, bucket, prefix string) ([]string, error) {
+	keys := []string{}
+	pages := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{Bucket: aws.String(s.buckets[bucket]), Prefix: &prefix})
+	for pages.HasMorePages() {
+		page, err := pages.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, item := range page.Contents {
+			keys = append(keys, aws.ToString(item.Key))
+		}
+	}
+	return keys, nil
 }
 
 // Development-only adapter. Production has no disk database or persistent volume.
 type localStorage struct {
 	root string
 	mu   sync.Mutex
+}
+
+func (s *localStorage) List(ctx context.Context, bucket, prefix string) ([]string, error) {
+	if bucket != "private" && bucket != "public" {
+		return nil, errors.New("invalid storage bucket")
+	}
+	keys := []string{}
+	root := filepath.Join(s.root, bucket)
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if errors.Is(err, os.ErrNotExist) && path == root {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			key, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
+			key = filepath.ToSlash(key)
+			if strings.HasPrefix(key, prefix) {
+				keys = append(keys, key)
+			}
+		}
+		return ctx.Err()
+	})
+	return keys, err
 }
 
 func (s *localStorage) filename(bucket, key string) (string, error) {
@@ -115,6 +174,23 @@ func (s *localStorage) Read(ctx context.Context, bucket, key string) (*object, e
 		return nil, err
 	}
 	return &object{Body: body, ETag: fmt.Sprintf("\"%x\"", sha256.Sum256(body))}, nil
+}
+
+func (s *localStorage) Copy(ctx context.Context, sourceBucket, destinationBucket, key, contentType, cache string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	source, err := s.Read(ctx, sourceBucket, key)
+	if err != nil {
+		return err
+	}
+	if source == nil {
+		return fmt.Errorf("copy source %s/%s: %w", sourceBucket, key, os.ErrNotExist)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return s.Write(ctx, destinationBucket, key, source.Body, contentType, cache, nil)
 }
 
 func (s *localStorage) Delete(ctx context.Context, bucket, key string) error {

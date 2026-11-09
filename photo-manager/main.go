@@ -38,6 +38,10 @@ type app struct {
 	authMu        sync.Mutex
 	sessions      map[string]time.Time
 	loginAttempts []time.Time
+	background    context.Context
+	workers       sync.WaitGroup
+	publicationMu sync.RWMutex
+	publication   publication
 }
 
 type requestError struct {
@@ -161,11 +165,24 @@ func (a *app) getCatalog(w http.ResponseWriter, r *http.Request) error {
 	var publishedRevision *int
 	if liveETag != "" {
 		publishedRevision = &live.Revision
+		// An older release may omit album photos despite matching the revision.
+		if live.Revision == c.Revision {
+			publicIDs := map[string]bool{}
+			for _, p := range live.Photos {
+				publicIDs[p.ID] = true
+			}
+			for _, p := range c.Photos {
+				if c.photoReady(p) != publicIDs[p.ID] {
+					publishedRevision = nil
+					break
+				}
+			}
+		}
 	}
 	if etag == "" {
 		etag = "new"
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development})
+	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development})
 	return nil
 }
 
@@ -180,7 +197,9 @@ func checkETag(r *http.Request, etag string) error {
 }
 
 func (a *app) mutate(w http.ResponseWriter, r *http.Request, change func(*catalog) error) error {
-	a.mu.Lock()
+	if err := a.lockCatalog(); err != nil {
+		return err
+	}
 	defer a.mu.Unlock()
 	c, etag, err := a.load(r.Context(), "private", "catalog.json")
 	if err != nil {
@@ -236,7 +255,14 @@ func (a *app) previewImage(w http.ResponseWriter, r *http.Request) error {
 	if !regexp.MustCompile(`^[a-f0-9]{32}$`).MatchString(r.PathValue("id")) {
 		return &requestError{404, "Photo not found."}
 	}
-	value, err := a.store.Read(r.Context(), "private", "photos/"+r.PathValue("id")+"/1280.jpg")
+	size := r.URL.Query().Get("size")
+	if size == "" {
+		size = "1280"
+	}
+	if size != "640" && size != "1280" {
+		return badRequest("Preview size must be 640 or 1280.")
+	}
+	value, err := a.store.Read(r.Context(), "private", "photos/"+r.PathValue("id")+"/"+size+".jpg")
 	if err != nil {
 		return err
 	}
@@ -299,6 +325,9 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 			if p.Deleting {
 				return &requestError{409, "This photo is being deleted. Reload and retry deletion."}
 			}
+			if p.Archived {
+				return &requestError{409, "Restore this archived photo before editing it."}
+			}
 			p.Alt, p.Caption, p.Tags, p.Published, p.CapturedDate = input.Alt, input.Caption, tags, input.Published, input.CapturedDate
 			c.Photos[i] = p
 			for i := range c.Albums {
@@ -326,8 +355,86 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
+func (a *app) archivePhoto(w http.ResponseWriter, r *http.Request) error {
+	if err := a.lockCatalog(); err != nil {
+		return err
+	}
+	defer a.mu.Unlock()
+	ctx, id := r.Context(), r.PathValue("id")
+	c, etag, err := a.load(ctx, "private", "catalog.json")
+	if err != nil {
+		return err
+	}
+	if err := checkETag(r, etag); err != nil {
+		return err
+	}
+	index := -1
+	for i := range c.Photos {
+		if c.Photos[i].ID == id {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return &requestError{404, "Photo not found."}
+	}
+	p := &c.Photos[index]
+	if p.Deleting {
+		return &requestError{409, "Finish deleting this photo first."}
+	}
+	if r.PathValue("action") == "restore" {
+		if !p.Archived {
+			return badRequest("This photo is not archived.")
+		}
+		if p.Archiving {
+			return &requestError{409, "Retry archive to finish manifest cleanup before restoring."}
+		}
+		p.Archived, p.Published = false, false
+	} else {
+		p.Archived, p.Archiving, p.Published = true, true, false
+		etag, err = a.save(ctx, &c, etag)
+		if err != nil {
+			return err
+		}
+		keys, err := a.store.List(ctx, "public", "releases/")
+		if err != nil {
+			return err
+		}
+		// Redact only existing public data; never publish unrelated working edits.
+		for _, key := range append([]string{"index.json"}, keys...) {
+			if !strings.HasSuffix(key, ".json") {
+				continue
+			}
+			live, current, err := a.load(ctx, "public", key)
+			if err != nil {
+				return err
+			}
+			if current == "" {
+				continue
+			}
+			live.removePhoto(id)
+			body, err := encode(live)
+			if err != nil {
+				return err
+			}
+			if err := a.store.Write(ctx, "public", key, body, "application/json", "public, max-age=30, must-revalidate", &current); err != nil {
+				return err
+			}
+		}
+		p.Archiving = false
+	}
+	next, err := a.save(ctx, &c, etag)
+	if err != nil {
+		return err
+	}
+	respond(w, 200, map[string]any{"catalog": c, "etag": next})
+	return nil
+}
+
 func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
-	a.mu.Lock()
+	if err := a.lockCatalog(); err != nil {
+		return err
+	}
 	defer a.mu.Unlock()
 	ctx, id := r.Context(), r.PathValue("id")
 	c, etag, err := a.load(ctx, "private", "catalog.json")
@@ -472,6 +579,12 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/photos/{id}/image", a.handler(a.previewImage))
 	mux.HandleFunc("PATCH /api/photos/{id}", a.handler(a.editPhoto))
 	mux.HandleFunc("DELETE /api/photos/{id}", a.handler(a.deletePhoto))
+	mux.HandleFunc("POST /api/photos/{id}/{action}", a.handler(func(w http.ResponseWriter, r *http.Request) error {
+		if action := r.PathValue("action"); action != "archive" && action != "restore" {
+			return &requestError{404, "Unknown photo action."}
+		}
+		return a.archivePhoto(w, r)
+	}))
 	mux.HandleFunc("POST /api/albums", a.handler(a.createAlbum))
 	mux.HandleFunc("PUT /api/albums/{id}", a.handler(a.editAlbum))
 	mux.HandleFunc("DELETE /api/albums/{id}", a.handler(func(w http.ResponseWriter, r *http.Request) error {
@@ -485,22 +598,10 @@ func (a *app) routes() http.Handler {
 			return &requestError{404, "Album not found."}
 		})
 	}))
-	mux.HandleFunc("POST /api/publish", a.handler(func(w http.ResponseWriter, r *http.Request) error {
-		a.mu.Lock()
-		defer a.mu.Unlock()
-		c, etag, err := a.load(r.Context(), "private", "catalog.json")
-		if err != nil {
-			return err
-		}
-		if err := checkETag(r, etag); err != nil {
-			return err
-		}
-		if err := a.publish(r.Context(), c); err != nil {
-			return err
-		}
-		respond(w, 200, map[string]int{"publishedRevision": c.Revision})
-		return nil
-	}))
+	mux.HandleFunc("POST /api/publish", a.handler(a.startPublication))
+	mux.HandleFunc("GET /api/publication", func(w http.ResponseWriter, r *http.Request) {
+		respond(w, 200, map[string]any{"publication": a.publicationStatus()})
+	})
 	if a.config.LocalRoot != "" {
 		mux.HandleFunc("GET /media/{key...}", func(w http.ResponseWriter, r *http.Request) {
 			key := r.PathValue("key")
@@ -593,14 +694,17 @@ func main() {
 		}
 		store = newR2Storage(os.Getenv("R2_ENDPOINT"), os.Getenv("R2_ACCESS_KEY_ID"), os.Getenv("R2_SECRET_ACCESS_KEY"), os.Getenv("R2_PRIVATE_BUCKET"), os.Getenv("R2_PUBLIC_BUCKET"))
 	}
-	a := &app{store: store, config: config, sessions: map[string]time.Time{}}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+	a := &app{store: store, config: config, sessions: map[string]time.Time{}, background: ctx}
+	if err := a.resumePublication(); err != nil {
+		log.Fatalf("Cannot load publication state: %T", err)
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	server := &http.Server{Addr: ":" + port, Handler: a.routes(), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 120 * time.Second, WriteTimeout: 10 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 32 << 10}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 	go func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 25*time.Second)
@@ -611,4 +715,5 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+	a.workers.Wait()
 }

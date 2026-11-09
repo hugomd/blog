@@ -27,6 +27,7 @@ type browser struct {
 	t      *testing.T
 	server *httptest.Server
 	client *http.Client
+	stop   func()
 	state  struct {
 		Catalog catalog `json:"catalog"`
 		ETag    string  `json:"etag"`
@@ -35,12 +36,17 @@ type browser struct {
 
 func newBrowser(t *testing.T, store storage) *browser {
 	t.Helper()
-	a := &app{store: store, config: configuration{Development: true, Password: "test-password-not-real", AuthMode: "password", PublicURL: "/media", LocalRoot: storeRoot(store)}, sessions: map[string]time.Time{}}
+	background, cancel := context.WithCancel(t.Context())
+	a := &app{store: store, config: configuration{Development: true, Password: "test-password-not-real", AuthMode: "password", PublicURL: "/media", LocalRoot: storeRoot(store)}, sessions: map[string]time.Time{}, background: background}
+	if err := a.resumePublication(); err != nil {
+		t.Fatal(err)
+	}
 	server := httptest.NewServer(a.routes())
 	a.config.Origin = server.URL
-	t.Cleanup(server.Close)
 	jar, _ := cookiejar.New(nil)
-	b := &browser{t: t, server: server, client: &http.Client{Jar: jar}}
+	stop := func() { cancel(); server.Close(); a.workers.Wait() }
+	t.Cleanup(stop)
+	b := &browser{t: t, server: server, client: &http.Client{Jar: jar}, stop: stop}
 	b.request("POST", "/api/login", map[string]string{"password": "test-password-not-real"}, 200)
 	b.request("GET", "/api/catalog", nil, 200)
 	return b
@@ -52,6 +58,9 @@ func storeRoot(store storage) string {
 	}
 	if failing, ok := store.(*failingStorage); ok {
 		return storeRoot(failing.storage)
+	}
+	if paused, ok := store.(*pausedCopyStorage); ok {
+		return storeRoot(paused.storage)
 	}
 	return ""
 }
@@ -93,11 +102,43 @@ func (b *browser) raw(method, path string, body []byte, status int) []byte {
 		b.t.Fatalf("%s %s: got %d, want %d: %s", method, path, response.StatusCode, status, result)
 	}
 	if status == 200 && (path == "/api/catalog" || (method != "GET" && path != "/api/login" && path != "/api/logout" && path != "/api/publish")) {
+		// Decode each response afresh, like fetch().json(); omitted false fields
+		// must not inherit true values from the previous response's slice storage.
+		b.state.Catalog = catalog{}
 		if err := json.Unmarshal(result, &b.state); err != nil {
 			b.t.Fatal(err)
 		}
 	}
 	return result
+}
+
+func (b *browser) publish(state string) {
+	b.t.Helper()
+	b.request("POST", "/api/publish", nil, http.StatusAccepted)
+	b.waitPublication(state)
+}
+
+func (b *browser) waitPublication(state string) publication {
+	b.t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var result struct {
+			Publication publication `json:"publication"`
+		}
+		if err := json.Unmarshal(b.request("GET", "/api/publication", nil, 200), &result); err != nil {
+			b.t.Fatal(err)
+		}
+		if result.Publication.State != "running" {
+			if result.Publication.State != state {
+				b.t.Fatalf("Publication state: got %+v, want %s", result.Publication, state)
+			}
+			return result.Publication
+		}
+		if time.Now().After(deadline) {
+			b.t.Fatal("Publication did not finish")
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 func edit(p photo, albums ...string) map[string]any {
@@ -233,6 +274,14 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	if !reflect.DeepEqual(p.Exif, want) || p.CapturedDate != "2022-09-11" {
 		t.Fatalf("Incorrect camera metadata: %+v", p)
 	}
+	for query, dimensions := range map[string]image.Point{"": {768, 1280}, "?size=640": {384, 640}} {
+		body := b.request("GET", "/api/photos/"+p.ID+"/image"+query, nil, 200)
+		img, err := jpeg.Decode(bytes.NewReader(body))
+		if err != nil || img.Bounds().Size() != dimensions {
+			t.Fatalf("Wrong preview dimensions for %s: %v", query, err)
+		}
+	}
+	b.request("GET", "/api/photos/"+p.ID+"/image?size=../catalog.json", nil, 400)
 	for size, wantDimensions := range map[int]image.Point{640: {384, 640}, 1280: {768, 1280}, 2560: {1536, 2560}} {
 		value, err := store.Read(t.Context(), "private", fmt.Sprintf("photos/%s/%d.jpg", p.ID, size))
 		if err != nil {
@@ -264,7 +313,7 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	p.Alt = "A city scene"
 	p.Published = true
 	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
-	b.request("POST", "/api/publish", nil, 200)
+	b.publish("succeeded")
 	manifest := b.request("GET", "/media/index.json", nil, 200)
 	if bytes.Contains(manifest, []byte("PRIVATE OWNER")) || bytes.Contains(manifest, []byte("GPS")) || bytes.Contains(manifest, []byte("filename")) {
 		t.Fatal("Private metadata leaked to public manifest")
@@ -282,14 +331,14 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	}
 }
 
-func TestAlbumsDoNotOwnThePhotostream(t *testing.T) {
-	b := newBrowser(t, &localStorage{root: t.TempDir()})
-	for range 3 {
+func TestAlbumPublicationReadinessAndStandalonePhotostream(t *testing.T) {
+	store := &localStorage{root: t.TempDir()}
+	b := newBrowser(t, store)
+	for range 4 {
 		b.raw("POST", "/api/photos", smallPNG(t), 200)
 	}
-	first, standalone, draft := b.state.Catalog.Photos[0], b.state.Catalog.Photos[1], b.state.Catalog.Photos[2]
+	first, standalone, inherited, draft := b.state.Catalog.Photos[0], b.state.Catalog.Photos[1], b.state.Catalog.Photos[2], b.state.Catalog.Photos[3]
 	first.Alt = "First"
-	first.Published = true
 	standalone.Alt = "Standalone"
 	standalone.Published = true
 	b.request("PATCH", "/api/photos/"+first.ID, edit(first), 200)
@@ -299,26 +348,82 @@ func TestAlbumsDoNotOwnThePhotostream(t *testing.T) {
 	for i, album := range b.state.Catalog.Albums {
 		album.Published = true
 		album.Slug = fmt.Sprintf("album-%d", i)
-		album.PhotoIDs = []string{draft.ID, first.ID}
-		album.CoverID = draft.ID
+		album.PhotoIDs = []string{inherited.ID, first.ID}
+		album.CoverID = inherited.ID
 		b.request("PUT", "/api/albums/"+album.ID, map[string]any{"title": album.Title, "slug": album.Slug, "description": "", "published": true, "photoIds": album.PhotoIDs, "coverId": album.CoverID}, 200)
 	}
-	b.request("POST", "/api/publish", nil, 200)
+	// Album inheritance must not bypass the alt-text requirement.
+	b.request("POST", "/api/publish", nil, 400)
+	inherited.Alt = "Inherited from two albums"
+	b.request("PATCH", "/api/photos/"+inherited.ID, edit(inherited, b.state.Catalog.Albums[0].ID, b.state.Catalog.Albums[1].ID), 200)
+	b.request("POST", "/api/albums", map[string]string{"title": "Draft album"}, 200)
+	draftAlbum := b.state.Catalog.Albums[2]
+	b.request("PUT", "/api/albums/"+draftAlbum.ID, map[string]any{"title": draftAlbum.Title, "slug": "draft", "published": false, "photoIds": []string{draft.ID}, "coverId": draft.ID}, 200)
+	// An old empty publication at this revision must not disable Publish on upgrade.
+	legacy, err := encode(catalog{Version: 1, Revision: b.state.Catalog.Revision, Photos: []photo{}, Albums: []album{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Write(t.Context(), "public", "index.json", legacy, "application/json", "no-store", nil); err != nil {
+		t.Fatal(err)
+	}
+	var publication struct {
+		Revision *int `json:"publishedRevision"`
+	}
+	if err := json.Unmarshal(b.request("GET", "/api/catalog", nil, 200), &publication); err != nil || publication.Revision != nil {
+		t.Fatalf("Legacy publication must need republishing: %+v, %v", publication, err)
+	}
+	b.publish("succeeded")
+	if err := json.Unmarshal(b.request("GET", "/api/catalog", nil, 200), &publication); err != nil || publication.Revision == nil || *publication.Revision != b.state.Catalog.Revision {
+		t.Fatalf("Publication must be current after republishing: %+v, %v", publication, err)
+	}
 	var live catalog
 	if err := json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live); err != nil {
 		t.Fatal(err)
 	}
-	if len(live.Photos) != 2 || live.Photos[0].ID != standalone.ID || live.Photos[1].ID != first.ID {
+	if len(live.Photos) != 3 || live.Photos[0].ID != inherited.ID || live.Photos[1].ID != standalone.ID || live.Photos[2].ID != first.ID {
 		t.Fatalf("Stream must contain standalone + album photo once, newest first: %+v", live.Photos)
 	}
-	for _, album := range live.Albums {
-		if !reflect.DeepEqual(album.PhotoIDs, []string{first.ID}) || album.CoverID != first.ID {
-			t.Fatalf("Draft photo or cover leaked: %+v", album)
+	if len(live.Albums) != 2 {
+		t.Fatalf("Draft album was published: %+v", live.Albums)
+	}
+	for _, p := range live.Photos {
+		if !p.Published {
+			t.Fatal("Public photo still marked draft")
 		}
 	}
+	for _, album := range live.Albums {
+		if !reflect.DeepEqual(album.PhotoIDs, []string{inherited.ID, first.ID}) || album.CoverID != inherited.ID {
+			t.Fatalf("Album photos/order/cover missing: %+v", album)
+		}
+	}
+	// Inheritance is derived, not latched into the independent publication flag.
+	b.request("GET", "/api/catalog", nil, 200)
+	if b.state.Catalog.Photos[0].Published || b.state.Catalog.Photos[2].Published {
+		t.Fatal("Publishing changed inherited photos' independent settings")
+	}
+	b.request("PATCH", "/api/photos/"+inherited.ID, edit(inherited, b.state.Catalog.Albums[1].ID), 200)
+	b.publish("succeeded")
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if len(live.Photos) != 3 {
+		t.Fatal("Removing one membership ignored the other published album")
+	}
+	b.request("PATCH", "/api/photos/"+inherited.ID, edit(inherited, draftAlbum.ID), 200)
+	b.publish("succeeded")
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if len(live.Photos) != 2 || live.Photos[0].ID != standalone.ID || live.Photos[1].ID != first.ID {
+		t.Fatalf("Removing the last published membership did not return photo to draft: %+v", live.Photos)
+	}
 	b.request("DELETE", "/api/albums/"+b.state.Catalog.Albums[0].ID, nil, 200)
-	if len(b.state.Catalog.Photos) != 3 {
+	if len(b.state.Catalog.Photos) != 4 {
 		t.Fatal("Removing an album deleted its photos")
+	}
+	remaining := b.state.Catalog.Albums[0]
+	b.request("PUT", "/api/albums/"+remaining.ID, map[string]any{"title": remaining.Title, "slug": remaining.Slug, "published": false, "photoIds": remaining.PhotoIDs, "coverId": remaining.CoverID}, 200)
+	b.publish("succeeded")
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if len(live.Photos) != 1 || live.Photos[0].ID != standalone.ID || len(live.Albums) != 0 {
+		t.Fatalf("Unpublishing last album must retain only independently ready photos: %+v", live)
 	}
 	stale := b.state.ETag
 	b.request("POST", "/api/albums", map[string]string{"title": "Another"}, 200)
@@ -338,6 +443,13 @@ type failingStorage struct {
 	failure func(method, bucket, key string, body []byte) bool
 }
 
+func (s *failingStorage) Copy(ctx context.Context, source, destination, key, contentType, cache string) error {
+	if (s.fail && destination == "public" && strings.HasSuffix(key, "/1280.jpg")) || (s.failure != nil && s.failure("COPY", destination, key, nil)) {
+		return errors.New("simulated storage outage")
+	}
+	return s.storage.Copy(ctx, source, destination, key, contentType, cache)
+}
+
 func (s *failingStorage) Write(ctx context.Context, bucket, key string, body []byte, contentType, cache string, expected *string) error {
 	if (s.fail && bucket == "public" && strings.HasSuffix(key, "/1280.jpg")) || (s.failure != nil && s.failure("PUT", bucket, key, body)) {
 		return errors.New("simulated storage outage")
@@ -352,6 +464,166 @@ func (s *failingStorage) Delete(ctx context.Context, bucket, key string) error {
 	return s.storage.Delete(ctx, bucket, key)
 }
 
+func (s *failingStorage) List(ctx context.Context, bucket, prefix string) ([]string, error) {
+	if s.failure != nil && s.failure("LIST", bucket, prefix, nil) {
+		return nil, errors.New("simulated storage outage")
+	}
+	return s.storage.List(ctx, bucket, prefix)
+}
+
+func TestArchiveRetainsFilesRedactsEveryManifestAndRestoresAlbumReadiness(t *testing.T) {
+	store := &localStorage{root: t.TempDir()}
+	b := newBrowser(t, store)
+	for range 3 {
+		b.raw("POST", "/api/photos", smallPNG(t), 200)
+	}
+	archived, kept, draft := b.state.Catalog.Photos[0], b.state.Catalog.Photos[1], b.state.Catalog.Photos[2]
+	for _, p := range []photo{archived, kept} {
+		p.Alt, p.Published = "Published text", true
+		b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	}
+	b.request("POST", "/api/albums", map[string]string{"title": "Ordered album"}, 200)
+	item := b.state.Catalog.Albums[0]
+	order := []string{draft.ID, archived.ID, kept.ID}
+	b.request("PUT", "/api/albums/"+item.ID, map[string]any{"title": item.Title, "slug": "ordered", "published": true, "photoIds": order[1:], "coverId": archived.ID}, 200)
+	for range 2 {
+		b.publish("succeeded")
+	}
+	// Archive must not accidentally publish this ready-but-unpublished draft.
+	draft.Alt, draft.Published = "Not public yet", true
+	b.request("PATCH", "/api/photos/"+draft.ID, edit(draft, item.ID), 200)
+	b.request("PUT", "/api/albums/"+item.ID, map[string]any{"title": item.Title, "slug": "ordered", "published": true, "photoIds": order, "coverId": archived.ID}, 200)
+	before := map[string]string{}
+	for _, bucket := range []string{"private", "public"} {
+		keys, err := store.List(t.Context(), bucket, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, key := range keys {
+			if strings.HasSuffix(key, ".json") {
+				continue
+			}
+			value, err := store.Read(t.Context(), bucket, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			before[bucket+"/"+key] = value.ETag
+		}
+	}
+	stale := b.state.ETag
+	b.request("POST", "/api/photos/"+archived.ID+"/archive", nil, 200)
+	current := b.state.ETag
+	b.state.ETag = stale
+	b.request("POST", "/api/photos/"+kept.ID+"/archive", nil, 409)
+	b.state.ETag = current
+	b.request("POST", "/api/photos/missing/archive", nil, 404)
+	if p := b.state.Catalog.Photos[0]; !p.Archived || p.Archiving || p.Published || p.Filename != archived.Filename {
+		t.Fatalf("Archive did not retain metadata with completed state: %+v", p)
+	}
+	if !reflect.DeepEqual(b.state.Catalog.Albums[0].PhotoIDs, order) || b.state.Catalog.Albums[0].CoverID != archived.ID {
+		t.Fatal("Archive lost private album order/cover")
+	}
+	keys, err := store.List(t.Context(), "public", "releases/")
+	if err != nil || len(keys) != 2 {
+		t.Fatalf("Historical releases: %v %v", keys, err)
+	}
+	for _, key := range append(keys, "index.json") {
+		value, err := store.Read(t.Context(), "public", key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var live catalog
+		if err := json.Unmarshal(value.Body, &live); err != nil {
+			t.Fatal(err)
+		}
+		if len(live.Photos) != 1 || live.Photos[0].ID != kept.ID || live.Photos[0].Alt != "Published text" || len(live.Albums) != 1 || !reflect.DeepEqual(live.Albums[0].PhotoIDs, []string{kept.ID}) || live.Albums[0].CoverID != kept.ID {
+			t.Fatalf("Wrong redacted manifest %s: %+v", key, live)
+		}
+	}
+	for path, etag := range before {
+		bucket, key, _ := strings.Cut(path, "/")
+		value, err := store.Read(t.Context(), bucket, key)
+		if err != nil || value == nil || value.ETag != etag {
+			t.Fatalf("Archive altered file %s: %v", path, err)
+		}
+	}
+	b.request("PATCH", "/api/photos/"+archived.ID, edit(archived), 409)
+	b.publish("succeeded")
+	var live catalog
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	for _, p := range live.Photos {
+		if p.ID == archived.ID {
+			t.Fatal("Publish resurrected archived photo")
+		}
+	}
+	b = newBrowser(t, store)
+	beforeRestore := b.request("GET", "/media/index.json", nil, 200)
+	b.request("POST", "/api/photos/"+archived.ID+"/restore", nil, 200)
+	if p := b.state.Catalog.Photos[0]; p.Archived || p.Published {
+		t.Fatalf("Restore must clear archive without enabling independent publication: %+v", p)
+	}
+	if !bytes.Equal(beforeRestore, b.request("GET", "/media/index.json", nil, 200)) {
+		t.Fatal("Restore changed the public index without publishing")
+	}
+	b.request("POST", "/api/photos/"+kept.ID+"/restore", nil, 400)
+	b.publish("succeeded")
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if len(live.Photos) != 3 || !reflect.DeepEqual(live.Albums[0].PhotoIDs, order) {
+		t.Fatalf("Restored photo must inherit published album readiness: %+v", live)
+	}
+}
+
+func TestArchiveRetriesHistoricalCleanupAfterRestart(t *testing.T) {
+	for _, failedKey := range []string{"listing", "index.json", "releases/", "catalog.json"} {
+		t.Run(failedKey, func(t *testing.T) {
+			store := &failingStorage{storage: &localStorage{root: t.TempDir()}}
+			b := newBrowser(t, store)
+			b.raw("POST", "/api/photos", smallPNG(t), 200)
+			p := b.state.Catalog.Photos[0]
+			p.Alt, p.Published = "Keep my files", true
+			b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+			b.publish("succeeded")
+			store.failure = func(method, bucket, key string, body []byte) bool {
+				if failedKey == "listing" {
+					return method == "LIST"
+				}
+				if method != "PUT" {
+					return false
+				}
+				if failedKey == "catalog.json" {
+					var c catalog
+					json.Unmarshal(body, &c)
+					return bucket == "private" && key == failedKey && len(c.Photos) == 1 && c.Photos[0].Archived && !c.Photos[0].Archiving
+				}
+				return bucket == "public" && strings.HasPrefix(key, failedKey)
+			}
+			b.request("POST", "/api/photos/"+p.ID+"/archive", nil, 500)
+			b = newBrowser(t, store)
+			if !b.state.Catalog.Photos[0].Archiving {
+				t.Fatal("Lost pending archive across restart")
+			}
+			b.request("POST", "/api/photos/"+p.ID+"/restore", nil, 409)
+			b.request("PATCH", "/api/photos/"+p.ID, edit(p), 409)
+			store.failure = nil
+			b.request("POST", "/api/photos/"+p.ID+"/archive", nil, 200)
+			if b.state.Catalog.Photos[0].Archiving {
+				t.Fatal("Retry did not complete")
+			}
+			keys, _ := store.List(t.Context(), "public", "releases/")
+			for _, key := range append(keys, "index.json") {
+				value, err := store.Read(t.Context(), "public", key)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if bytes.Contains(value.Body, []byte(p.ID)) {
+					t.Fatalf("Retry left reference in %s", key)
+				}
+			}
+			b.request("GET", "/api/photos/"+p.ID+"/image", nil, 200)
+		})
+	}
+}
+
 func TestDeletePhotoRemovesFilesAndMembershipsWithoutPublishingDrafts(t *testing.T) {
 	store := &localStorage{root: t.TempDir()}
 	b := newBrowser(t, store)
@@ -363,7 +635,7 @@ func TestDeletePhotoRemovesFilesAndMembershipsWithoutPublishingDrafts(t *testing
 		p.Alt, p.Published = "Original published caption", true
 		b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
 	}
-	for i, ids := range [][]string{{draft.ID, deleted.ID, kept.ID}, {kept.ID, deleted.ID}, {deleted.ID}} {
+	for i, ids := range [][]string{{deleted.ID, kept.ID}, {kept.ID, deleted.ID}, {deleted.ID}} {
 		b.request("POST", "/api/albums", map[string]string{"title": fmt.Sprintf("Album %d", i)}, 200)
 		item := b.state.Catalog.Albums[i]
 		cover := deleted.ID
@@ -372,7 +644,7 @@ func TestDeletePhotoRemovesFilesAndMembershipsWithoutPublishingDrafts(t *testing
 		}
 		b.request("PUT", "/api/albums/"+item.ID, map[string]any{"title": item.Title, "slug": fmt.Sprintf("album-%d", i), "published": true, "photoIds": ids, "coverId": cover}, 200)
 	}
-	b.request("POST", "/api/publish", nil, 200)
+	b.publish("succeeded")
 	// These ready-but-unpublished edits must NOT be published by deletion.
 	kept.Alt, kept.Published = "Unpublished change", true
 	b.request("PATCH", "/api/photos/"+kept.ID, edit(kept, b.state.Catalog.Albums[0].ID, b.state.Catalog.Albums[1].ID), 200)
@@ -392,7 +664,7 @@ func TestDeletePhotoRemovesFilesAndMembershipsWithoutPublishingDrafts(t *testing
 	if len(b.state.Catalog.Photos) != 2 || b.state.Catalog.Photos[0].ID != kept.ID || b.state.Catalog.Photos[1].ID != draft.ID {
 		t.Fatalf("Deletion affected unrelated library photos: %+v", b.state.Catalog.Photos)
 	}
-	for i, expected := range [][]string{{draft.ID, kept.ID}, {kept.ID}, {}, {}} {
+	for i, expected := range [][]string{{kept.ID, draft.ID}, {kept.ID}, {}, {}} {
 		item := b.state.Catalog.Albums[i]
 		if !reflect.DeepEqual(item.PhotoIDs, expected) || (i < 2 && item.CoverID != expected[0]) || (i >= 2 && item.CoverID != "") {
 			t.Fatalf("Wrong private album membership/cover: %+v", item)
@@ -445,7 +717,7 @@ func TestDeletePhotoResumesAfterStorageFailureAndRestart(t *testing.T) {
 			p := b.state.Catalog.Photos[0]
 			p.Alt, p.Published = "Delete this synthetic photo", true
 			b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
-			b.request("POST", "/api/publish", nil, 200)
+			b.publish("succeeded")
 			store.failure = func(method, bucket, key string, body []byte) bool {
 				switch stage {
 				case "intent":
@@ -473,7 +745,7 @@ func TestDeletePhotoResumesAfterStorageFailureAndRestart(t *testing.T) {
 			store.failure = nil
 			if stage != "intent" {
 				b.request("PATCH", "/api/photos/"+p.ID, edit(p), 409)
-				b.request("POST", "/api/publish", nil, 200)
+				b.publish("succeeded")
 				var live catalog
 				json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
 				if len(live.Photos) != 0 {
@@ -506,7 +778,7 @@ func TestFailedPublicationDoesNotReplaceLiveIndex(t *testing.T) {
 	p.Alt = "Initial photo"
 	p.Published = true
 	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
-	b.request("POST", "/api/publish", nil, 200)
+	b.publish("succeeded")
 	before := b.request("GET", "/media/index.json", nil, 200)
 	b.raw("POST", "/api/photos", smallPNG(t), 200)
 	p = b.state.Catalog.Photos[1]
@@ -514,12 +786,12 @@ func TestFailedPublicationDoesNotReplaceLiveIndex(t *testing.T) {
 	p.Published = true
 	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
 	store.fail = true
-	b.request("POST", "/api/publish", nil, 500)
+	b.publish("failed")
 	if !bytes.Equal(before, b.request("GET", "/media/index.json", nil, 200)) {
 		t.Fatal("Failed image upload replaced live index")
 	}
 	store.fail = false
-	b.request("POST", "/api/publish", nil, 200)
+	b.publish("succeeded")
 	var live catalog
 	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
 	if len(live.Photos) != 2 {
@@ -565,6 +837,7 @@ func TestAuthenticationAndInputBoundaries(t *testing.T) {
 	}
 	b.request("POST", "/api/logout", nil, 200)
 	b.request("GET", "/api/catalog", nil, 401)
+	b.request("GET", "/api/publication", nil, 401)
 }
 
 func TestProxyAuthenticationRequiresAllowedIdentity(t *testing.T) {

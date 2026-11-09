@@ -10,6 +10,10 @@ async function load() {
   $('#retry').hidden = true;
   $('#status').hidden = false;
   $('#status').textContent = 'Loading photographs…';
+  $('#status').classList.add('loading');
+  $('#skeleton').hidden = false;
+  stream.setAttribute('aria-busy', 'true');
+  $('#albums').setAttribute('aria-busy', 'true');
   try {
     const response = await fetch(document.body.dataset.manifest, { cache: 'no-cache', credentials: 'omit' });
     if (response.status === 404) state.catalog = { version: 1, photos: [], albums: [] };
@@ -24,6 +28,11 @@ async function load() {
     stream.innerHTML = ''; $('#albums').innerHTML = '';
     $('#status').textContent = 'The photographs couldn’t be loaded. Please try again.';
     $('#retry').hidden = false;
+  } finally {
+    $('#skeleton').hidden = true;
+    $('#status').classList.remove('loading');
+    stream.setAttribute('aria-busy', 'false');
+    $('#albums').setAttribute('aria-busy', 'false');
   }
 }
 
@@ -38,8 +47,9 @@ function render() {
   $('#nav-stream').toggleAttribute('aria-current', !isAlbums && !isAlbum);
   $('#nav-albums').toggleAttribute('aria-current', isAlbums || isAlbum);
   $('#back').hidden = !isAlbum;
-  $('#title').textContent = isAlbums ? 'Albums' : isAlbum ? album?.title || 'Album unavailable' : 'Photos';
-  $('#description').textContent = isAlbums ? 'A story, a place, a weekend.' : isAlbum ? album?.description || '' : 'A few places, a few moments.';
+  $('#title').textContent = isAlbums ? 'Albums' : isAlbum ? album?.title || 'Album unavailable' : 'Photostream';
+  $('#description').hidden = !isAlbums && !isAlbum;
+  $('#description').textContent = isAlbums ? 'A story, a place, a weekend.' : isAlbum ? album?.description || '' : '';
   document.title = `${$('#title').textContent} · Hugo’s Blog`;
   stream.hidden = isAlbums;
   $('#albums').hidden = !isAlbums;
