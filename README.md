@@ -34,8 +34,8 @@ anything or start servers.
 
 Setup deliberately does not run `deploy.sh`: that script refreshes the checked-in
 webring from live feeds. Full site builds also fetch remote tweet and Fediverse
-data, and the sponsoring shortcode on the About page requires `GITHUB_TOKEN`.
-Configure that credential through Amp secrets, not in setup or a committed file.
+data. The sponsorship list is maintained directly in `content/about.md` and
+does not need a GitHub token.
 Unavailable remote data can still break a build independently of the toolchain;
 for example, the tweet shortcode assumes the API supplies a creation date.
 
