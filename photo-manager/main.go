@@ -158,31 +158,28 @@ func (a *app) getCatalog(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	return a.respondCatalog(w, r, c, etag)
+}
+
+// Reads and mutations return the same live comparison so saved edits refresh it.
+func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, etag string) error {
 	live, liveETag, err := a.load(r.Context(), "public", "index.json")
 	if err != nil {
 		return err
 	}
+	changes := c.publicRelease(a.config.PublicURL).changesFrom(live)
 	var publishedRevision *int
 	if liveETag != "" {
 		publishedRevision = &live.Revision
-		// An older release may omit album photos despite matching the revision.
-		if live.Revision == c.Revision {
-			publicIDs := map[string]bool{}
-			for _, p := range live.Photos {
-				publicIDs[p.ID] = true
-			}
-			for _, p := range c.Photos {
-				if c.photoReady(p) != publicIDs[p.ID] {
-					publishedRevision = nil
-					break
-				}
-			}
+		// Older releases can differ despite matching the private revision.
+		if live.Revision == c.Revision && changes.Changed {
+			publishedRevision = nil
 		}
 	}
 	if etag == "" {
 		etag = "new"
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development})
+	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development})
 	return nil
 }
 
@@ -215,8 +212,7 @@ func (a *app) mutate(w http.ResponseWriter, r *http.Request, change func(*catalo
 	if err != nil {
 		return err
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": next})
-	return nil
+	return a.respondCatalog(w, r, c, next)
 }
 
 func (a *app) upload(w http.ResponseWriter, r *http.Request) error {
@@ -427,8 +423,7 @@ func (a *app) archivePhoto(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": next})
-	return nil
+	return a.respondCatalog(w, r, c, next)
 }
 
 func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
@@ -493,8 +488,7 @@ func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": next})
-	return nil
+	return a.respondCatalog(w, r, c, next)
 }
 
 func (a *app) createAlbum(w http.ResponseWriter, r *http.Request) error {

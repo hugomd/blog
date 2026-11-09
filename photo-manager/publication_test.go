@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -145,4 +146,89 @@ func TestResumedPublicationRejectsChangedCatalog(t *testing.T) {
 		t.Fatalf("Changed source was not rejected: %+v", job)
 	}
 	b.request("GET", "/media/index.json", nil, 404)
+}
+
+func TestPublicationChangesCompareLiveContent(t *testing.T) {
+	b := newBrowser(t, &localStorage{root: t.TempDir()})
+	type counts struct{ Live, Next, Added, Updated, Removed, Unchanged int }
+	expect := func(changed bool, photos, albums counts, response ...[]byte) {
+		t.Helper()
+		if len(response) == 0 {
+			response = append(response, b.request("GET", "/api/catalog", nil, 200))
+		}
+		var result struct {
+			Changes *struct {
+				Changed bool
+				Photos  counts
+				Albums  counts
+			} `json:"publicationChanges"`
+		}
+		if err := json.Unmarshal(response[0], &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.Changes == nil || result.Changes.Changed != changed || !reflect.DeepEqual(result.Changes.Photos, photos) || !reflect.DeepEqual(result.Changes.Albums, albums) {
+			t.Fatalf("Got publication changes %+v; want changed=%v, photos=%+v, albums=%+v", result.Changes, changed, photos, albums)
+		}
+	}
+	for range 5 {
+		b.raw("POST", "/api/photos", smallPNG(t), 200)
+	}
+	kept, updated, removed, added := b.state.Catalog.Photos[0], b.state.Catalog.Photos[1], b.state.Catalog.Photos[2], b.state.Catalog.Photos[3]
+	standalone := b.state.Catalog.Photos[4]
+	for _, p := range []photo{kept, updated, removed} {
+		p.Alt, p.Published = "A street", true
+		b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	}
+	b.request("POST", "/api/albums", map[string]string{"title": "Kept album"}, 200)
+	b.request("POST", "/api/albums", map[string]string{"title": "Removed album"}, 200)
+	first, second := b.state.Catalog.Albums[0], b.state.Catalog.Albums[1]
+	saveAlbum := func(a album, published bool, ids []string) {
+		t.Helper()
+		b.request("PUT", "/api/albums/"+a.ID, map[string]any{"title": a.Title, "slug": a.Slug, "description": a.Description, "published": published, "photoIds": ids, "coverId": ""}, 200)
+	}
+	saveAlbum(first, true, []string{kept.ID, updated.ID})
+	saveAlbum(second, true, []string{removed.ID})
+	// Before the first release, only ready content is new, not the private draft.
+	expect(true, counts{Next: 3, Added: 3}, counts{Next: 2, Added: 2})
+	b.publish("succeeded")
+	expect(false, counts{Live: 3, Next: 3, Unchanged: 3}, counts{Live: 2, Next: 2, Unchanged: 2})
+
+	// Private-only changes advance the revision, but do not change the website.
+	added.Alt, added.Caption = "A new street", "Private draft caption"
+	saved := b.request("PATCH", "/api/photos/"+added.ID, edit(added), 200)
+	expect(false, counts{Live: 3, Next: 3, Unchanged: 3}, counts{Live: 2, Next: 2, Unchanged: 2}, saved)
+	b.request("POST", "/api/albums", map[string]string{"title": "New draft album"}, 200)
+	third := b.state.Catalog.Albums[2]
+	expect(false, counts{Live: 3, Next: 3, Unchanged: 3}, counts{Live: 2, Next: 2, Unchanged: 2})
+
+	updated = b.state.Catalog.Photos[1]
+	updated.Caption = "Changed public caption"
+	b.request("PATCH", "/api/photos/"+updated.ID, edit(updated, first.ID), 200)
+	removed = b.state.Catalog.Photos[2]
+	removed.Published = false
+	b.request("PATCH", "/api/photos/"+removed.ID, edit(removed), 200)
+	b.request("DELETE", "/api/albums/"+second.ID, nil, 200)
+	b.request("PATCH", "/api/photos/"+added.ID, edit(added, first.ID), 200)
+	standalone.Alt, standalone.Published = "A new standalone photo", true
+	b.request("PATCH", "/api/photos/"+standalone.ID, edit(standalone), 200)
+	saveAlbum(third, true, []string{added.ID, kept.ID})
+	// The net gain of one photo hides two additions and one removal. Album
+	// totals are unchanged despite changes. Inherited photos count only once.
+	expect(true, counts{Live: 3, Next: 4, Added: 2, Updated: 1, Removed: 1, Unchanged: 1}, counts{Live: 2, Next: 2, Added: 1, Updated: 1, Removed: 1})
+	b.publish("succeeded")
+	expect(false, counts{Live: 4, Next: 4, Unchanged: 4}, counts{Live: 2, Next: 2, Unchanged: 2})
+
+	// Switching from independent to inherited readiness is not a public edit.
+	kept = b.state.Catalog.Photos[0]
+	kept.Published = false
+	saved = b.request("PATCH", "/api/photos/"+kept.ID, edit(kept, first.ID, third.ID), 200)
+	expect(false, counts{Live: 4, Next: 4, Unchanged: 4}, counts{Live: 2, Next: 2, Unchanged: 2}, saved)
+
+	// A curated order change updates the album, not the photos or their totals.
+	saveAlbum(first, true, []string{added.ID, updated.ID, kept.ID})
+	expect(true, counts{Live: 4, Next: 4, Unchanged: 4}, counts{Live: 2, Next: 2, Updated: 1, Unchanged: 1})
+	b.publish("succeeded")
+	// Archive already updates the live manifests; no publication remains due.
+	saved = b.request("POST", "/api/photos/"+kept.ID+"/archive", nil, 200)
+	expect(false, counts{Live: 3, Next: 3, Unchanged: 3}, counts{Live: 2, Next: 2, Unchanged: 2}, saved)
 }

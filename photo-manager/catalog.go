@@ -113,34 +113,17 @@ func (c catalog) photoReady(p photo) bool {
 	return false
 }
 
-func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) error {
-	previous, etag, err := a.load(ctx, "public", "index.json")
-	if err != nil {
-		return err
-	}
-	alreadyPublished := map[string]bool{}
-	for _, p := range previous.Photos {
-		alreadyPublished[p.ID] = true
-	}
-	release := catalog{Version: 1, Revision: c.Revision, PublishedAt: now(), Photos: []photo{}, Albums: []album{}}
+func (c catalog) publicRelease(publicURL string) catalog {
+	release := catalog{Version: 1, Revision: c.Revision, Photos: []photo{}, Albums: []album{}}
 	published := map[string]bool{}
-	keys := []string{}
 	for _, p := range c.Photos {
 		if !c.photoReady(p) {
 			continue
 		}
-		if p.Alt == "" {
-			return badRequest("Add alt text to every published photo.")
-		}
-		if !alreadyPublished[p.ID] {
-			for _, size := range []int{640, 1280, 2560} {
-				keys = append(keys, fmt.Sprintf("photos/%s/%d.jpg", p.ID, size))
-			}
-		}
 		p.Published = true
 		p.Filename = ""
-		p.Thumbnail = strings.TrimRight(a.config.PublicURL, "/") + "/photos/" + p.ID + "/640.jpg"
-		p.Src = strings.TrimRight(a.config.PublicURL, "/") + "/photos/" + p.ID + "/2560.jpg"
+		p.Thumbnail = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/640.jpg"
+		p.Src = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/2560.jpg"
 		release.Photos = append(release.Photos, p)
 		published[p.ID] = true
 	}
@@ -164,6 +147,31 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 			}
 		}
 		release.Albums = append(release.Albums, item)
+	}
+	return release
+}
+
+func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) error {
+	previous, etag, err := a.load(ctx, "public", "index.json")
+	if err != nil {
+		return err
+	}
+	alreadyPublished := map[string]bool{}
+	for _, p := range previous.Photos {
+		alreadyPublished[p.ID] = true
+	}
+	release := c.publicRelease(a.config.PublicURL)
+	release.PublishedAt = now()
+	keys := []string{}
+	for _, p := range release.Photos {
+		if p.Alt == "" {
+			return badRequest("Add alt text to every published photo.")
+		}
+		if !alreadyPublished[p.ID] {
+			for _, size := range []int{640, 1280, 2560} {
+				keys = append(keys, fmt.Sprintf("photos/%s/%d.jpg", p.ID, size))
+			}
+		}
 	}
 	// Copy within R2, with a bounded number of requests and no image bytes in Go.
 	// Finish every copy before changing the discoverable public manifest.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"reflect"
 	"time"
 )
 
@@ -17,6 +18,67 @@ type publication struct {
 	Completed   int    `json:"completed"`
 	Total       int    `json:"total"`
 	Error       string `json:"error,omitempty"`
+}
+
+type publicationCounts struct {
+	Live      int `json:"live"`
+	Next      int `json:"next"`
+	Added     int `json:"added"`
+	Updated   int `json:"updated"`
+	Removed   int `json:"removed"`
+	Unchanged int `json:"unchanged"`
+}
+
+type publicationChanges struct {
+	Changed bool              `json:"changed"`
+	Photos  publicationCounts `json:"photos"`
+	Albums  publicationCounts `json:"albums"`
+}
+
+// Compare the public projection, not private revisions or publication settings.
+func (next catalog) changesFrom(live catalog) publicationChanges {
+	changes := publicationChanges{
+		Photos: publicationCounts{Live: len(live.Photos), Next: len(next.Photos)},
+		Albums: publicationCounts{Live: len(live.Albums), Next: len(next.Albums)},
+	}
+	photos := map[string]photo{}
+	for _, p := range live.Photos {
+		photos[p.ID] = p
+	}
+	samePhotoOrder := len(live.Photos) == len(next.Photos)
+	for i, p := range next.Photos {
+		if i >= len(live.Photos) || live.Photos[i].ID != p.ID {
+			samePhotoOrder = false
+		}
+		if previous, ok := photos[p.ID]; !ok {
+			changes.Photos.Added++
+		} else if !reflect.DeepEqual(previous, p) {
+			changes.Photos.Updated++
+		} else {
+			changes.Photos.Unchanged++
+		}
+	}
+	changes.Photos.Removed = changes.Photos.Live - changes.Photos.Updated - changes.Photos.Unchanged
+	albums := map[string]album{}
+	for _, item := range live.Albums {
+		albums[item.ID] = item
+	}
+	sameAlbumOrder := len(live.Albums) == len(next.Albums)
+	for i, item := range next.Albums {
+		if i >= len(live.Albums) || live.Albums[i].ID != item.ID {
+			sameAlbumOrder = false
+		}
+		if previous, ok := albums[item.ID]; !ok {
+			changes.Albums.Added++
+		} else if !reflect.DeepEqual(previous, item) {
+			changes.Albums.Updated++
+		} else {
+			changes.Albums.Unchanged++
+		}
+	}
+	changes.Albums.Removed = changes.Albums.Live - changes.Albums.Updated - changes.Albums.Unchanged
+	changes.Changed = !samePhotoOrder || !sameAlbumOrder || changes.Photos.Unchanged != changes.Photos.Next || changes.Albums.Unchanged != changes.Albums.Next
+	return changes
 }
 
 func (a *app) publicationStatus() publication {

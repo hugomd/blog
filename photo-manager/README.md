@@ -32,6 +32,10 @@ volume. Images **and all manifests** live in R2 in production.
   Published albums include their non-archived photos without a separate photo
   opt-in. Draft albums alone do not make their photos public. Missing alt text
   blocks publication; archived/deleting photos are excluded and covers fall back.
+- The publication preview compares the next public manifest with the live index:
+  photos and albums are counted separately as added, updated, removed or unchanged,
+  alongside live and next-release totals. Private-only edits do not require
+  publication. Album order/cover changes count as album updates, not new photos.
 - Publication runs in the background with image-copy progress. You can browse,
   reload or close the page; edits, uploads, archive and delete are locked until
   it finishes. A pod replacement resumes the saved job. Failures expose a retry
