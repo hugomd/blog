@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Photos · Studio</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <section id="login" hidden>
+    <form id="login-form" class="login-card">
+      <div class="brand-mark" aria-hidden="true">◧</div>
+      <p class="eyebrow">HUGO’S BLOG / STUDIO</p>
+      <h1>A home for your photos.</h1>
+      <p class="muted">Upload, collect, and publish. Your originals stay private.</p>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">Sign in →</button>
+      <p id="login-error" role="alert"></p>
+      <small class="muted">On Jegigrat, sign in through Pocket ID instead.</small>
+    </form>
+  </section>
+  <div id="studio" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="#photos"><span class="brand-mark" aria-hidden="true">◧</span> Photos<span class="studio-label">STUDIO</span></a>
+      <p class="eyebrow">YOUR LIBRARY</p>
+      <nav aria-label="Photo management">
+        <a href="#photos" id="nav-photos">All photos <span id="photo-count"></span></a>
+        <a href="#albums" id="nav-albums">Albums <span id="album-count"></span></a>
+      </nav>
+      <div class="sidebar-note"><span class="dot"></span> Original files stay private.<br>Only publish what you choose.</div>
+      <button id="logout" class="quiet">Sign out ↗</button>
+    </aside>
+    <div class="workspace">
+      <div id="sandbox" class="sandbox" hidden>LOCAL PREVIEW <span>Not connected to R2 or the live blog.</span></div>
+      <header class="topbar">
+        <span>Hugo’s Blog <span class="slash">/</span> Photo management</span>
+        <div class="actions"><span id="publish-status" class="muted"></span><button id="publish" class="primary">Publish changes ↗</button></div>
+      </header>
+      <div id="error" class="error" role="alert" hidden><span></span><button id="reload">Reload library</button></div>
+      <main id="main"></main>
+      <footer><span id="status" role="status">Ready.</span><span>Images + manifests · R2</span></footer>
+    </div>
+  </div>
+  <input id="files" type="file" accept="image/jpeg,image/png" multiple hidden>
+  <dialog id="editor" aria-labelledby="dialog-title">
+    <button id="close-editor" class="close" aria-label="Close editor">×</button>
+    <div id="editor-body"></div>
+  </dialog>
+  <div id="upload-progress" class="upload-progress" role="status" hidden><span></span><progress></progress></div>
+</body>
+</html>

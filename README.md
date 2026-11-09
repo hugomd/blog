@@ -17,7 +17,7 @@ hugo server
 ### Amp orbs
 
 `.agents/setup` bootstraps Hermit and installs the versions pinned in `bin/`:
-Hugo Extended 0.111.3 and Go 1.19.8. Hugo is kept at this version
+Hugo Extended 0.111.3 and Go 1.27.3. Hugo is kept at this version
 for compatibility with the site's legacy templates; the gallery needs Extended's
 Sass support. Setup then builds a pinned `openring` revision with Hermit's Go
 compiler into its standard `.hermit/go/bin` directory. Go verifies module
@@ -27,6 +27,8 @@ Setup also adds a repository-scoped login-shell hook so Amp commands and
 supervised services receive the complete Hermit environment automatically.
 Themes are vendored; there are no Node packages or databases to install.
 Repeated setup runs reuse Hermit's package cache and the Go build cache.
+Setup downloads the [photo manager](photo-manager/README.md)'s Go modules and
+warms its build cache without needing R2 credentials or starting the service.
 `.agents/resume` only checks that the tools are available; it does not reinstall
 anything or start servers.
 
@@ -39,3 +41,11 @@ for example, the tweet shortcode assumes the API supplies a creation date.
 
 ### Static Assets
 Hosted assets are stored in [`/content`](./content), and get served on `/`, e.g. `/about.json`.
+
+### Photo manager
+
+The standalone [Go photo manager](photo-manager/README.md) uploads and processes
+photos, manages optional albums, and publishes an R2-backed manifest. Its
+deployment configuration belongs in `hugomd/jegigrat-k3s`; it is independent of
+the Hugo build. The existing public blog gallery has not yet been switched to
+consume that manifest.

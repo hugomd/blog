@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# No services or per-user authentication need restoring for this static site.
+# Services and R2 authentication are explicit; resume only checks the toolchain.
 for tool in hugo go openring; do
   if ! command -v "$tool" >/dev/null; then
     echo "Missing $tool; run .agents/setup to repair this orb" >&2

@@ -43,6 +43,11 @@ else
 fi
 echo "openring ready (${SECONDS}s)"
 
+echo "Preparing the Go photo manager"
+./bin/go -C photo-manager mod download
+./bin/go -C photo-manager build -o /dev/null .
+echo "Photo manager dependencies and build cache ready (${SECONDS}s)"
+
 # Amp and supervised services use new non-interactive login shells. Export the
 # complete Hermit environment there, but only inside this repository.
 profile_marker="# hugomd/blog Hermit environment"

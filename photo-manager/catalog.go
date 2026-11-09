@@ -1,0 +1,175 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+)
+
+type photo struct {
+	ID           string            `json:"id"`
+	Filename     string            `json:"filename,omitempty"`
+	Alt          string            `json:"alt"`
+	Caption      string            `json:"caption"`
+	Tags         []string          `json:"tags"`
+	Published    bool              `json:"published"`
+	UploadedAt   string            `json:"uploadedAt"`
+	CapturedDate string            `json:"capturedDate"`
+	Width        int               `json:"width"`
+	Height       int               `json:"height"`
+	Exif         map[string]string `json:"exif"`
+	Thumbnail    string            `json:"thumbnail,omitempty"`
+	Src          string            `json:"src,omitempty"`
+}
+
+type album struct {
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Slug        string   `json:"slug"`
+	Description string   `json:"description"`
+	Published   bool     `json:"published"`
+	PhotoIDs    []string `json:"photoIds"`
+	CoverID     string   `json:"coverId"`
+}
+
+type catalog struct {
+	Version     int     `json:"version"`
+	Revision    int     `json:"revision"`
+	Photos      []photo `json:"photos"`
+	Albums      []album `json:"albums"`
+	PublishedAt string  `json:"publishedAt,omitempty"`
+}
+
+func identifier() string {
+	var bytes [16]byte
+	if _, err := rand.Read(bytes[:]); err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(bytes[:])
+}
+
+func encode(value any) ([]byte, error) { return json.MarshalIndent(value, "", "  ") }
+
+func (a *app) load(ctx context.Context, bucket, key string) (catalog, string, error) {
+	value, err := a.store.Read(ctx, bucket, key)
+	result := catalog{Version: 1, Photos: []photo{}, Albums: []album{}}
+	if err != nil || value == nil {
+		return result, "", err
+	}
+	if err := json.Unmarshal(value.Body, &result); err != nil {
+		return catalog{}, "", fmt.Errorf("invalid catalog: %w", err)
+	}
+	if result.Version != 1 {
+		return catalog{}, "", errors.New("unsupported catalog version")
+	}
+	return result, value.ETag, nil
+}
+
+func (a *app) save(ctx context.Context, c *catalog, etag string) (string, error) {
+	c.Revision++
+	body, err := encode(c)
+	if err != nil {
+		return "", err
+	}
+	if err := a.store.Write(ctx, "private", "catalog.json", body, "application/json", "no-store", &etag); err != nil {
+		return "", err
+	}
+	// Use the storage service's ETag, not a locally assumed digest format.
+	value, err := a.store.Read(ctx, "private", "catalog.json")
+	if err != nil {
+		return "", err
+	}
+	if value == nil {
+		return "", errors.New("saved catalog not found")
+	}
+	if !bytes.Equal(value.Body, body) {
+		return "", errConflict
+	}
+	return value.ETag, nil
+}
+
+func (a *app) publish(ctx context.Context, c catalog) error {
+	previous, etag, err := a.load(ctx, "public", "index.json")
+	if err != nil {
+		return err
+	}
+	alreadyPublished := map[string]bool{}
+	for _, p := range previous.Photos {
+		alreadyPublished[p.ID] = true
+	}
+	release := catalog{Version: 1, Revision: c.Revision, PublishedAt: now(), Photos: []photo{}, Albums: []album{}}
+	published := map[string]bool{}
+	for _, p := range c.Photos {
+		if !p.Published {
+			continue
+		}
+		if p.Alt == "" {
+			return badRequest("Add alt text to every published photo.")
+		}
+		if !alreadyPublished[p.ID] {
+			for _, size := range []int{640, 1280, 2560} {
+				key := fmt.Sprintf("photos/%s/%d.jpg", p.ID, size)
+				image, err := a.store.Read(ctx, "private", key)
+				if err != nil {
+					return err
+				}
+				if image == nil {
+					return errors.New("missing photo derivative")
+				}
+				if err := a.store.Write(ctx, "public", key, image.Body, "image/jpeg", "public, max-age=31536000, immutable", nil); err != nil {
+					return err
+				}
+			}
+		}
+		p.Filename = ""
+		p.Thumbnail = strings.TrimRight(a.config.PublicURL, "/") + "/photos/" + p.ID + "/640.jpg"
+		p.Src = strings.TrimRight(a.config.PublicURL, "/") + "/photos/" + p.ID + "/2560.jpg"
+		release.Photos = append(release.Photos, p)
+		published[p.ID] = true
+	}
+	// Membership never affects the stream, which contains every published photo once.
+	sort.Slice(release.Photos, func(i, j int) bool { return release.Photos[i].UploadedAt > release.Photos[j].UploadedAt })
+	for _, item := range c.Albums {
+		if !item.Published {
+			continue
+		}
+		originalIDs := item.PhotoIDs
+		item.PhotoIDs = []string{}
+		for _, id := range originalIDs {
+			if published[id] {
+				item.PhotoIDs = append(item.PhotoIDs, id)
+			}
+		}
+		if !contains(item.PhotoIDs, item.CoverID) {
+			item.CoverID = ""
+			if len(item.PhotoIDs) > 0 {
+				item.CoverID = item.PhotoIDs[0]
+			}
+		}
+		release.Albums = append(release.Albums, item)
+	}
+	body, err := encode(release)
+	if err != nil {
+		return err
+	}
+	// Keep rollback snapshots. Discoverability changes with one final atomic write.
+	if err := a.store.Write(ctx, "public", "releases/"+identifier()+".json", body, "application/json", "public, max-age=31536000, immutable", nil); err != nil {
+		return err
+	}
+	return a.store.Write(ctx, "public", "index.json", body, "application/json", "public, max-age=30, must-revalidate", &etag)
+}
+
+func contains(values []string, value string) bool {
+	for _, existing := range values {
+		if existing == value {
+			return true
+		}
+	}
+	return false
+}
