@@ -33,6 +33,7 @@ type object struct {
 type storage interface {
 	List(context.Context, string, string) ([]string, error)
 	Read(context.Context, string, string) (*object, error)
+	PreviewURL(context.Context, string, string) (string, error)
 	Size(context.Context, string, string) (int64, error)
 	Open(context.Context, string, string, int64, int64) (io.ReadCloser, error)
 	Write(context.Context, string, string, []byte, string, string, *string) error
@@ -71,6 +72,25 @@ func (s *r2Storage) Read(ctx context.Context, bucket, key string) (*object, erro
 		return nil, err
 	}
 	return &object{Body: body, ETag: aws.ToString(result.ETag)}, nil
+}
+
+// Preview URLs only target private derivatives. HEAD needs its own signature;
+// ranges are deliberately unsigned so native video seeking works against R2.
+func (s *r2Storage) PreviewURL(ctx context.Context, key, method string) (string, error) {
+	client := s3.NewPresignClient(s.client)
+	expiry := func(o *s3.PresignOptions) { o.Expires = 15 * time.Minute }
+	if method == http.MethodHead {
+		request, err := client.PresignHeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(s.buckets["private"]), Key: &key}, expiry)
+		if err != nil {
+			return "", err
+		}
+		return request.URL, nil
+	}
+	request, err := client.PresignGetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.buckets["private"]), Key: &key, ResponseCacheControl: aws.String("private, no-store")}, expiry)
+	if err != nil {
+		return "", err
+	}
+	return request.URL, nil
 }
 
 func (s *r2Storage) Size(ctx context.Context, bucket, key string) (int64, error) {
@@ -203,6 +223,10 @@ func (s *localStorage) Read(ctx context.Context, bucket, key string) (*object, e
 		return nil, err
 	}
 	return &object{Body: body, ETag: fmt.Sprintf("\"%x\"", sha256.Sum256(body))}, nil
+}
+
+func (s *localStorage) PreviewURL(ctx context.Context, key, method string) (string, error) {
+	return "", nil // Development keeps authenticated same-origin previews.
 }
 
 func (s *localStorage) Size(ctx context.Context, bucket, key string) (int64, error) {

@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/rwcarlsen/goexif/exif"
 )
 
@@ -861,5 +863,94 @@ func TestProxyAuthenticationRequiresAllowedIdentity(t *testing.T) {
 		if w.Code != want {
 			t.Fatalf("Identity %q: got %d want %d", email, w.Code, want)
 		}
+	}
+}
+
+func TestR2PreviewRedirects(t *testing.T) {
+	const imageID = "11111111111111111111111111111111"
+	const videoID = "22222222222222222222222222222222"
+	const deletingID = "33333333333333333333333333333333"
+	body, err := encode(catalog{Version: 4, Photos: []photo{
+		{ID: imageID}, {ID: videoID, Kind: "video"}, {ID: deletingID, Deleting: true},
+	}, Albums: []album{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/private/catalog.json" {
+			t.Errorf("Studio requested media bytes or mutated storage: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(500)
+			return
+		}
+		w.Header().Set("ETag", `"catalog-etag"`)
+		w.Write(body)
+	}))
+	defer r2.Close()
+	a := &app{store: newR2Storage(r2.URL, "disposable-key", "disposable-secret", "private", "public"), config: configuration{AuthMode: "proxy", AllowedEmail: "admin@example.invalid", UploadOrigin: r2.URL}}
+	handler := a.routes()
+	for _, test := range []struct {
+		method, id, suffix, identity, key string
+		status                            int
+	}{
+		{"GET", imageID, "image?size=640", "admin@example.invalid", imageID + "/640.jpg", 307},
+		{"GET", imageID, "image", "admin@example.invalid", imageID + "/1280.jpg", 307},
+		{"HEAD", imageID, "image?size=1280", "admin@example.invalid", imageID + "/1280.jpg", 307},
+		{"GET", videoID, "image?size=640", "admin@example.invalid", videoID + "/640.jpg", 307},
+		{"GET", videoID, "video", "admin@example.invalid", videoID + "/video.mp4", 307},
+		{"HEAD", videoID, "video", "admin@example.invalid", videoID + "/video.mp4", 307},
+		{"GET", imageID, "video", "admin@example.invalid", "", 404},
+		{"GET", deletingID, "image", "admin@example.invalid", "", 404},
+		{"GET", strings.Repeat("a", 32), "image", "admin@example.invalid", "", 404},
+		{"GET", imageID, "image?size=../catalog.json", "admin@example.invalid", "", 400},
+		{"GET", imageID, "image?size=2560", "admin@example.invalid", "", 400},
+		{"GET", "originals", "image", "admin@example.invalid", "", 404},
+		{"GET", imageID, "image", "", "", 401},
+		{"GET", videoID, "video", "other@example.invalid", "", 401},
+		{"HEAD", videoID, "video", "", "", 401},
+	} {
+		t.Run(test.method+"/"+test.id+"/"+test.suffix+"/"+test.identity, func(t *testing.T) {
+			r := httptest.NewRequest(test.method, "/api/photos/"+test.id+"/"+test.suffix, nil)
+			r.Header.Set("X-Auth-Request-Email", test.identity)
+			r.Header.Set("Range", "bytes=17-53")
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, r)
+			if w.Code != test.status || w.Header().Get("Cache-Control") != "no-store" {
+				t.Fatalf("Status/cache: %d %v", w.Code, w.Header())
+			}
+			location, err := w.Result().Location()
+			if test.status != 307 {
+				if err == nil {
+					t.Fatal("Rejected preview issued a signed URL")
+				}
+				return
+			}
+			if err != nil || location.Scheme+"://"+location.Host != r2.URL || location.Path != "/private/photos/"+test.key {
+				t.Fatalf("Incorrect signed destination: %v %v", location, err)
+			}
+			query := location.Query()
+			if query.Get("X-Amz-Algorithm") != "AWS4-HMAC-SHA256" || query.Get("X-Amz-Expires") != "900" || len(query.Get("X-Amz-Signature")) != 64 || !strings.HasPrefix(query.Get("X-Amz-Credential"), "disposable-key/") || query.Get("X-Amz-SignedHeaders") != "host" {
+				t.Fatal("Missing signature, wrong expiry, or range/cookie-bound signature")
+			}
+			// Verify the returned capability for the actual HTTP method, not just
+			// the presence of a signature (a GET signature cannot authorize HEAD).
+			signature := query.Get("X-Amz-Signature")
+			signedAt, err := time.Parse("20060102T150405Z", query.Get("X-Amz-Date"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			query.Del("X-Amz-Signature")
+			location.RawQuery = query.Encode()
+			verification, _ := http.NewRequest(test.method, location.String(), nil)
+			verified, _, err := v4.NewSigner().PresignHTTP(t.Context(), aws.Credentials{AccessKeyID: "disposable-key", SecretAccessKey: "disposable-secret"}, verification, "UNSIGNED-PAYLOAD", "s3", "auto", signedAt)
+			if err != nil || !strings.Contains(verified, "X-Amz-Signature="+signature) {
+				t.Fatalf("Invalid %s signature: %v", test.method, err)
+			}
+			if test.method == "GET" && query.Get("response-cache-control") != "private, no-store" {
+				t.Fatal("Signed media allowed caching")
+			}
+			if w.Header().Get("Referrer-Policy") != "no-referrer" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "media-src 'self' "+r2.URL+";") {
+				t.Fatal("Redirect referrer or direct video CSP is incorrect")
+			}
+		})
 	}
 }

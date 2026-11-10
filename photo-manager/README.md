@@ -140,7 +140,19 @@ downloading JPEGs into Go and uploading them again. Credentials need source read
 and destination write access. At most four derivative copies run concurrently;
 photos already in the current index are not recopied. Only re-encoded derivatives
 are copied, never originals. Library thumbnails use 640px previews; photo details
-keep 1280px previews. Both endpoints remain authenticated and `no-store`.
+keep 1280px previews. Authenticated image/poster and video preview endpoints
+check current library membership, then issue `307` redirects to 15-minute signed
+GET/HEAD URLs for private R2 derivatives. Image and video bytes, including video
+seek ranges, travel directly from R2 to the browser, not through Studio. The
+redirect and media responses are `no-store`; revisiting a Studio preview endpoint
+gets a fresh URL, so lazy-loaded images do not depend on catalog-age expiry.
+Local filesystem development retains authenticated same-origin streaming.
+
+Preview URLs are temporary bearer capabilities: anyone holding one can read that
+derivative until expiry, even outside Tailscale or after Studio logout. Removing
+catalog membership prevents new URLs, but does not revoke an already-issued URL
+before expiry unless its object is deleted. Originals never receive preview URLs;
+public and protected visitor-gallery delivery/authentication is unchanged.
 
 `POST /api/publish` validates `If-Match`, persists a job, and returns **202** with
 `publication`. Authenticated `GET /api/publication` exposes `idle`, `running`,
@@ -238,18 +250,19 @@ authentication. Mutations additionally require an exact matching `Origin`.
 | `ADMIN_PASSWORD` / `ADMIN_PASSWORD_FILE` | At least 16 characters; only needed in password mode |
 | `PORT` | HTTP listen port, default 8080 |
 
-Direct browser upload requires CORS on the **private** R2 bucket, restricted to
-the exact Studio origin, allowing `PUT` and the `Content-Type` request header.
+Direct browser delivery uses CORS on the **private** R2 bucket, restricted to
+the exact Studio origin, allowing `PUT`, `GET`, `HEAD` and the `Content-Type` and
+`Range` request headers.
 For example (replace the origin if your deployment differs):
 
 ```json
-[{"AllowedOrigins":["https://photos.internal.ii.md"],"AllowedMethods":["PUT"],"AllowedHeaders":["Content-Type"],"MaxAgeSeconds":3600}]
+[{"AllowedOrigins":["https://photos.internal.ii.md"],"AllowedMethods":["PUT","GET","HEAD"],"AllowedHeaders":["Content-Type","Range"],"MaxAgeSeconds":3600}]
 ```
 
 This does not make the bucket public. Browser requests use signed query
 credentials, never Studio cookies; no exposed ETag header is needed because the
 server lists authoritative parts before completion. The Studio CSP permits
-connections only to itself and the configured R2 endpoint origin. Signed URLs
+upload connections and video sources only to itself and the configured R2 endpoint origin. Signed URLs
 are bearer capabilities: do not log or share them. R2 credentials also require
 multipart initiation, part listing, completion and abort permissions. Without
 CORS, browser uploads fail even if server-to-R2 access works. Local filesystem

@@ -287,7 +287,27 @@ func (a *app) previewImage(w http.ResponseWriter, r *http.Request) error {
 	if size != "640" && size != "1280" {
 		return badRequest("Preview size must be 640 or 1280.")
 	}
-	value, err := a.store.Read(r.Context(), "private", "photos/"+r.PathValue("id")+"/"+size+".jpg")
+	c, _, err := a.load(r.Context(), "private", "catalog.json")
+	if err != nil {
+		return err
+	}
+	found := false
+	for _, p := range c.Photos {
+		found = found || (p.ID == r.PathValue("id") && !p.Deleting)
+	}
+	if !found {
+		return &requestError{404, "Photo not found."}
+	}
+	key := "photos/" + r.PathValue("id") + "/" + size + ".jpg"
+	location, err := a.store.PreviewURL(r.Context(), key, r.Method)
+	if err != nil {
+		return err
+	}
+	if location != "" {
+		http.Redirect(w, r, location, http.StatusTemporaryRedirect)
+		return nil
+	}
+	value, err := a.store.Read(r.Context(), "private", key)
 	if err != nil {
 		return err
 	}
@@ -312,6 +332,14 @@ func (a *app) previewVideo(w http.ResponseWriter, r *http.Request) error {
 		return &requestError{404, "Video not found."}
 	}
 	key := "photos/" + id + "/video.mp4"
+	location, err := a.store.PreviewURL(r.Context(), key, r.Method)
+	if err != nil {
+		return err
+	}
+	if location != "" {
+		http.Redirect(w, r, location, http.StatusTemporaryRedirect)
+		return nil
+	}
 	size, err := a.store.Size(r.Context(), "private", key)
 	if err != nil {
 		return err
@@ -756,7 +784,7 @@ func (a *app) routes() http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob:; connect-src 'self' "+a.config.UploadOrigin+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob:; media-src 'self' "+a.config.UploadOrigin+"; connect-src 'self' "+a.config.UploadOrigin+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			if r.Method != "GET" && r.Method != "HEAD" {
 				origin := a.config.Origin
