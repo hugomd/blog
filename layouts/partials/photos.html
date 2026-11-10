@@ -43,9 +43,16 @@
     <a class="control" id="nav-albums" href="{{ "photos/" | relURL }}#albums">Albums</a>
   </nav>
   <dialog id="viewer" aria-label="Media viewer">
-    <div class="toolbar"><button class="control" id="close" aria-label="Close viewer">✕ Close</button><div class="tools"><span id="count" class="meta" aria-live="polite"></span><button class="control" id="details" aria-pressed="false" aria-controls="info">ⓘ Info</button></div></div>
+    <div class="toolbar">
+      <button class="control icon-control" id="close" aria-label="Close viewer" title="Close viewer"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/times.svg").Content | safeHTML }}</span></button>
+      <div class="tools">
+        <span id="count" class="meta" aria-live="polite"></span>
+        <button class="control icon-control" id="details" aria-label="Media information" title="Media information" aria-pressed="false" aria-controls="info"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/info-circle.svg").Content | safeHTML }}</span></button>
+        <button class="control icon-control" id="previous" aria-label="Previous item" title="Previous item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-left.svg").Content | safeHTML }}</span></button>
+        <button class="control icon-control" id="next" aria-label="Next item" title="Next item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-right.svg").Content | safeHTML }}</span></button>
+      </div>
+    </div>
     <img id="zoom" class="zoom" alt="">
-    <button class="control arrow" id="previous" aria-label="Previous item">←</button><button class="control arrow" id="next" aria-label="Next item">→</button>
     <aside id="info" class="info" aria-label="Media information" hidden></aside>
     <p id="media-error" class="media-error" role="alert" hidden>This video couldn’t be played. Try reopening it or check your connection.</p>
     <p id="caption" class="caption"></p>
