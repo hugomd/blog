@@ -309,10 +309,24 @@ func TestPublicationBackfillsLegacyBlurHashesWithoutChangingDrafts(t *testing.T)
 			t.Fatal("Derived metadata changed the durable job's draft catalog")
 		}
 		var response struct {
+			Catalog catalog            `json:"catalog"`
 			Changes publicationChanges `json:"publicationChanges"`
 		}
 		if err := json.Unmarshal(b.request("GET", "/api/catalog", nil, 200), &response); err != nil {
 			t.Fatal(err)
+		}
+		for i, p := range response.Catalog.Photos {
+			want := ""
+			if i == 0 || i == 3 {
+				want = previewBlurHash(variants[0].Body)
+			}
+			if p.BlurHash != want {
+				t.Fatalf("Studio photo %d: got BlurHash %q, want %q", i, p.BlurHash, want)
+			}
+		}
+		after, err = store.Read(t.Context(), "private", "catalog.json")
+		if err != nil || after == nil || before.ETag != after.ETag || !bytes.Equal(before.Body, after.Body) {
+			t.Fatal("Studio preview metadata changed the saved draft catalog")
 		}
 		if response.Changes.Changed || response.Changes.Photos.Unchanged != 3 || response.Changes.ProtectedPhotos.Unchanged != 2 {
 			t.Fatalf("Hash-only differences left pending publication: %+v", response.Changes)

@@ -15,7 +15,8 @@ const operating = () => state.operation?.state === 'running';
 const changing = () => operating() || !!transfer;
 const duration = seconds => Number.isFinite(seconds) ? `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}` : '';
 const videoBadge = photo => photo.kind === 'video' ? `<span class="video-badge">Video ${duration(photo.duration)}</span>` : '';
-const preview = photo => photo.kind === 'video' ? `<video controls preload="metadata" playsinline poster="${image(photo.id, 1280)}" src="/api/photos/${encodeURIComponent(photo.id)}/video" aria-label="${escape(photo.alt || photo.filename)}"></video>` : `<img src="${image(photo.id, 1280)}" alt="${escape(photo.alt)}">`;
+const thumbnail = (photo, size = 640) => `<span class="media-image"><img data-preview="${photo.id}" src="${image(photo.id, size)}" width="${photo.width}" height="${photo.height}" alt="${escape(photo.alt)}" ${size === 640 ? 'loading="lazy"' : ''}></span>`;
+const preview = photo => photo.kind === 'video' ? `<video data-preview="${photo.id}" width="${photo.width}" height="${photo.height}" controls preload="metadata" playsinline poster="${image(photo.id, 1280)}" src="/api/photos/${encodeURIComponent(photo.id)}/video" aria-label="${escape(photo.alt || photo.filename)}"></video>` : thumbnail(photo, 1280);
 const photoById = id => state.catalog.photos.find(photo => photo.id === id);
 const albumIds = id => state.catalog.albums.filter(album => album.photoIds.includes(id)).map(album => album.id);
 const photoReady = (photo, albums = state.catalog.albums) => !photo.archived && !photo.archiving && !photo.deleting && (photo.published || albums.some(album => album.published && album.photoIds.includes(photo.id)));
@@ -23,6 +24,66 @@ const privateAlbum = album => album.access === 'password' || album.access === 'l
 const photoPublic = (photo, albums = state.catalog.albums) => photoReady(photo, albums.filter(album => !privateAlbum(album)));
 const accessLabel = album => album.access === 'link' ? 'Private share link' : album.access === 'password' ? 'Password protected' : 'Public';
 const badge = published => `<span class="badge ${published ? '' : 'draft'}">${published ? 'Ready to publish' : 'Draft'}</span>`;
+
+// Same standard Base83/DCT decoding as the independently bundled public gallery.
+function blurhashBackground(photo) {
+  const hash = photo.blurhash;
+  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';
+  if (typeof hash !== 'string' || hash.length < 6 || hash.length > 166 || [...hash].some(c => !alphabet.includes(c))) return 'none';
+  const base83 = value => [...value].reduce((result, c) => result * 83 + alphabet.indexOf(c), 0);
+  const size = base83(hash[0]), nx = size % 9 + 1, ny = Math.floor(size / 9) + 1;
+  if (size > 80 || hash.length !== 4 + 2 * nx * ny || !(photo.width > 0 && photo.height > 0)) return 'none';
+  const linear = value => value / 255 <= .04045 ? value / 255 / 12.92 : ((value / 255 + .055) / 1.055) ** 2.4;
+  const srgb = value => Math.round(255 * (value <= .0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - .055));
+  const maximum = (base83(hash[1]) + 1) / 166;
+  const dc = base83(hash.slice(2, 6));
+  if (dc > 0xffffff) return 'none';
+  const colors = [[linear(dc >> 16), linear(dc >> 8 & 255), linear(dc & 255)]];
+  for (let i = 1; i < nx * ny; i++) {
+    const value = base83(hash.slice(4 + i * 2, 6 + i * 2));
+    if (value >= 19 ** 3) return 'none';
+    colors.push([Math.floor(value / 361), Math.floor(value / 19) % 19, value % 19].map(n => {
+      const v = (n - 9) / 9;
+      return Math.sign(v) * v * v * maximum;
+    }));
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(32 * Math.min(1, photo.width / photo.height)));
+  canvas.height = Math.max(1, Math.round(32 * Math.min(1, photo.height / photo.width)));
+  const context = canvas.getContext('2d');
+  if (!context) return 'none';
+  const pixels = context.createImageData(canvas.width, canvas.height);
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const rgb = [0, 0, 0];
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          const basis = Math.cos(Math.PI * x * i / canvas.width) * Math.cos(Math.PI * y * j / canvas.height);
+          for (let c = 0; c < 3; c++) rgb[c] += colors[i + j * nx][c] * basis;
+        }
+      }
+      const offset = 4 * (x + y * canvas.width);
+      for (let c = 0; c < 3; c++) pixels.data[offset + c] = srgb(Math.max(0, Math.min(1, rgb[c])));
+      pixels.data[offset + 3] = 255;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+  return `url(${canvas.toDataURL()})`;
+}
+
+function revealPreviews(container) {
+  for (const media of container.querySelectorAll('[data-preview]')) {
+    const photo = photoById(media.dataset.preview);
+    const surface = media instanceof HTMLImageElement ? media.parentElement : media;
+    surface.style.backgroundImage = blurhashBackground(photo);
+    surface.style.setProperty('--aspect', photo.width / photo.height);
+    if (media instanceof HTMLImageElement) {
+      const reveal = () => { if (media.naturalWidth) media.classList.add('loaded'); };
+      media.addEventListener('load', reveal, { once: true });
+      reveal();
+    }
+  }
+}
 
 async function api(path, { method = 'GET', body, headers = {}, awaitOperation = false } = {}) {
   const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && (/^\/photos\/[^/]+\/(archive|restore)$/.test(path) || /^\/uploads\/[^/]+\/complete$/.test(path)));
@@ -159,7 +220,8 @@ function renderPhotos() {
   });
   $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos & videos</h1></div><button class="primary" data-upload>＋ Upload files</button></div>
     <div class="toolbar"><label class="search"><span class="hint">Search your library</span><input id="search" type="search" placeholder="Names, captions, tags…" value="${escape(search)}"></label><label><span class="hint">Show</span><select id="filter"><option value="all">All photos & videos</option><option value="draft">Drafts</option><option value="ready">Ready to publish</option><option value="standalone">Not in an album</option></select></label></div>
-    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="${photo.deleting ? 'Retry deletion of' : 'Edit'} ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${photo.deleting ? '<span class="badge draft">Deletion incomplete</span>' : badge(photoReady(photo))}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : photo.kind === 'video' ? 'Standalone video' : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><h2>${state.catalog.photos.length ? 'No matching photos or videos.' : 'No photos or videos yet.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop JPEGs, PNGs, MP4s or MOVs here, or choose files. Photos: up to 30 MiB; videos: up to 512 MiB. Every file starts as a private draft.'}</p><button data-upload>Choose files →</button></div>`}`;
+    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="${photo.deleting ? 'Retry deletion of' : 'Edit'} ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : thumbnail(photo)}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${photo.deleting ? '<span class="badge draft">Deletion incomplete</span>' : badge(photoReady(photo))}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : photo.kind === 'video' ? 'Standalone video' : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><h2>${state.catalog.photos.length ? 'No matching photos or videos.' : 'No photos or videos yet.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop JPEGs, PNGs, MP4s or MOVs here, or choose files. Photos: up to 30 MiB; videos: up to 512 MiB. Every file starts as a private draft.'}</p><button data-upload>Choose files →</button></div>`}`;
+  revealPreviews($('#main'));
   $('#filter').value = filter;
   $('#filter').onchange = event => { filter = event.target.value; renderPhotos(); refreshButtons(); };
   $('#search').oninput = event => {
@@ -172,15 +234,17 @@ function renderPhotos() {
 function renderArchived() {
   const photos = [...state.catalog.photos].reverse().filter(photo => photo.archived);
   $('#main').innerHTML = `<div class="page-heading"><div><h1>Archived</h1><p>Files and album memberships are kept. Restored photos follow their albums’ publication status.</p></div></div>
-    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="View archived ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong><span class="badge draft">${photo.deleting ? 'Deletion incomplete' : photo.archiving ? 'Archive incomplete' : 'Archived'}</span></div></button>`).join('')}</div>` : '<div class="empty"><h2>No archived photos or videos.</h2><p>Archive a photo or video from its details to remove it from public manifests without deleting its files.</p></div>'}`;
+    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="View archived ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : thumbnail(photo)}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong><span class="badge draft">${photo.deleting ? 'Deletion incomplete' : photo.archiving ? 'Archive incomplete' : 'Archived'}</span></div></button>`).join('')}</div>` : '<div class="empty"><h2>No archived photos or videos.</h2><p>Archive a photo or video from its details to remove it from public manifests without deleting its files.</p></div>'}`;
+  revealPreviews($('#main'));
 }
 
 function renderAlbums() {
   $('#main').innerHTML = `<div class="page-heading"><div><h1>Albums</h1></div><button class="primary" id="create-album">＋ New album</button></div>
   ${state.catalog.albums.length ? `<div class="grid album-grid">${state.catalog.albums.map(album => {
     const cover = [album.coverId, ...album.photoIds].map(photoById).find(photo => photo && !photo.deleting && !photo.archived);
-    return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `<img src="${image(cover.id)}" alt="${escape(cover.alt)}" loading="lazy">${videoBadge(cover)}` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${accessLabel(album)} · ${album.photoIds.length} photos/videos${privateAlbum(album) ? '' : ` · /${escape(album.slug)}/`}</div></a>`;
+    return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `${thumbnail(cover)}${videoBadge(cover)}` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${accessLabel(album)} · ${album.photoIds.length} photos/videos${privateAlbum(album) ? '' : ` · /${escape(album.slug)}/`}</div></a>`;
   }).join('')}</div>` : '<div class="empty"><h2>No albums yet.</h2></div>'}`;
+  revealPreviews($('#main'));
   $('#create-album').onclick = () => {
     openDialog(`<form id="create-form" class="simple-dialog"><h2 id="dialog-title">Create an album</h2><label>Album title<input name="title" placeholder="New York, September 2022" maxlength="150" required autofocus></label><p class="muted">Choose photos, a cover, and a URL after creating the album.</p><div class="editor-footer"><button class="primary">Create draft album →</button></div></form>`);
     $('#create-form').onsubmit = event => {
@@ -233,8 +297,9 @@ function renderAlbum(id) {
     $('#ordered-list').innerHTML = order.map((id, i) => {
       const photo = photoById(id);
       const visibility = photoPublic(photo, albums) ? privateAlbum(selected) ? 'Also public' : 'Public' : [...new Set(albums.filter(item => item.published && item.photoIds.includes(id)).map(accessLabel))].join(' · ');
-      return `<li>${photo.deleting ? '' : `<img src="${image(id)}" alt="${escape(photo.alt)}">`}<div class="order-title"><p>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move item ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move item ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove item ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
+      return `<li>${photo.deleting ? '' : thumbnail(photo)}<div class="order-title"><p>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move item ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move item ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove item ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
     }).join('') || '<p class="muted">No photos or videos selected yet.</p>';
+    revealPreviews($('#ordered-list'));
     $('#ordered-list').onclick = event => {
       const move = event.target.closest('[data-move]'), remove = event.target.closest('[data-remove]');
       if (move) { const i = Number(move.dataset.move), target = i + Number(move.dataset.direction); if (target < 0 || target >= order.length) return; [order[i], order[target]] = [order[target], order[i]]; dirty = true; renderOrder(); }
@@ -276,7 +341,7 @@ function renderAlbum(id) {
     });
   };
   $('#choose-photos').onclick = () => {
-    openDialog(`<form id="choose-form" class="simple-dialog"><h2 id="dialog-title">Choose photos & videos</h2><p class="muted">Photos and videos can belong to more than one album.</p><div class="grid">${[...state.catalog.photos].reverse().filter(photo => !photo.deleting).map(photo => `<label class="choice"><img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy"><input type="checkbox" name="photo" value="${photo.id}" ${order.includes(photo.id) ? 'checked' : ''}><span>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</span></label>`).join('') || '<p class="muted">Upload files or finish pending deletions first.</p>'}</div><div class="editor-footer"><span class="hint">Changes are applied when you save the album.</span><button class="primary">Use selected files</button></div></form>`, false);
+    openDialog(`<form id="choose-form" class="simple-dialog"><h2 id="dialog-title">Choose photos & videos</h2><p class="muted">Photos and videos can belong to more than one album.</p><div class="grid">${[...state.catalog.photos].reverse().filter(photo => !photo.deleting).map(photo => `<label class="choice">${thumbnail(photo)}<input type="checkbox" name="photo" value="${photo.id}" ${order.includes(photo.id) ? 'checked' : ''}><span>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</span></label>`).join('') || '<p class="muted">Upload files or finish pending deletions first.</p>'}</div><div class="editor-footer"><span class="hint">Changes are applied when you save the album.</span><button class="primary">Use selected files</button></div></form>`, false);
     $('#choose-form').onsubmit = event => {
       event.preventDefault();
       const selected = new FormData(event.target).getAll('photo');
@@ -293,6 +358,7 @@ function renderAlbum(id) {
 
 function openDialog(html, trackEdits = true) {
   $('#editor-body').innerHTML = html;
+  revealPreviews($('#editor-body'));
   $('#editor-body').oninput = trackEdits ? () => { dirty = true; } : null;
   editor.showModal();
   editor.querySelector('[autofocus]')?.focus();

@@ -201,6 +201,22 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 	if etag == "" {
 		etag = "new"
 	}
+	// Republication backfills live hashes without rewriting drafts. Reuse the
+	// already-loaded manifests for Studio previews, keeping its saved ETag intact.
+	hashes := map[string]string{}
+	for _, release := range []catalog{live, liveProtected} {
+		for _, p := range release.Photos {
+			if p.BlurHash != "" {
+				hashes[p.ID] = p.BlurHash
+			}
+		}
+	}
+	c.Photos = append([]photo{}, c.Photos...)
+	for i := range c.Photos {
+		if c.Photos[i].BlurHash == "" {
+			c.Photos[i].BlurHash = hashes[c.Photos[i].ID]
+		}
+	}
 	c.Albums = append([]album{}, c.Albums...)
 	for i := range c.Albums {
 		item := &c.Albums[i]
@@ -788,7 +804,7 @@ func (a *app) routes() http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob:; media-src 'self' "+a.config.UploadOrigin+"; connect-src 'self' "+a.config.UploadOrigin+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob: data:; media-src 'self' "+a.config.UploadOrigin+"; connect-src 'self' "+a.config.UploadOrigin+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			if r.Method != "GET" && r.Method != "HEAD" {
 				origin := a.config.Origin

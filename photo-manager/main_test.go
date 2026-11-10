@@ -987,6 +987,9 @@ func TestR2PreviewRedirects(t *testing.T) {
 			if w.Header().Get("Referrer-Policy") != "no-referrer" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "media-src 'self' "+r2.URL+";") {
 				t.Fatal("Redirect referrer or direct video CSP is incorrect")
 			}
+			if !strings.Contains(w.Header().Get("Content-Security-Policy"), "img-src 'self' https: blob: data:;") {
+				t.Fatal("Studio CSP blocks generated BlurHash previews")
+			}
 		})
 	}
 }

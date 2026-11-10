@@ -153,7 +153,13 @@ Backfill only enriches the authorized release projections, never exposes private
 photos publicly, and does not rewrite the working catalog or change its ETag/revision.
 Derived hash-only differences do not count as pending publication changes. No
 re-upload or separate migration is required; existing live manifests remain unchanged
-until the next publication. Library thumbnails use 640px previews; photo details
+until the next publication. Studio uses these hashes for loading placeholders in
+library, album, chooser and editor previews, including video posters. Its catalog
+response fills missing draft hashes from already-loaded live public/protected
+manifests without saving draft changes or performing extra storage reads. Missing
+or invalid hashes keep a neutral placeholder; alt text remains available to
+assistive technology without flashing while images load or fail.
+Library thumbnails use 640px previews; photo details
 keep 1280px previews. Authenticated image/poster and video preview endpoints
 check current library membership, then issue `307` redirects to 15-minute signed
 GET/HEAD URLs for private R2 derivatives. Image and video bytes, including video
