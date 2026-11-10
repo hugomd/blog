@@ -140,11 +140,6 @@ func (a *app) startPublication(w http.ResponseWriter, r *http.Request) error {
 			return badRequest("Configure protected storage and a private share link before publishing.")
 		}
 	}
-	for _, p := range c.Photos {
-		if c.photoReady(p) && p.Alt == "" {
-			return badRequest("Add alt text to every published photo.")
-		}
-	}
 	if etag == "" {
 		etag = "new"
 	}

@@ -38,6 +38,9 @@ func newBrowser(t *testing.T, store storage) *browser {
 	t.Helper()
 	background, cancel := context.WithCancel(t.Context())
 	a := &app{store: store, config: configuration{Development: true, Password: "test-password-not-real", AuthMode: "password", PublicURL: "/media", LocalRoot: storeRoot(store), PrivateAlbums: storeRoot(store) != "", GalleryURL: "https://example.test/photos/"}, sessions: map[string]time.Time{}, background: background}
+	if err := a.resumeOperation(); err != nil {
+		t.Fatal(err)
+	}
 	if err := a.resumePublication(); err != nil {
 		t.Fatal(err)
 	}
@@ -60,6 +63,9 @@ func storeRoot(store storage) string {
 		return storeRoot(failing.storage)
 	}
 	if paused, ok := store.(*pausedCopyStorage); ok {
+		return storeRoot(paused.storage)
+	}
+	if paused, ok := store.(*pausedOperationStorage); ok {
 		return storeRoot(paused.storage)
 	}
 	return ""
@@ -339,7 +345,6 @@ func TestAlbumPublicationReadinessAndStandalonePhotostream(t *testing.T) {
 	}
 	first, standalone, inherited, draft := b.state.Catalog.Photos[0], b.state.Catalog.Photos[1], b.state.Catalog.Photos[2], b.state.Catalog.Photos[3]
 	first.Alt = "First"
-	standalone.Alt = "Standalone"
 	standalone.Published = true
 	b.request("PATCH", "/api/photos/"+first.ID, edit(first), 200)
 	b.request("PATCH", "/api/photos/"+standalone.ID, edit(standalone), 200)
@@ -352,9 +357,7 @@ func TestAlbumPublicationReadinessAndStandalonePhotostream(t *testing.T) {
 		album.CoverID = inherited.ID
 		b.request("PUT", "/api/albums/"+album.ID, map[string]any{"title": album.Title, "slug": album.Slug, "description": "", "published": true, "photoIds": album.PhotoIDs, "coverId": album.CoverID}, 200)
 	}
-	// Album inheritance must not bypass the alt-text requirement.
-	b.request("POST", "/api/publish", nil, 400)
-	inherited.Alt = "Inherited from two albums"
+	// Alt text is optional for both standalone and album-inherited photos.
 	b.request("PATCH", "/api/photos/"+inherited.ID, edit(inherited, b.state.Catalog.Albums[0].ID, b.state.Catalog.Albums[1].ID), 200)
 	b.request("POST", "/api/albums", map[string]string{"title": "Draft album"}, 200)
 	draftAlbum := b.state.Catalog.Albums[2]
@@ -386,6 +389,9 @@ func TestAlbumPublicationReadinessAndStandalonePhotostream(t *testing.T) {
 	}
 	if len(live.Albums) != 2 {
 		t.Fatalf("Draft album was published: %+v", live.Albums)
+	}
+	if live.Photos[0].Alt != "" || live.Photos[1].Alt != "" || live.Photos[2].Alt != "First" {
+		t.Fatal("Publishing must retain optional alt text without inventing descriptions")
 	}
 	for _, p := range live.Photos {
 		if !p.Published {
@@ -823,7 +829,7 @@ func TestAuthenticationAndInputBoundaries(t *testing.T) {
 	b.raw("POST", "/api/photos", smallPNG(t), 200)
 	p := b.state.Catalog.Photos[0]
 	p.Published = true
-	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 400)
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
 	p.Published = false
 	p.CapturedDate = "2026-02-31"
 	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 400)
@@ -838,6 +844,7 @@ func TestAuthenticationAndInputBoundaries(t *testing.T) {
 	b.request("POST", "/api/logout", nil, 200)
 	b.request("GET", "/api/catalog", nil, 401)
 	b.request("GET", "/api/publication", nil, 401)
+	b.request("GET", "/api/operation", nil, 401)
 }
 
 func TestProxyAuthenticationRequiresAllowedIdentity(t *testing.T) {

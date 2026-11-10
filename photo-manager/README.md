@@ -17,8 +17,8 @@ volume. Images **and all manifests** live in R2 in production.
   focal length, plus an editable capture date. GPS, camera serial numbers,
   owner names, XMP and embedded previews are not published. Original files,
   including any original GPS data, remain private.
-- Add alt text, a caption and comma-separated tags. Alt text is required to
-  publish a photo. Photos in any published album are automatically ready;
+- Optionally add alt text, a caption and comma-separated tags. Photos can be
+  published without alt text. Photos in any published album are automatically ready;
   the per-photo **Publish independently of albums** setting is for standalone
   publication. Remove a photo from every published album and clear its
   independent setting to return it to draft. A photo can appear in multiple
@@ -41,8 +41,8 @@ volume. Images **and all manifests** live in R2 in production.
 - **Save photo / Save album** changes the private working catalog only.
   **Publish changes** confirms and publishes all ready photos/albums together.
   Published albums include their non-archived photos without a separate photo
-  opt-in. Draft albums alone do not make their photos public. Missing alt text
-  blocks publication; archived/deleting photos are excluded and covers fall back.
+  opt-in. Draft albums alone do not make their photos public. Archived/deleting
+  photos are excluded and covers fall back.
 - The publication preview compares the next public manifest with the live index:
   photos and albums are counted separately as added, updated, removed or unchanged,
   alongside live and next-release totals. Private-only edits do not require
@@ -51,6 +51,16 @@ volume. Images **and all manifests** live in R2 in production.
   reload or close the page; edits, uploads, archive and delete are locked until
   it finishes. A pod replacement resumes the saved job. Failures expose a retry
   action; reload first if another writer changed the catalog or public index.
+- Photo/album saves, album/photo deletions and archive/restore run as server-side
+  background changes. Studio gets a `202` acknowledgement after the job status is
+  stored, then polls `/api/operation`; you can browse, reload or leave the page.
+  Conflicting writes and publication are blocked until completion. Success is
+  shown only after storage finishes. A server restart marks an interrupted change
+  failed rather than replaying a possibly committed edit; reload to inspect the
+  actual state before retrying. Archive/deletion intent markers remain available
+  for cleanup retries. Request bodies/passwords are not persisted in job status.
+  Uploads and creating draft albums remain synchronous. API clients without
+  `Prefer: respond-async` retain the synchronous mutation response contract.
 - **Archive photo** keeps originals, derivatives, metadata and private album
   memberships/order, but removes the photo from the current public index and
   every stored historical release, including album references and covers.

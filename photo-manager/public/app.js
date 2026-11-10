@@ -3,10 +3,13 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 const state = { catalog: { photos: [], albums: [] }, etag: 'new' };
 let busy = false, dirty = false, conflicted = false, filter = 'all', search = '';
 let publicationTimer;
+let operationTimer;
+const operationStarted = Symbol('operation started');
 const editor = $('#editor');
 const deletion = $('#delete-confirmation');
 const image = (id, size = 640) => `/api/photos/${encodeURIComponent(id)}/image?size=${size}`;
 const publishing = () => state.publication?.state === 'running';
+const changing = () => state.operation?.state === 'running';
 const photoById = id => state.catalog.photos.find(photo => photo.id === id);
 const albumIds = id => state.catalog.albums.filter(album => album.photoIds.includes(id)).map(album => album.id);
 const photoReady = (photo, albums = state.catalog.albums) => !photo.archived && !photo.archiving && !photo.deleting && (photo.published || albums.some(album => album.published && album.photoIds.includes(photo.id)));
@@ -16,19 +19,28 @@ const accessLabel = album => album.access === 'link' ? 'Private share link' : al
 const badge = published => `<span class="badge ${published ? '' : 'draft'}">${published ? 'Ready to publish' : 'Draft'}</span>`;
 
 async function api(path, { method = 'GET', body, headers = {} } = {}) {
+  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && /^\/photos\/[^/]+\/(archive|restore)$/.test(path));
   const response = await fetch(`/api${path}`, {
-    method, headers: { ...(method === 'GET' ? {} : { 'If-Match': state.etag }), ...(body && !(body instanceof File) ? { 'Content-Type': 'application/json' } : {}), ...headers },
+    method, headers: { ...(method === 'GET' ? {} : { 'If-Match': state.etag }), ...(backgroundChange ? { Prefer: 'respond-async' } : {}), ...(body && !(body instanceof File) ? { 'Content-Type': 'application/json' } : {}), ...headers },
     body: body instanceof File ? body : body ? JSON.stringify(body) : undefined,
   });
   const result = await response.json();
   if (!response.ok) {
     if (response.status === 409) conflicted = true;
     if (response.status === 401 && path !== '/login') {
-      clearTimeout(publicationTimer); state.publication = null;
+      clearTimeout(publicationTimer); clearTimeout(operationTimer); state.publication = null; state.operation = null;
       deletion.close(); editor.close(); $('#studio').hidden = true; $('#login').hidden = false;
       $('#publication-progress').hidden = true; refreshButtons();
+      $('#operation-progress').hidden = true;
     }
     throw new Error(result.error || 'The request failed. Reload before retrying.');
+  }
+  if (response.status === 202 && result.operation) {
+    state.operation = result.operation;
+    dirty = false; deletion.close(); editor.close();
+    renderOperation(); refreshButtons();
+    watchOperation();
+    throw operationStarted; // Do not run a caller's synchronous success message.
   }
   return result;
 }
@@ -49,9 +61,29 @@ function showError(error) {
 }
 function status(message) { $('#status').textContent = message; }
 function refreshButtons() {
-  document.querySelectorAll('button').forEach(button => { button.disabled = busy || (publishing() && !button.matches('.photo-card,#close-editor,#reload,#cancel-delete,#logout')) || button.hasAttribute('data-boundary') || (conflicted && button.id !== 'reload' && button.id !== 'close-editor' && button.id !== 'cancel-delete' && !button.hasAttribute('data-reload')); });
-  document.querySelectorAll('#album-form input,#album-form textarea,#album-form select,#editor-body input,#editor-body textarea,#editor-body select').forEach(input => { input.disabled = publishing(); });
-  $('#publish').disabled = busy || publishing() || conflicted || (!state.publicationChanges?.changed && state.publication?.state !== 'failed');
+  document.querySelectorAll('button').forEach(button => { button.disabled = busy || ((publishing() || changing()) && !button.matches('.photo-card,#close-editor,#reload,#cancel-delete,#logout')) || button.hasAttribute('data-boundary') || (conflicted && button.id !== 'reload' && button.id !== 'close-editor' && button.id !== 'cancel-delete' && !button.hasAttribute('data-reload')); });
+  document.querySelectorAll('#album-form input,#album-form textarea,#album-form select,#editor-body input,#editor-body textarea,#editor-body select').forEach(input => { input.disabled = publishing() || changing(); });
+  $('#publish').disabled = busy || publishing() || changing() || conflicted || (!state.publicationChanges?.changed && state.publication?.state !== 'failed');
+}
+function renderOperation() {
+  $('#operation-progress').hidden = !changing();
+  if (!changing()) return;
+  $('#operation-progress span').textContent = `${state.operation.method === 'DELETE' ? 'Deleting' : state.operation.path.endsWith('/archive') ? 'Archiving' : state.operation.path.endsWith('/restore') ? 'Restoring' : 'Saving'} in the background. You can browse or leave this page.`;
+  status('Change accepted. Waiting for storage to finish…');
+}
+async function watchOperation() {
+  clearTimeout(operationTimer);
+  try {
+    const { operation: job } = await api('/operation');
+    if (job.state !== 'running') {
+      Object.assign(state, await api('/catalog')); render();
+      if (job.state === 'failed') {
+        status('Change failed. Library reloaded; check the current state before retrying.'); showError(new Error(job.error));
+      } else status('Change complete. Publish separately to apply saved catalog changes to the website.');
+    } else state.operation = job;
+    renderOperation(); refreshButtons();
+  } catch (error) { showError(error); }
+  if (changing() && !$('#studio').hidden) operationTimer = setTimeout(watchOperation, 1000);
 }
 function renderPublication() {
   const job = state.publication;
@@ -78,7 +110,7 @@ async function watchPublication() {
 async function work(task) {
   if (busy) return;
   busy = true; refreshButtons(); $('#error').hidden = true; $('#dialog-error')?.remove();
-  try { await task(); } catch (error) { showError(error); }
+  try { await task(); } catch (error) { if (error !== operationStarted) showError(error); }
   finally { busy = false; refreshButtons(); }
 }
 
@@ -89,6 +121,7 @@ function render() {
   $('#sandbox').hidden = !state.development;
   $('#logout').hidden = state.authMode === 'proxy';
   renderPublication();
+  renderOperation();
   const route = location.hash.slice(1) || 'photos';
   $('#nav-photos').toggleAttribute('aria-current', route === 'photos');
   $('#nav-albums').toggleAttribute('aria-current', route.startsWith('album'));
@@ -266,7 +299,7 @@ function editPhoto(id) {
     return;
   }
   openDialog(`<div class="photo-editor"><div class="editor-image"><img src="${image(id, 1280)}" alt="${escape(photo.alt)}"></div><form id="photo-form" class="editor-fields"><h2 id="dialog-title">Photo details</h2><p class="muted">${escape(photo.filename)} · ${photo.width} × ${photo.height}</p>
-    <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Describe what’s in the photo. Required before publishing.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
+    <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Optional. Describe what’s in the photo.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
     <fieldset><legend>Albums · optional</legend>${state.catalog.albums.map(album => `<label class="check"><input type="checkbox" name="album" value="${album.id}" ${album.photoIds.includes(id) ? 'checked' : ''}>${escape(album.title)} · ${accessLabel(album)}</label>`).join('') || '<span class="hint">No albums yet.</span>'}</fieldset>
     <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Publish publicly, independently of albums</label><p class="hint">Photos in published albums are automatically ready. Public albums or independent publication make a photo public even if it also belongs to private share-link or password-protected albums. To make it a draft, remove it from every published album and uncheck this setting. Previously public image URLs and old releases remain accessible.</p>
     <dl class="exif">${Object.entries(photo.exif).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web images.</p><button type="button" data-archive-photo="${id}" data-action="archive">Archive photo</button><p class="hint">Keep files; remove this photo from all public manifests, including historical releases. Cached copies and direct image URLs may remain accessible.</p><div class="editor-footer"><button type="button" class="danger" data-delete-photo="${id}">Delete photo</button><button class="primary" type="submit">Save photo</button></div></form></div>`);
@@ -290,7 +323,7 @@ function confirmDeletePhoto(id) {
     try {
       Object.assign(state, await api(`/photos/${id}`, { method: 'DELETE' }));
     } catch (error) {
-      conflicted = true; // Cleanup may have partly completed; reload before retrying.
+      if (error !== operationStarted) conflicted = true; // Cleanup may have partly completed; reload before retrying.
       throw error;
     }
     dirty = false; deletion.close(); editor.close(); render(); status('Photo and stored files deleted. Removed from every album.');
@@ -300,7 +333,7 @@ function confirmDeletePhoto(id) {
 deletion.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 
 async function upload(files) {
-  if (!files.length || busy || publishing() || conflicted || editor.open || deletion.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
+  if (!files.length || busy || publishing() || changing() || conflicted || editor.open || deletion.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
   dirty = false;
   await work(async () => {
     $('#upload-progress').hidden = false;
@@ -326,7 +359,7 @@ document.addEventListener('click', event => {
     if (dirty && !confirm('Discard unsaved edits and archive this photo?')) return;
     work(async () => {
       try { Object.assign(state, await api(`/photos/${target.dataset.archivePhoto}/${action}`, { method: 'POST' })); }
-      catch (error) { conflicted = true; throw error; }
+      catch (error) { if (error !== operationStarted) conflicted = true; throw error; }
       dirty = false; editor.close(); render();
       status(action === 'restore' ? 'Photo restored. Published-album photos are ready; publish separately to update the website.' : 'Photo archived. Files kept; public manifests updated.');
     });
@@ -382,6 +415,7 @@ async function boot() {
     Object.assign(state, await api('/catalog'));
     $('#login').hidden = true; $('#studio').hidden = false; render();
     if (publishing() || state.publication?.state === 'failed') await watchPublication();
+    if (changing() || state.operation?.state === 'failed') await watchOperation();
   } catch (error) {
     $('#login').hidden = false;
     $('#login-error').textContent = error.message;

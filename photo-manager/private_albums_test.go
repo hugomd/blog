@@ -21,6 +21,9 @@ func TestProtectedAlbumsPublishSharedPhotosWithoutLeakingPrivateContent(t *testi
 	for i, p := range photos {
 		p.Alt = []string{"Shared photograph", "Protected-only photograph", "Standalone public photograph", "Unpublished draft"}[i]
 		p.Caption = p.Alt
+		if i == 1 {
+			p.Alt = "" // Private publication also permits optional alt text.
+		}
 		p.Published = i == 2
 		b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
 	}
@@ -63,6 +66,9 @@ func TestProtectedAlbumsPublishSharedPhotosWithoutLeakingPrivateContent(t *testi
 	json.Unmarshal(protectedObject.Body, &protected)
 	if len(protected.Photos) != 2 || len(protected.Albums) != 1 || !reflect.DeepEqual(protected.Albums[0].PhotoIDs, []string{photos[1].ID, photos[0].ID}) {
 		t.Fatalf("Incorrect protected release: %+v", protected)
+	}
+	if protected.Photos[0].ID != photos[1].ID || protected.Photos[0].Alt != "" {
+		t.Fatal("Private publication must preserve an empty optional description")
 	}
 	credential := protected.Albums[0]
 	if !strings.HasPrefix(credential.PasswordHash, "scrypt$16384$8$5$") || len(credential.AccessVersion) != 32 {

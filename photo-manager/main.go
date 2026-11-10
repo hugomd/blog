@@ -44,6 +44,8 @@ type app struct {
 	workers       sync.WaitGroup
 	publicationMu sync.RWMutex
 	publication   publication
+	operationMu   sync.RWMutex
+	operation     operation
 }
 
 type requestError struct {
@@ -76,6 +78,10 @@ func decodeRequest(w http.ResponseWriter, r *http.Request, value any) error {
 
 func (a *app) handler(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" && r.Method != "HEAD" && r.URL.Path != "/api/login" && r.URL.Path != "/api/logout" && r.Context().Value(operationContext{}) != true && a.operationStatus().State == "running" {
+			respond(w, 423, map[string]string{"error": "Another change is in progress. Wait and retry."})
+			return
+		}
 		if err := fn(w, r); err != nil {
 			status, message := 500, "Storage or processing failed. Reload to check the current state before retrying."
 			var clientError *requestError
@@ -163,8 +169,13 @@ func (a *app) getCatalog(w http.ResponseWriter, r *http.Request) error {
 	return a.respondCatalog(w, r, c, etag)
 }
 
-// Reads and mutations return the same live comparison so saved edits refresh it.
+// Synchronous clients receive the live comparison; background changes let the
+// browser refresh it separately instead of repeating remote reads in the worker.
 func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, etag string) error {
+	if r.Context().Value(operationContext{}) == true {
+		respond(w, 200, map[string]bool{"ok": true})
+		return nil
+	}
 	live, liveETag, err := a.load(r.Context(), "public", "index.json")
 	if err != nil {
 		return err
@@ -195,7 +206,7 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 		item.PasswordHash, item.AccessVersion = "", ""
 		item.LinkHash = ""
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development, "privateAlbumsEnabled": a.config.PrivateAlbums, "galleryURL": a.config.GalleryURL})
+	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "operation": a.operationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development, "privateAlbumsEnabled": a.config.PrivateAlbums, "galleryURL": a.config.GalleryURL})
 	return nil
 }
 
@@ -302,9 +313,6 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 		input.Alt, input.Caption = strings.TrimSpace(input.Alt), strings.TrimSpace(input.Caption)
 		if len(input.Alt) > 1000 || len(input.Caption) > 4000 || len(input.Tags) > 30 {
 			return badRequest("Alt text, caption or tags are too long.")
-		}
-		if input.Published && input.Alt == "" {
-			return badRequest("Add alt text before publishing this photo.")
 		}
 		if input.CapturedDate != "" {
 			if _, err := time.Parse("2006-01-02", input.CapturedDate); err != nil {
@@ -615,17 +623,17 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/catalog", a.handler(a.getCatalog))
 	mux.HandleFunc("POST /api/photos", a.handler(a.upload))
 	mux.HandleFunc("GET /api/photos/{id}/image", a.handler(a.previewImage))
-	mux.HandleFunc("PATCH /api/photos/{id}", a.handler(a.editPhoto))
-	mux.HandleFunc("DELETE /api/photos/{id}", a.handler(a.deletePhoto))
-	mux.HandleFunc("POST /api/photos/{id}/{action}", a.handler(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc("PATCH /api/photos/{id}", a.change(a.editPhoto))
+	mux.HandleFunc("DELETE /api/photos/{id}", a.change(a.deletePhoto))
+	mux.HandleFunc("POST /api/photos/{id}/{action}", a.change(func(w http.ResponseWriter, r *http.Request) error {
 		if action := r.PathValue("action"); action != "archive" && action != "restore" {
 			return &requestError{404, "Unknown photo action."}
 		}
 		return a.archivePhoto(w, r)
 	}))
 	mux.HandleFunc("POST /api/albums", a.handler(a.createAlbum))
-	mux.HandleFunc("PUT /api/albums/{id}", a.handler(a.editAlbum))
-	mux.HandleFunc("DELETE /api/albums/{id}", a.handler(func(w http.ResponseWriter, r *http.Request) error {
+	mux.HandleFunc("PUT /api/albums/{id}", a.change(a.editAlbum))
+	mux.HandleFunc("DELETE /api/albums/{id}", a.change(func(w http.ResponseWriter, r *http.Request) error {
 		return a.mutate(w, r, func(c *catalog) error {
 			for i, item := range c.Albums {
 				if item.ID == r.PathValue("id") {
@@ -639,6 +647,9 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/publish", a.handler(a.startPublication))
 	mux.HandleFunc("GET /api/publication", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, 200, map[string]any{"publication": a.publicationStatus()})
+	})
+	mux.HandleFunc("GET /api/operation", func(w http.ResponseWriter, r *http.Request) {
+		respond(w, 200, map[string]any{"operation": a.operationStatus()})
 	})
 	if a.config.LocalRoot != "" {
 		mux.HandleFunc("GET /media/{key...}", func(w http.ResponseWriter, r *http.Request) {
@@ -751,6 +762,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 	a := &app{store: store, config: config, sessions: map[string]time.Time{}, background: ctx}
+	if err := a.resumeOperation(); err != nil {
+		log.Fatalf("Cannot load change state: %T", err)
+	}
 	if err := a.resumePublication(); err != nil {
 		log.Fatalf("Cannot load publication state: %T", err)
 	}

@@ -231,9 +231,6 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 			alreadyPublished[p.ID] = true
 		}
 		for _, p := range target.next.Photos {
-			if p.Alt == "" {
-				return badRequest("Add alt text to every published photo.")
-			}
 			if !alreadyPublished[p.ID] {
 				for _, size := range []int{640, 1280, 2560} {
 					keys = append(keys, copyJob{target.bucket, fmt.Sprintf("photos/%s/%d.jpg", p.ID, size)})
