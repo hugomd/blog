@@ -32,6 +32,15 @@
 .publication-changes th{font-weight:500;color:#aaa}
 .publication-changes th:first-child{text-align:left}
 .publication-changes tbody tr:last-child th,.publication-changes tbody tr:last-child td{color:#eee;font-weight:600;border-bottom:0}
+.publication-changes caption{text-align:left;color:#dfd7bb;font-size:12px;padding-bottom:8px}
+.album-labels{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.access-settings select{width:100%}
+.access-warning{color:#c6bd97}
+.album-share{display:flex;align-items:center;flex-wrap:wrap;gap:10px;max-width:850px;margin-top:22px}
+.album-share label{flex:1 1 260px;min-width:0;margin:0}
+.album-share button{align-self:flex-end}
+.album-share small{flex-basis:100%;margin:0}
+@media(max-width:700px){.album-labels{max-width:120px}.access-settings input,.access-settings select{font-size:16px}.album-share input{font-size:12px}.album-share button{min-height:44px}}
 @media(max-width:450px){.sidebar{flex-wrap:wrap}.sidebar nav{width:100%;justify-content:space-between}}
 @media(min-width:1650px){main{max-width:1600px;width:100%;margin:auto}.grid{grid-template-columns:repeat(5,minmax(0,1fr))}.album-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:1100px){.sidebar{width:185px;padding:26px 16px}.brand{font-size:25px;gap:6px}.studio-label{display:none}.workspace{margin-left:185px}.topbar,main,footer{padding-left:25px;padding-right:25px}.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.album-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.topbar .actions .muted{display:none}.photo-editor{grid-template-columns:1fr 1fr}.editor-image{padding:12px;min-height:450px}.editor-fields{padding:32px 22px}}

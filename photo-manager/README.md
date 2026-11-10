@@ -27,6 +27,12 @@ volume. Images **and all manifests** live in R2 in production.
   Use the arrow buttons to reorder photos; remove an album without deleting
   its photos. The photostream orders all published photos by upload time,
   newest first, independent of album membership or later edits.
+- Albums can be public or password protected. A photo can belong to both;
+  independent public publication or any published public album keeps it public.
+  Studio labels that overlap **Also public**. Protected-only photos are omitted
+  from the public photostream. Save, then Publish applies access/password changes.
+  Protected share links require the separate [delivery gateway](../photo-access/README.md)
+  and a third, non-public delivery bucket. Previously public URLs cannot be recalled.
 - **Save photo / Save album** changes the private working catalog only.
   **Publish changes** confirms and publishes all ready photos/albums together.
   Published albums include their non-archived photos without a separate photo
@@ -181,9 +187,11 @@ authentication. Mutations additionally require an exact matching `Origin`.
 | `AUTH_MODE` | `proxy` for Jegigrat; `password` is the default |
 | `ALLOWED_EMAIL` | Required exact Pocket ID email in proxy mode |
 | `R2_ENDPOINT` | HTTPS account S3 endpoint, e.g. `https://ACCOUNT.r2.cloudflarestorage.com` |
-| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Dedicated R2 S3 credentials, read/write only the two required buckets |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | Dedicated R2 S3 credentials, scoped to required buckets |
 | `R2_PRIVATE_BUCKET` | Private original/catalog bucket |
 | `R2_PUBLIC_BUCKET` | Separate public web-image/manifest bucket |
+| `R2_PROTECTED_BUCKET` | Optional third, non-public derivative/snapshot bucket; enables protected album controls |
+| `PUBLIC_GALLERY_URL` | Share-link base, default `https://hugo.md/photos/` |
 | `PUBLIC_MEDIA_URL` | HTTPS public bucket custom domain, optionally with a URL prefix |
 | `ADMIN_PASSWORD` / `ADMIN_PASSWORD_FILE` | At least 16 characters; only needed in password mode |
 | `PORT` | HTTP listen port, default 8080 |
@@ -197,6 +205,10 @@ kubelet probes; don't create an unauthenticated route for the other APIs.
 
 Production routing, NetworkPolicy, Secret references and shared Gateway TLS
 changes belong in `hugomd/jegigrat-k3s/config/photo-manager/`, not this repository.
+Protected delivery adds Pages bindings, a session secret and runtime prerequisites;
+follow the [protected album deployment notes](../photo-access/README.md) before
+enabling it. The working catalog upgrades permanently to version 2 when first
+protecting an album; older Studio versions must not be restored afterward.
 The proposed editor hostname is `photos.internal.ii.md`; confirm it and prepare
 DNS, R2 buckets/domain, sealed credentials, an immutable image digest and the
 shared certificate before deploying. No resources are provisioned by this app.

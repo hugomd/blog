@@ -30,9 +30,11 @@ type publicationCounts struct {
 }
 
 type publicationChanges struct {
-	Changed bool              `json:"changed"`
-	Photos  publicationCounts `json:"photos"`
-	Albums  publicationCounts `json:"albums"`
+	Changed         bool              `json:"changed"`
+	Photos          publicationCounts `json:"photos"`
+	Albums          publicationCounts `json:"albums"`
+	ProtectedPhotos publicationCounts `json:"protectedPhotos"`
+	ProtectedAlbums publicationCounts `json:"protectedAlbums"`
 }
 
 // Compare the public projection, not private revisions or publication settings.
@@ -129,6 +131,11 @@ func (a *app) startPublication(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := checkETag(r, etag); err != nil {
 		return err
+	}
+	for _, item := range c.Albums {
+		if item.Access == "password" && (!a.config.PrivateAlbums || item.PasswordHash == "" || item.AccessVersion == "") {
+			return badRequest("Configure protected storage and an album password before publishing.")
+		}
 	}
 	for _, p := range c.Photos {
 		if c.photoReady(p) && p.Alt == "" {

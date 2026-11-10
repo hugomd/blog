@@ -63,3 +63,8 @@ The public R2 bucket needs GET/HEAD CORS access for `https://hugo.md` and
 rounded, edge-to-edge photographs on black, a thumbnail-origin zoom viewer,
 keyboard navigation, reduced-motion support, and optional camera information
 and tags. It has no frontend dependencies or build step.
+
+Password-protected albums use a narrowly routed Pages Function and a separate,
+non-public delivery bucket. They are not hidden public URLs. See the
+[protected album configuration and security contract](photo-access/README.md)
+before deploying or enabling them in Studio.

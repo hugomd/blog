@@ -37,7 +37,7 @@ type browser struct {
 func newBrowser(t *testing.T, store storage) *browser {
 	t.Helper()
 	background, cancel := context.WithCancel(t.Context())
-	a := &app{store: store, config: configuration{Development: true, Password: "test-password-not-real", AuthMode: "password", PublicURL: "/media", LocalRoot: storeRoot(store)}, sessions: map[string]time.Time{}, background: background}
+	a := &app{store: store, config: configuration{Development: true, Password: "test-password-not-real", AuthMode: "password", PublicURL: "/media", LocalRoot: storeRoot(store), PrivateAlbums: storeRoot(store) != "", GalleryURL: "https://example.test/photos/"}, sessions: map[string]time.Time{}, background: background}
 	if err := a.resumePublication(); err != nil {
 		t.Fatal(err)
 	}

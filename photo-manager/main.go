@@ -29,6 +29,8 @@ var assets embed.FS
 type configuration struct {
 	Origin, PublicURL, AuthMode, Password, AllowedEmail, LocalRoot string
 	Development                                                    bool
+	PrivateAlbums                                                  bool
+	GalleryURL                                                     string
 }
 
 type app struct {
@@ -168,6 +170,13 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 		return err
 	}
 	changes := c.publicRelease(a.config.PublicURL).changesFrom(live)
+	liveProtected, _, err := a.loadProtected(r.Context(), live)
+	if err != nil {
+		return err
+	}
+	protectedChanges := c.protectedRelease().changesFrom(liveProtected)
+	changes.ProtectedPhotos, changes.ProtectedAlbums = protectedChanges.Photos, protectedChanges.Albums
+	changes.Changed = changes.Changed || protectedChanges.Changed
 	var publishedRevision *int
 	if liveETag != "" {
 		publishedRevision = &live.Revision
@@ -179,7 +188,13 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 	if etag == "" {
 		etag = "new"
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development})
+	c.Albums = append([]album{}, c.Albums...)
+	for i := range c.Albums {
+		item := &c.Albums[i]
+		item.PasswordSet = item.PasswordHash != ""
+		item.PasswordHash, item.AccessVersion = "", ""
+	}
+	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development, "privateAlbumsEnabled": a.config.PrivateAlbums, "galleryURL": a.config.GalleryURL})
 	return nil
 }
 
@@ -392,28 +407,12 @@ func (a *app) archivePhoto(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		keys, err := a.store.List(ctx, "public", "releases/")
-		if err != nil {
+		// Redact existing releases only, never publish unrelated working edits.
+		if err := a.redactPhoto(ctx, "public", id, true); err != nil {
 			return err
 		}
-		// Redact only existing public data; never publish unrelated working edits.
-		for _, key := range append([]string{"index.json"}, keys...) {
-			if !strings.HasSuffix(key, ".json") {
-				continue
-			}
-			live, current, err := a.load(ctx, "public", key)
-			if err != nil {
-				return err
-			}
-			if current == "" {
-				continue
-			}
-			live.removePhoto(id)
-			body, err := encode(live)
-			if err != nil {
-				return err
-			}
-			if err := a.store.Write(ctx, "public", key, body, "application/json", "public, max-age=30, must-revalidate", &current); err != nil {
+		if a.config.PrivateAlbums {
+			if err := a.redactPhoto(ctx, "protected", id, true); err != nil {
 				return err
 			}
 		}
@@ -459,21 +458,17 @@ func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
 		return &requestError{404, "Photo not found."}
 	}
 	// Change only the live photo and its memberships, never publish other drafts.
-	live, liveETag, err := a.load(ctx, "public", "index.json")
-	if err != nil {
+	if err := a.redactPhoto(ctx, "public", id, false); err != nil {
 		return err
 	}
-	if liveETag != "" {
-		live.removePhoto(id)
-		body, err := encode(live)
-		if err != nil {
+	buckets := []string{"public", "private"}
+	if a.config.PrivateAlbums {
+		if err := a.redactPhoto(ctx, "protected", id, true); err != nil {
 			return err
 		}
-		if err := a.store.Write(ctx, "public", "index.json", body, "application/json", "public, max-age=30, must-revalidate", &liveETag); err != nil {
-			return err
-		}
+		buckets = append(buckets, "protected")
 	}
-	for _, bucket := range []string{"public", "private"} {
+	for _, bucket := range buckets {
 		for _, size := range []int{640, 1280, 2560} {
 			if err := a.store.Delete(ctx, bucket, fmt.Sprintf("photos/%s/%d.jpg", id, size)); err != nil {
 				return err
@@ -517,6 +512,8 @@ func (a *app) editAlbum(w http.ResponseWriter, r *http.Request) error {
 		Published   bool     `json:"published"`
 		PhotoIDs    []string `json:"photoIds"`
 		CoverID     string   `json:"coverId"`
+		Access      string   `json:"access"`
+		Password    string   `json:"password"`
 	}
 	if err := decodeRequest(w, r, &input); err != nil {
 		return err
@@ -547,7 +544,36 @@ func (a *app) editAlbum(w http.ResponseWriter, r *http.Request) error {
 		}
 		for i, item := range c.Albums {
 			if item.ID == r.PathValue("id") {
-				c.Albums[i] = album{ID: item.ID, Title: input.Title, Slug: input.Slug, Description: input.Description, Published: input.Published, PhotoIDs: selected, CoverID: input.CoverID}
+				access := input.Access
+				if access == "" {
+					access = item.Access
+				}
+				if access != "" && access != "public" && access != "password" {
+					return badRequest("Choose public or password-protected access.")
+				}
+				next := album{ID: item.ID, Title: input.Title, Slug: input.Slug, Description: input.Description, Published: input.Published, PhotoIDs: selected, CoverID: input.CoverID}
+				if access == "password" {
+					if !a.config.PrivateAlbums {
+						return badRequest("Protected album storage is not configured.")
+					}
+					next.Access, next.PasswordHash, next.AccessVersion = access, item.PasswordHash, item.AccessVersion
+					if input.Password != "" {
+						hash, err := albumPassword(input.Password)
+						if err != nil {
+							return err
+						}
+						next.PasswordHash, next.AccessVersion = hash, identifier()
+					}
+					if next.PasswordHash == "" {
+						return badRequest("Set a password before protecting this album.")
+					}
+					if item.Published != next.Published {
+						next.AccessVersion = identifier()
+					}
+				} else if input.Password != "" {
+					return badRequest("Choose password-protected access before setting a password.")
+				}
+				c.Albums[i] = next
 				return nil
 			}
 		}
@@ -676,6 +702,7 @@ func main() {
 			config.LocalRoot = ".local-data"
 		}
 		config.PublicURL = "/media"
+		config.PrivateAlbums = true
 		store = &localStorage{root: config.LocalRoot}
 	} else {
 		for _, name := range []string{"R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_PRIVATE_BUCKET", "R2_PUBLIC_BUCKET", "PUBLIC_MEDIA_URL"} {
@@ -686,7 +713,22 @@ func main() {
 		if !validHTTPS(os.Getenv("R2_ENDPOINT")) || !validHTTPS(config.PublicURL) || os.Getenv("R2_PRIVATE_BUCKET") == os.Getenv("R2_PUBLIC_BUCKET") {
 			log.Fatal("Use HTTPS R2/media URLs and separate private/public buckets")
 		}
-		store = newR2Storage(os.Getenv("R2_ENDPOINT"), os.Getenv("R2_ACCESS_KEY_ID"), os.Getenv("R2_SECRET_ACCESS_KEY"), os.Getenv("R2_PRIVATE_BUCKET"), os.Getenv("R2_PUBLIC_BUCKET"))
+		r2 := newR2Storage(os.Getenv("R2_ENDPOINT"), os.Getenv("R2_ACCESS_KEY_ID"), os.Getenv("R2_SECRET_ACCESS_KEY"), os.Getenv("R2_PRIVATE_BUCKET"), os.Getenv("R2_PUBLIC_BUCKET"))
+		if protected := os.Getenv("R2_PROTECTED_BUCKET"); protected != "" {
+			if protected == os.Getenv("R2_PRIVATE_BUCKET") || protected == os.Getenv("R2_PUBLIC_BUCKET") {
+				log.Fatal("Protected delivery requires a separate, non-public bucket")
+			}
+			r2.buckets["protected"] = protected
+			config.PrivateAlbums = true
+		}
+		store = r2
+	}
+	config.GalleryURL = strings.TrimRight(os.Getenv("PUBLIC_GALLERY_URL"), "/") + "/"
+	if config.GalleryURL == "/" {
+		config.GalleryURL = "https://hugo.md/photos/"
+	}
+	if !development && !validHTTPS(config.GalleryURL) {
+		log.Fatal("PUBLIC_GALLERY_URL must be HTTPS")
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()

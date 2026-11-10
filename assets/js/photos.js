@@ -2,12 +2,40 @@ const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const state = { catalog: null, photos: [], index: 0, info: false, busy: false };
 const stream = $('#stream'), viewer = $('#viewer'), info = $('#info');
+const privatePath = location.pathname.match(/^\/photos\/private\/[a-f0-9]{32}\//)?.[0];
 let zoom = $('#zoom');
 let swipeStart;
+let loadRequest;
 const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
+
+function clearPrivate() {
+  loadRequest?.abort(); loadRequest = null;
+  viewer.close(); zoom.getAnimations().forEach(animation => animation.cancel());
+  zoom.removeAttribute('src'); zoom.alt = ''; info.innerHTML = ''; $('#caption').textContent = ''; $('#count').textContent = '';
+  document.body.style.overflow = '';
+  state.catalog = null; state.photos = []; state.busy = false; state.info = false;
+  stream.innerHTML = ''; $('#albums').innerHTML = '';
+  $('#album-intro').hidden = true; $('#title').textContent = ''; $('#description').textContent = '';
+  $('#lock-album').hidden = true;
+  $('#skeleton').hidden = true;
+  $('#status').classList.remove('loading');
+  stream.setAttribute('aria-busy', 'false'); $('#albums').setAttribute('aria-busy', 'false');
+  $('#main').setAttribute('aria-label', 'Private album'); document.title = 'Private album · Hugo’s Blog';
+}
+
+function showUnlock(message = '') {
+  clearPrivate();
+  $('#album-unlock').hidden = false;
+  $('#unlock-error').textContent = message;
+  $('#status').hidden = true; $('#retry').hidden = true;
+}
 // The public manifest is the sole source of gallery content. Never fall back to
 // repository photos: doing so could reintroduce archived/unpublished images.
 async function load() {
+  if (privatePath) clearPrivate();
+  loadRequest?.abort();
+  const request = new AbortController(); loadRequest = request;
+  $('#album-unlock').hidden = true;
   $('#retry').hidden = true;
   $('#status').hidden = false;
   $('#status').textContent = 'Loading photographs…';
@@ -17,30 +45,40 @@ async function load() {
   stream.setAttribute('aria-busy', 'true');
   $('#albums').setAttribute('aria-busy', 'true');
   try {
-    const response = await fetch(document.body.dataset.manifest, { cache: 'no-cache', credentials: 'omit' });
-    if (response.status === 404) state.catalog = { version: 1, photos: [], albums: [] };
+    const response = await fetch(privatePath ? `${privatePath}catalog` : document.body.dataset.manifest, { cache: privatePath ? 'no-store' : 'no-cache', credentials: privatePath ? 'same-origin' : 'omit', signal: request.signal });
+    if (request.signal.aborted) return;
+    if (privatePath && response.status === 401) { showUnlock(); return; }
+    if (privatePath && response.status === 404) { message('This album isn’t available.'); return; }
+    let catalog;
+    if (response.status === 404) catalog = { version: 1, photos: [], albums: [] };
     else {
       if (!response.ok) throw new Error('Manifest unavailable');
-      state.catalog = await response.json();
+      catalog = await response.json();
     }
-    if (state.catalog.version !== 1 || !Array.isArray(state.catalog.photos) || !Array.isArray(state.catalog.albums)) throw new Error('Unsupported manifest');
+    if (request.signal.aborted) return;
+    if (catalog.version !== 1 || !Array.isArray(catalog.photos) || !Array.isArray(catalog.albums)) throw new Error('Unsupported manifest');
+    state.catalog = catalog;
+    $('#lock-album').hidden = !privatePath;
     render();
   } catch {
+    if (request.signal.aborted) return;
     state.catalog = null;
     stream.innerHTML = ''; $('#albums').innerHTML = '';
     $('#status').textContent = 'The photographs couldn’t be loaded. Please try again.';
     $('#retry').hidden = false;
   } finally {
-    $('#skeleton').hidden = true;
-    $('#status').classList.remove('loading');
-    stream.setAttribute('aria-busy', 'false');
-    $('#albums').setAttribute('aria-busy', 'false');
+    if (loadRequest === request) {
+      $('#skeleton').hidden = true;
+      $('#status').classList.remove('loading');
+      stream.setAttribute('aria-busy', 'false');
+      $('#albums').setAttribute('aria-busy', 'false');
+    }
   }
 }
 
 function albumURL(slug) { return `${$('#nav-stream').getAttribute('href').split('#')[0]}#album/${encodeURIComponent(slug)}`; }
 function render() {
-  const route = location.hash.slice(1) || (document.body.dataset.album ? `album/${encodeURIComponent(document.body.dataset.album)}` : 'stream');
+  const route = privatePath ? `album/${encodeURIComponent(state.catalog?.albums[0]?.slug || '')}` : location.hash.slice(1) || (document.body.dataset.album ? `album/${encodeURIComponent(document.body.dataset.album)}` : 'stream');
   const isAlbums = route === 'albums', isAlbum = route.startsWith('album/');
   stream.classList.toggle('list', !isAlbums && !isAlbum);
   $('#skeleton').classList.toggle('list', !isAlbums && !isAlbum);
@@ -51,7 +89,7 @@ function render() {
   const album = isAlbum ? state.catalog.albums.find(a => `album/${encodeURIComponent(a.slug)}` === route) : null;
   const title = isAlbums ? 'Albums' : isAlbum ? album?.title || 'Album unavailable' : 'Photostream';
   $('#nav-stream').setAttribute('aria-current', !isAlbums && !isAlbum ? 'page' : 'false');
-  $('#nav-albums').setAttribute('aria-current', isAlbums || isAlbum ? 'page' : 'false');
+  $('#nav-albums').setAttribute('aria-current', !privatePath && (isAlbums || isAlbum) ? 'page' : 'false');
   $('#album-intro').hidden = !isAlbum;
   $('#title').textContent = title;
   $('#description').hidden = !isAlbum || !album?.description;
@@ -151,16 +189,21 @@ async function open(index) {
   try { await animatePhoto(from, place()); }
   finally { state.busy = false; }
 }
-async function close() {
+async function close(event) {
   if (state.busy || !viewer.open) return;
   state.busy = true;
   const button = stream.children[state.index], thumb = button.querySelector('img');
+  const touch = event?.pointerType === 'touch' || (event?.detail > 0 && matchMedia('(pointer: coarse)').matches);
   // Navigation/resize can move the thumbnail: use its current position.
   try { await animatePhoto(thumb.getBoundingClientRect(), zoom.getBoundingClientRect(), true); }
   finally {
     viewer.close(); zoom.getAnimations().forEach(a => a.cancel());
     thumb.style.visibility = ''; document.body.style.overflow = '';
-    button.focus({ preventScroll: true }); state.busy = false;
+    // Closing a dialog can restore focus automatically, so touch needs an
+    // explicit blur. Keyboard users still return to their selected thumbnail.
+    if (touch) button.blur();
+    else button.focus({ preventScroll: true });
+    state.busy = false;
   }
 }
 function step(delta) {
@@ -180,6 +223,34 @@ $('#previous').onclick = () => step(-1);
 $('#next').onclick = () => step(1);
 $('#details').onclick = () => { if (!state.busy) { state.info = !state.info; renderViewer(); } };
 $('#retry').onclick = load;
+$('#album-login').onsubmit = async event => {
+  event.preventDefault();
+  if (!privatePath) return;
+  const form = event.target, button = form.querySelector('button');
+  button.disabled = true; $('#unlock-error').textContent = '';
+  try {
+    const response = await fetch(`${privatePath}login`, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: new FormData(form).get('password') }) });
+    if (!response.ok) {
+      const message = response.status === 401 ? 'Incorrect password.' : response.status === 429 ? 'Too many attempts. Please try again in a minute.' : response.status === 404 ? 'This album isn’t available.' : 'The album couldn’t be unlocked. Please try again.';
+      showUnlock(message);
+      return;
+    }
+    await load();
+  } catch {
+    showUnlock('The album couldn’t be unlocked. Please try again.');
+  } finally { form.reset(); button.disabled = false; }
+};
+$('#lock-album').onclick = async () => {
+  if (!privatePath) return;
+  showUnlock();
+  const button = $('#album-login button');
+  button.disabled = true;
+  try {
+    const response = await fetch(`${privatePath}logout`, { method: 'POST', credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) throw new Error('Logout failed');
+  } catch { $('#unlock-error').textContent = 'Couldn’t end the session. Retry locking before leaving a shared device.'; $('#lock-album').hidden = false; }
+  finally { button.disabled = false; }
+};
 $('.skip').onclick = event => { event.preventDefault(); $('#main').focus(); };
 viewer.addEventListener('cancel', event => { event.preventDefault(); close(); });
 viewer.addEventListener('keydown', event => {
@@ -198,7 +269,7 @@ viewer.addEventListener('touchend', event => {
   step(dx < 0 ? 1 : -1);
 }, { passive: false });
 viewer.addEventListener('touchcancel', () => { swipeStart = null; });
-viewer.addEventListener('click', event => { if (event.target === viewer || event.target === zoom) close(); });
+viewer.addEventListener('click', event => { if (event.target === viewer || event.target === zoom) close(event); });
 addEventListener('resize', () => { layoutPhotos(); if (viewer.open) place(); });
 addEventListener('hashchange', async () => {
   // Browser Back may arrive during the zoom. Keep its thumbnail in the DOM
@@ -207,5 +278,6 @@ addEventListener('hashchange', async () => {
   if (viewer.open) await close();
   render();
 });
+addEventListener('pageshow', event => { if (privatePath && event.persisted) load(); });
 render();
 load();

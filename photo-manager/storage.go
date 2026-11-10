@@ -127,7 +127,7 @@ type localStorage struct {
 }
 
 func (s *localStorage) List(ctx context.Context, bucket, prefix string) ([]string, error) {
-	if bucket != "private" && bucket != "public" {
+	if bucket != "private" && bucket != "public" && bucket != "protected" {
 		return nil, errors.New("invalid storage bucket")
 	}
 	keys := []string{}
@@ -155,7 +155,7 @@ func (s *localStorage) List(ctx context.Context, bucket, prefix string) ([]strin
 }
 
 func (s *localStorage) filename(bucket, key string) (string, error) {
-	if (bucket != "private" && bucket != "public") || !fs.ValidPath(key) {
+	if (bucket != "private" && bucket != "public" && bucket != "protected") || !fs.ValidPath(key) {
 		return "", errors.New("invalid storage key")
 	}
 	return filepath.Join(s.root, bucket, filepath.FromSlash(key)), nil

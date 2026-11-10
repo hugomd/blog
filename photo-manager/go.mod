@@ -9,6 +9,7 @@ require (
 	github.com/aws/smithy-go v1.28.8
 	github.com/disintegration/imaging v1.6.2
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
+	golang.org/x/crypto v0.58.0
 )
 
 require (

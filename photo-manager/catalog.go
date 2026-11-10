@@ -33,21 +33,26 @@ type photo struct {
 }
 
 type album struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Slug        string   `json:"slug"`
-	Description string   `json:"description"`
-	Published   bool     `json:"published"`
-	PhotoIDs    []string `json:"photoIds"`
-	CoverID     string   `json:"coverId"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Slug          string   `json:"slug"`
+	Description   string   `json:"description"`
+	Published     bool     `json:"published"`
+	PhotoIDs      []string `json:"photoIds"`
+	CoverID       string   `json:"coverId"`
+	Access        string   `json:"access,omitempty"`
+	PasswordHash  string   `json:"passwordHash,omitempty"`
+	AccessVersion string   `json:"accessVersion,omitempty"`
+	PasswordSet   bool     `json:"passwordSet,omitempty"`
 }
 
 type catalog struct {
-	Version     int     `json:"version"`
-	Revision    int     `json:"revision"`
-	Photos      []photo `json:"photos"`
-	Albums      []album `json:"albums"`
-	PublishedAt string  `json:"publishedAt,omitempty"`
+	Version          int     `json:"version"`
+	Revision         int     `json:"revision"`
+	Photos           []photo `json:"photos"`
+	Albums           []album `json:"albums"`
+	PublishedAt      string  `json:"publishedAt,omitempty"`
+	ProtectedRelease string  `json:"protectedRelease,omitempty"`
 }
 
 func identifier() string {
@@ -69,13 +74,22 @@ func (a *app) load(ctx context.Context, bucket, key string) (catalog, string, er
 	if err := json.Unmarshal(value.Body, &result); err != nil {
 		return catalog{}, "", fmt.Errorf("invalid catalog: %w", err)
 	}
-	if result.Version != 1 {
+	if result.Version != 1 && result.Version != 2 {
 		return catalog{}, "", errors.New("unsupported catalog version")
+	}
+	if !a.config.PrivateAlbums && ((bucket == "private" && result.Version == 2) || result.ProtectedRelease != "") {
+		return catalog{}, "", &requestError{503, "Restore protected album storage configuration before editing this library."}
 	}
 	return result, value.ETag, nil
 }
 
 func (a *app) save(ctx context.Context, c *catalog, etag string) (string, error) {
+	for _, item := range c.Albums {
+		if item.Access == "password" {
+			// Older binaries must reject, rather than publicly publish, this catalog.
+			c.Version = 2
+		}
+	}
 	c.Revision++
 	body, err := encode(c)
 	if err != nil {
@@ -114,39 +128,62 @@ func (c catalog) photoReady(p photo) bool {
 }
 
 func (c catalog) publicRelease(publicURL string) catalog {
+	return c.release(publicURL, false)
+}
+
+func (c catalog) protectedRelease() catalog {
+	return c.release("", true)
+}
+
+func (c catalog) release(publicURL string, protected bool) catalog {
 	release := catalog{Version: 1, Revision: c.Revision, Photos: []photo{}, Albums: []album{}}
+	members := map[string]bool{}
+	for _, item := range c.Albums {
+		if item.Published && (item.Access == "password") == protected {
+			for _, id := range item.PhotoIDs {
+				members[id] = true
+			}
+		}
+	}
 	published := map[string]bool{}
 	for _, p := range c.Photos {
-		if !c.photoReady(p) {
+		if p.Archived || p.Archiving || p.Deleting || (!members[p.ID] && (protected || !p.Published)) {
 			continue
 		}
 		p.Published = true
 		p.Filename = ""
-		p.Thumbnail = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/640.jpg"
-		p.Src = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/2560.jpg"
+		p.Thumbnail, p.Src = "", ""
+		if !protected {
+			p.Thumbnail = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/640.jpg"
+			p.Src = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/2560.jpg"
+		}
 		release.Photos = append(release.Photos, p)
 		published[p.ID] = true
 	}
 	// Include standalone and published-album photos once, newest first.
 	sort.Slice(release.Photos, func(i, j int) bool { return release.Photos[i].UploadedAt > release.Photos[j].UploadedAt })
 	for _, item := range c.Albums {
-		if !item.Published {
+		if !item.Published || (item.Access == "password") != protected {
 			continue
 		}
+		// Explicit projection keeps private credentials out of public snapshots.
+		next := album{ID: item.ID, Title: item.Title, Slug: item.Slug, Description: item.Description, Published: true, PhotoIDs: []string{}, CoverID: item.CoverID}
+		if protected {
+			next.Access, next.PasswordHash, next.AccessVersion = "password", item.PasswordHash, item.AccessVersion
+		}
 		originalIDs := item.PhotoIDs
-		item.PhotoIDs = []string{}
 		for _, id := range originalIDs {
 			if published[id] {
-				item.PhotoIDs = append(item.PhotoIDs, id)
+				next.PhotoIDs = append(next.PhotoIDs, id)
 			}
 		}
-		if !contains(item.PhotoIDs, item.CoverID) {
-			item.CoverID = ""
-			if len(item.PhotoIDs) > 0 {
-				item.CoverID = item.PhotoIDs[0]
+		if !contains(next.PhotoIDs, next.CoverID) {
+			next.CoverID = ""
+			if len(next.PhotoIDs) > 0 {
+				next.CoverID = next.PhotoIDs[0]
 			}
 		}
-		release.Albums = append(release.Albums, item)
+		release.Albums = append(release.Albums, next)
 	}
 	return release
 }
@@ -156,20 +193,34 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 	if err != nil {
 		return err
 	}
-	alreadyPublished := map[string]bool{}
-	for _, p := range previous.Photos {
-		alreadyPublished[p.ID] = true
+	previousProtected, _, err := a.loadProtected(ctx, previous)
+	if err != nil {
+		return err
 	}
 	release := c.publicRelease(a.config.PublicURL)
 	release.PublishedAt = now()
-	keys := []string{}
-	for _, p := range release.Photos {
-		if p.Alt == "" {
-			return badRequest("Add alt text to every published photo.")
+	protected := c.protectedRelease()
+	if len(protected.Albums) > 0 && !a.config.PrivateAlbums {
+		return badRequest("Configure protected album storage before publishing private albums.")
+	}
+	type copyJob struct{ bucket, key string }
+	keys := []copyJob{}
+	for _, target := range []struct {
+		bucket         string
+		next, previous catalog
+	}{{"public", release, previous}, {"protected", protected, previousProtected}} {
+		alreadyPublished := map[string]bool{}
+		for _, p := range target.previous.Photos {
+			alreadyPublished[p.ID] = true
 		}
-		if !alreadyPublished[p.ID] {
-			for _, size := range []int{640, 1280, 2560} {
-				keys = append(keys, fmt.Sprintf("photos/%s/%d.jpg", p.ID, size))
+		for _, p := range target.next.Photos {
+			if p.Alt == "" {
+				return badRequest("Add alt text to every published photo.")
+			}
+			if !alreadyPublished[p.ID] {
+				for _, size := range []int{640, 1280, 2560} {
+					keys = append(keys, copyJob{target.bucket, fmt.Sprintf("photos/%s/%d.jpg", p.ID, size)})
+				}
 			}
 		}
 	}
@@ -177,7 +228,7 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 	// Finish every copy before changing the discoverable public manifest.
 	copyContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	jobs := make(chan string, len(keys))
+	jobs := make(chan copyJob, len(keys))
 	for _, key := range keys {
 		jobs <- key
 	}
@@ -189,11 +240,15 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 	failures := make(chan error, 1)
 	for range min(4, len(keys)) {
 		workers.Go(func() {
-			for key := range jobs {
+			for job := range jobs {
 				if copyContext.Err() != nil {
 					return
 				}
-				if err := a.store.Copy(copyContext, "private", "public", key, "image/jpeg", "public, max-age=31536000, immutable"); err != nil {
+				cache := "public, max-age=31536000, immutable"
+				if job.bucket == "protected" {
+					cache = "private, no-store"
+				}
+				if err := a.store.Copy(copyContext, "private", job.bucket, job.key, "image/jpeg", cache); err != nil {
 					select {
 					case failures <- err:
 					default:
@@ -216,6 +271,19 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 	}
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+	if a.config.PrivateAlbums {
+		// The final public index write commits both projections. Interrupted
+		// attempts leave only undiscoverable, private release snapshots.
+		release.ProtectedRelease = identifier()
+		protected.PublishedAt = release.PublishedAt
+		body, err := encode(protected)
+		if err != nil {
+			return err
+		}
+		if err := a.store.Write(ctx, "protected", "releases/"+release.ProtectedRelease+".json", body, "application/json", "private, no-store", nil); err != nil {
+			return err
+		}
 	}
 	body, err := encode(release)
 	if err != nil {
