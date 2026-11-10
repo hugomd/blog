@@ -154,7 +154,7 @@ func (b *browser) waitPublication(state string) publication {
 }
 
 func edit(p photo, albums ...string) map[string]any {
-	return map[string]any{"alt": p.Alt, "caption": p.Caption, "tags": p.Tags, "capturedDate": p.CapturedDate, "published": p.Published, "albumIds": albums}
+	return map[string]any{"alt": p.Alt, "caption": p.Caption, "location": p.Location, "tags": p.Tags, "capturedDate": p.CapturedDate, "published": p.Published, "albumIds": albums}
 }
 
 // Synthetic EXIF includes real GPS IFDs and a private owner field, not just marker text.
@@ -315,7 +315,7 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 		}
 	}
 	want := map[string]string{"Make": "FUJIFILM", "Camera": "X-E4", "Lens": "XF35mmF1.4 R", "ISO": "640", "Shutter": "1/250 s", "Aperture": "ƒ/2.8", "Focal length": "35 mm"}
-	if !reflect.DeepEqual(p.Exif, want) || p.CapturedDate != "2022-09-11" {
+	if !reflect.DeepEqual(p.Exif, want) || p.CapturedDate != "2022-09-11" || p.Location != "" {
 		t.Fatalf("Incorrect camera metadata: %+v", p)
 	}
 	for query, dimensions := range map[string]image.Point{"": {768, 1280}, "?size=640": {384, 640}} {
@@ -375,6 +375,44 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	copy := b.request("GET", live.Photos[0].Thumbnail, nil, 200)
 	if bytes.Contains(copy, []byte("Exif\x00\x00")) {
 		t.Fatal("Public derivative contains EXIF location data")
+	}
+}
+
+func TestOptionalPhotoLocationPublishesOnlyAfterConfirmation(t *testing.T) {
+	b := newBrowser(t, &localStorage{root: t.TempDir()})
+	b.raw("POST", "/api/photos", smallPNG(t), 200)
+	p := b.state.Catalog.Photos[0]
+	p.Published, p.Location = true, "  New York, NY  "
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	if b.state.Catalog.Photos[0].Location != "New York, NY" {
+		t.Fatal("Manual location was not saved and trimmed")
+	}
+	legacy := edit(b.state.Catalog.Photos[0])
+	delete(legacy, "location")
+	b.request("PATCH", "/api/photos/"+p.ID, legacy, 200)
+	if b.state.Catalog.Photos[0].Location != "New York, NY" {
+		t.Fatal("An older client cleared the saved location")
+	}
+	p.Location = strings.Repeat("a", 300)
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	p.Location += "b"
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 400)
+	p.Location = "New York, NY"
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	b.publish("succeeded")
+	var live catalog
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if live.Photos[0].Location != "New York, NY" {
+		t.Fatal("Published photo is missing its explicit location")
+	}
+	p.Location = "   "
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p), 200)
+	if !bytes.Contains(b.request("GET", "/media/index.json", nil, 200), []byte(`"location"`)) {
+		t.Fatal("A draft edit changed the live publication")
+	}
+	b.publish("succeeded")
+	if bytes.Contains(b.request("GET", "/media/index.json", nil, 200), []byte(`"location"`)) {
+		t.Fatal("Empty location was not omitted after publishing")
 	}
 }
 
@@ -481,6 +519,68 @@ func TestAlbumPublicationReadinessAndStandalonePhotostream(t *testing.T) {
 		if album.Title == "Must not overwrite" {
 			t.Fatal("Stale tab overwrote catalog")
 		}
+	}
+}
+
+func TestPhotostreamSelectionIsAtomicAndPublishesSeparately(t *testing.T) {
+	b := newBrowser(t, &localStorage{root: t.TempDir()})
+	for range 4 {
+		b.raw("POST", "/api/photos", smallPNG(t), 200)
+	}
+	first, second, archived := b.state.Catalog.Photos[0].ID, b.state.Catalog.Photos[1].ID, b.state.Catalog.Photos[3].ID
+	b.request("POST", "/api/albums", map[string]string{"title": "Private collection"}, 200)
+	private := b.state.Catalog.Albums[0]
+	b.request("PUT", "/api/albums/"+private.ID, map[string]any{"title": private.Title, "slug": private.Slug, "access": "link", "published": true, "photoIds": []string{first}, "coverId": first}, 200)
+	p := b.state.Catalog.Photos[0]
+	p.Alt, p.Caption, p.Tags, p.CapturedDate = "Mountain", "Keep this caption", []string{"travel", "mountain"}, "2024-02-29"
+	b.request("PATCH", "/api/photos/"+first, edit(p, private.ID), 200)
+	b.request("POST", "/api/photos/"+archived+"/archive", nil, 200)
+	b.publish("succeeded")
+	live := b.request("GET", "/media/index.json", nil, 200)
+	b.request("GET", "/api/catalog", nil, 200)
+	before := b.state.Catalog
+	for _, test := range []struct {
+		ids    []string
+		status int
+	}{
+		{[]string{}, 400},
+		{[]string{first, first}, 400},
+		{[]string{first, "missing"}, 404},
+		{[]string{first, archived}, 409},
+	} {
+		b.request("POST", "/api/photostream", map[string]any{"photoIds": test.ids}, test.status)
+		b.request("GET", "/api/catalog", nil, 200)
+		if !reflect.DeepEqual(before, b.state.Catalog) {
+			t.Fatal("Rejected selection partially changed the catalog")
+		}
+	}
+	etag := b.state.ETag
+	b.state.ETag = "stale"
+	b.request("POST", "/api/photostream", map[string]any{"photoIds": []string{first, second}}, 409)
+	b.state.ETag = etag
+	b.async("POST", "/api/photostream", map[string]any{"photoIds": []string{first, second}})
+	b.waitOperation("succeeded")
+	b.request("GET", "/api/catalog", nil, 200)
+	for i, photo := range b.state.Catalog.Photos {
+		want := before.Photos[i]
+		if want.ID == first || want.ID == second {
+			want.Published = true
+		}
+		if !reflect.DeepEqual(want, photo) {
+			t.Fatalf("Selection overwrote metadata or changed an unselected file: got %+v, want %+v", photo, want)
+		}
+	}
+	if b.state.Catalog.Revision != before.Revision+1 || !reflect.DeepEqual(before.Albums, b.state.Catalog.Albums) {
+		t.Fatal("Selection should save once without changing album membership or access")
+	}
+	if !bytes.Equal(live, b.request("GET", "/media/index.json", nil, 200)) {
+		t.Fatal("Saving the selection published it without confirmation")
+	}
+	b.publish("succeeded")
+	var published catalog
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &published)
+	if len(published.Photos) != 2 || published.Photos[0].ID != second || published.Photos[1].ID != first {
+		t.Fatalf("Publication did not contain exactly the selected files in newest-first order: %+v", published.Photos)
 	}
 }
 

@@ -85,7 +85,7 @@ function revealPreviews(container) {
 }
 
 async function api(path, { method = 'GET', body, headers = {} } = {}) {
-  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && (/^\/photos\/[^/]+\/(archive|restore)$/.test(path) || path === '/uploads/process'));
+  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && (/^\/photos\/[^/]+\/(archive|restore)$/.test(path) || path === '/uploads/process' || path === '/photostream'));
   const response = await fetch(`/api${path}`, {
     method, headers: { ...(method === 'GET' ? {} : { 'If-Match': state.etag }), ...(backgroundChange ? { Prefer: 'respond-async' } : {}), ...(body && !(body instanceof File) ? { 'Content-Type': 'application/json' } : {}), ...headers },
     body: body instanceof File ? body : body ? JSON.stringify(body) : undefined,
@@ -210,6 +210,7 @@ function render() {
 }
 
 function renderPhotos() {
+  const candidates = [...state.catalog.photos].reverse().filter(photo => !photo.archived && !photo.archiving && !photo.deleting && !photoPublic(photo));
   const photos = [...state.catalog.photos].reverse().filter(photo => {
     if (photo.archived) return false;
     if (filter === 'draft' && photoReady(photo)) return false;
@@ -217,7 +218,7 @@ function renderPhotos() {
     if (filter === 'standalone' && albumIds(photo.id).length) return false;
     return `${photo.filename} ${photo.alt} ${photo.caption} ${photo.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase());
   });
-  $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos & videos</h1></div><button class="primary" data-upload>＋ Upload files</button></div>
+  $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos & videos</h1></div><div class="library-actions"><button id="choose-photostream" ${candidates.length ? '' : 'disabled data-boundary'}>＋ Add to photostream</button><button class="primary" data-upload>＋ Upload files</button></div></div>
     <div class="toolbar"><label class="search"><span class="hint">Search your library</span><input id="search" type="search" placeholder="Names, captions, tags…" value="${escape(search)}"></label><label><span class="hint">Show</span><select id="filter"><option value="all">All photos & videos</option><option value="draft">Drafts</option><option value="ready">Ready to publish</option><option value="standalone">Not in an album</option></select></label></div>
     ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="${photo.deleting ? 'Retry deletion of' : 'Edit'} ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : thumbnail(photo)}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${photo.deleting ? '<span class="badge draft">Deletion incomplete</span>' : badge(photoReady(photo))}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : photo.kind === 'video' ? 'Standalone video' : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><h2>${state.catalog.photos.length ? 'No matching photos or videos.' : 'No photos or videos yet.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop JPEGs, PNGs, MP4s or MOVs here, or choose files. Photos: up to 30 MiB; videos: up to 512 MiB. Every file starts as a private draft.'}</p><button data-upload>Choose files →</button></div>`}`;
   revealPreviews($('#main'));
@@ -227,6 +228,28 @@ function renderPhotos() {
     search = event.target.value;
     const caret = event.target.selectionStart;
     renderPhotos(); refreshButtons(); $('#search').focus(); $('#search').setSelectionRange(caret, caret);
+  };
+  $('#choose-photostream').onclick = () => {
+    openDialog(`<form id="photostream-form" class="simple-dialog photostream-chooser"><h2 id="dialog-title">Add to the public photostream</h2><p>Select multiple photos or videos to publish independently of albums. Items already ready for the public photostream are omitted.</p><p class="hint access-warning">This makes selected files public, including files in private share-link or password-protected albums. Saving stages the change; Publish changes makes it live.</p><div class="grid">${candidates.map(photo => `<label class="choice">${thumbnail(photo)}<input type="checkbox" name="photo" value="${photo.id}"><span>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</span>${state.catalog.albums.some(album => privateAlbum(album) && album.photoIds.includes(photo.id)) ? '<small class="hint access-warning">Private album · becomes public</small>' : ''}</label>`).join('')}</div><div class="editor-footer"><span class="hint" id="photostream-selection-count" role="status"></span><button class="primary" id="add-selected-photos">Add selected files</button></div></form>`);
+    const form = $('#photostream-form');
+    const updateSelection = () => {
+      const count = new FormData(form).getAll('photo').length;
+      $('#photostream-selection-count').textContent = `${count} file${count === 1 ? '' : 's'} selected. Publish separately when ready.`;
+      $('#add-selected-photos').textContent = count ? `Add ${count} file${count === 1 ? '' : 's'}` : 'Add selected files';
+      $('#add-selected-photos').toggleAttribute('data-boundary', !count);
+      refreshButtons();
+    };
+    form.onchange = updateSelection;
+    form.onsubmit = event => {
+      event.preventDefault();
+      const photoIds = new FormData(form).getAll('photo');
+      if (!photoIds.length) return;
+      work(async () => {
+        Object.assign(state, await api('/photostream', { method: 'POST', body: { photoIds } }));
+        dirty = false; editor.close(); render(); status('Selection saved for the public photostream. Publish changes when ready.');
+      });
+    };
+    updateSelection();
   };
 }
 
@@ -271,8 +294,8 @@ function renderAlbum(id) {
     ${shareURL ? `<div class="album-share"><label>Saved ${accessLabel(album).toLowerCase()} URL<input id="album-share-link" value="${escape(shareURL)}" readonly></label><button type="button" id="copy-album-link">Copy link</button><span id="copy-link-status" class="hint" role="status"></span></div>` : ''}
     ${album.access === 'link' && album.linkToken ? '<button type="button" id="regenerate-album-link">Regenerate link</button>' : ''}
     <p id="album-share-warning" class="hint access-warning" role="status"></p></div>
-    <div class="section-heading"><h2>Photos & videos <span class="muted">${album.photoIds.length}</span></h2><button type="button" id="choose-photos">＋ Choose files</button></div>
-    <p class="hint">Order is top to bottom. − removes album membership only. Archived photos retain their place here but never appear in public manifests. Delete permanently removes files.</p><ol class="ordered-list" id="ordered-list"></ol>
+    <div class="section-heading album-files-heading"><h2>Photos & videos <span class="muted">${album.photoIds.length}</span></h2><div class="album-file-actions"><div class="album-date-sort" role="group" aria-label="Sort by capture date"><button type="button" data-sort-date="1" aria-describedby="album-order-help">Oldest first</button><button type="button" data-sort-date="-1" aria-describedby="album-order-help">Newest first</button></div><button type="button" id="choose-photos">＋ Choose files</button></div></div>
+    <p class="hint" id="album-order-help">Order is top to bottom. Date sorting uses capture dates; undated files go last. − removes album membership only. Archived photos retain their place here but never appear in public manifests. Delete permanently removes files.</p><ol class="ordered-list" id="ordered-list"></ol>
     <div class="editor-footer"><button type="button" class="danger" id="delete-album">Remove album</button><button class="primary" type="submit">Save album</button></div></form>`;
   let order = [...album.photoIds], cover = album.coverId, regenerateLink = false;
   $('#album-form select[name=access]').value = album.access || 'public';
@@ -296,7 +319,8 @@ function renderAlbum(id) {
     $('#ordered-list').innerHTML = order.map((id, i) => {
       const photo = photoById(id);
       const visibility = photoPublic(photo, albums) ? privateAlbum(selected) ? 'Also public' : 'Public' : [...new Set(albums.filter(item => item.published && item.photoIds.includes(id)).map(accessLabel))].join(' · ');
-      return `<li>${photo.deleting ? '' : thumbnail(photo)}<div class="order-title"><p>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move item ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move item ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove item ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
+      const detailsLabel = `${photo.archived ? 'View' : 'Edit'} details`;
+      return `<li>${photo.deleting ? '' : `<button type="button" class="album-photo-preview" data-photo="${id}" aria-label="${detailsLabel} for ${escape(photo.caption || photo.filename)}">${thumbnail(photo)}</button>`}<div class="order-title"><p>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</p><small>${escape(photo.capturedDate || 'No capture date')} · ${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small>${photo.deleting ? '' : `<button type="button" class="album-edit-details" data-photo="${id}" aria-label="${detailsLabel} for ${escape(photo.caption || photo.filename)}">${detailsLabel}</button>`}</div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move item ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move item ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove item ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
     }).join('') || '<p class="muted">No photos or videos selected yet.</p>';
     revealPreviews($('#ordered-list'));
     $('#ordered-list').onclick = event => {
@@ -305,9 +329,24 @@ function renderAlbum(id) {
       if (remove) { order = order.filter(id => id !== remove.dataset.remove); if (!order.includes(cover)) cover = ''; dirty = true; renderOrder(); }
     };
     $('#ordered-list').onchange = event => { cover = event.target.value; dirty = true; };
+    document.querySelectorAll('[data-sort-date]').forEach(button => button.toggleAttribute('data-boundary', order.length < 2));
     refreshButtons();
   }
   renderOrder();
+  document.querySelectorAll('[data-sort-date]').forEach(button => {
+    button.onclick = () => {
+      const dates = new Map(state.catalog.photos.map(photo => [photo.id, photo.capturedDate]));
+      if (!cover) cover = order[0] || '';
+      order.sort((a, b) => {
+        const left = dates.get(a), right = dates.get(b);
+        if (!left) return right ? 1 : 0;
+        if (!right) return -1;
+        return Number(button.dataset.sortDate) * left.localeCompare(right);
+      });
+      dirty = true; renderOrder();
+      status(`Album sorted by capture date, ${button.dataset.sortDate === '1' ? 'oldest' : 'newest'} first. Save album, then Publish changes to update the website.`);
+    };
+  });
   if ($('#regenerate-album-link')) $('#regenerate-album-link').onclick = () => {
     regenerateLink = true; dirty = true;
     if ($('#copy-link-status')) $('#copy-link-status').textContent = '';
@@ -366,13 +405,19 @@ function openDialog(html, trackEdits = true) {
   refreshButtons();
 }
 function closeEditor() {
-  if (busy || (!location.hash.startsWith('#album/') && dirty && !confirm('Discard unsaved edits?'))) return;
+  const albumChooser = location.hash.startsWith('#album/') && !$('#photo-form');
+  if (busy || (!albumChooser && dirty && !confirm('Discard unsaved edits?'))) return;
   // An album's unsaved edits remain in its page when dismissing the chooser.
-  if (!location.hash.startsWith('#album/')) dirty = false;
+  if (!albumChooser) dirty = false;
   editor.close();
 }
 
 function editPhoto(id) {
+  if (location.hash.startsWith('#album/') && dirty) {
+    showError(new Error('Save album before editing photo details so your unsaved album changes are kept.'));
+    $('#error').scrollIntoView({ block: 'nearest' });
+    return;
+  }
   const photo = photoById(id);
   const noun = photo.kind === 'video' ? 'video' : 'photo';
   if (photo.deleting) { confirmDeletePhoto(id); return; }
@@ -382,6 +427,7 @@ function editPhoto(id) {
   }
   openDialog(`<div class="photo-editor"><div class="editor-image">${preview(photo)}</div><form id="photo-form" class="editor-fields"><h2 id="dialog-title">${photo.kind === 'video' ? 'Video' : 'Photo'} details</h2><p class="muted">${escape(photo.filename)} · ${photo.width} × ${photo.height}${photo.kind === 'video' ? ` · ${duration(photo.duration)}` : ''}</p>
     <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Optional. Describe what’s in the ${noun}.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
+    <label>Location · optional<input name="location" value="${escape(photo.location)}" maxlength="300" placeholder="New York, NY"><small>Only a location you enter is shared with this ${noun}'s viewers. GPS is never extracted.</small></label>
     <fieldset><legend>Albums · optional</legend>${state.catalog.albums.map(album => `<label class="check"><input type="checkbox" name="album" value="${album.id}" ${album.photoIds.includes(id) ? 'checked' : ''}>${escape(album.title)} · ${accessLabel(album)}</label>`).join('') || '<span class="hint">No albums yet.</span>'}</fieldset>
     <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Publish publicly, independently of albums</label><p class="hint">Photos and videos in published albums are automatically ready. Public albums or independent publication make this ${noun} public even if it also belongs to private share-link or password-protected albums. To make it a draft, remove it from every published album and uncheck this setting. Previously public media URLs and old releases remain accessible.</p>
     <dl class="exif">${Object.entries(photo.exif || {}).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web media.</p><button type="button" data-archive-photo="${id}" data-action="archive">Archive ${noun}</button><p class="hint">Keep files; remove this ${noun} from all public manifests, including historical releases. Cached copies and direct media URLs may remain accessible.</p><div class="editor-footer"><button type="button" class="danger" data-delete-photo="${id}">Delete ${noun}</button><button class="primary" type="submit">Save ${noun}</button></div></form></div>`);
@@ -389,7 +435,7 @@ function editPhoto(id) {
     event.preventDefault();
     const form = new FormData(event.target);
     work(async () => {
-      Object.assign(state, await api(`/photos/${id}`, { method: 'PATCH', body: { alt: form.get('alt'), caption: form.get('caption'), tags: form.get('tags').split(',').map(tag => tag.trim()).filter(Boolean), capturedDate: form.get('capturedDate'), published: form.has('published'), albumIds: form.getAll('album') } }));
+      Object.assign(state, await api(`/photos/${id}`, { method: 'PATCH', body: { alt: form.get('alt'), caption: form.get('caption'), tags: form.get('tags').split(',').map(tag => tag.trim()).filter(Boolean), capturedDate: form.get('capturedDate'), location: form.get('location'), published: form.has('published'), albumIds: form.getAll('album') } }));
       dirty = false; editor.close(); render(); status('Photo saved. Publish changes when you’re ready.');
     });
   };

@@ -48,10 +48,30 @@ processing needs temporary disk space.
   publication. Remove a photo from every published album and clear its
   independent setting to return it to draft. A photo can appear in multiple
   albums without duplication in the photostream.
+- Use **Add to photostream** in the library to select multiple photos or videos
+  at once. Already-public items are omitted; archived or deleting items cannot
+  be selected. The selection enables independent public publication without
+  changing captions, tags or album membership. Private-album items are explicitly
+  labelled because this also makes them public. Save the selection, then use
+  **Publish changes** to apply it to the website.
 - Albums have titles, URL slugs, descriptions, covers and explicit photo order.
-  Use the arrow buttons to reorder photos; remove an album without deleting
-  its photos. The photostream orders all published photos by upload time,
-  newest first, independent of album membership or later edits.
+  Use **Oldest first** or **Newest first** to sort an album by capture date;
+  undated files stay last and same-date files keep their relative order. Sorting
+  preserves the cover and remains unsaved until **Save album**; **Publish changes**
+  applies the order to the website. Arrow buttons still allow manual ordering.
+  Remove an album without deleting its photos. The photostream orders all
+  published photos by upload time, newest first, independent of album membership
+  or later edits.
+- In an album, click a thumbnail or **Edit details** to edit a photo's alt text,
+  caption, tags, capture date, optional location and publication settings without
+  leaving the album.
+  Save unsaved album edits first. Saving photo details returns to the album;
+  **Publish changes** remains separate. Archived files offer **View details**.
+- Location is optional, manually entered text (up to 300 UTF-8 bytes), never
+  extracted from GPS. It is shown to the photo's authorized viewers only after
+  publication; clear it and publish again to remove it from current manifests.
+  The gallery's date button expands into camera details and optional location;
+  image dimensions are not displayed there.
 - Albums can be public, accessible with a private share link, or password protected.
   A photo can belong to multiple albums with different access modes;
   independent public publication or any published public album keeps it public.
@@ -132,7 +152,7 @@ Public bucket:
 - `index.json`: the currently published snapshot, containing `version`,
   `revision`, `publishedAt`, `photos` and `albums`. Photos contain `id`, `alt`,
   `caption`, `tags`, `capturedDate`, `uploadedAt`, dimensions, allowlisted `exif`,
-  `thumbnail`, `src` and optional `blurhash`. Albums reference the same IDs through
+  `thumbnail`, `src`, optional `location` and optional `blurhash`. Albums reference the same IDs through
   ordered `photoIds` and `coverId`. Standalone photos are in `photos` too.
   Videos also contain `kind: "video"` and duration in seconds; their `src` is
   the MP4 and `thumbnail` is the poster. Missing `kind` still means image.

@@ -198,6 +198,7 @@ test('catalog is curated, whitelisted and album scoped, including shared public 
   const f = fixture();
   const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
   f.release.photos[0].blurhash = blurhash;
+  f.release.photos[0].location = 'New York, NY';
   f.release.photos[2].blurhash = { private: 'not visitor metadata' };
   f.save();
   const a = await (await status(await f.call('catalog', { headers: { Cookie: signedCookie() } }), 200)).json();
@@ -208,10 +209,13 @@ test('catalog is curated, whitelisted and album scoped, including shared public 
   assert.deepEqual(Object.keys(a.photos[0]).sort(), ['alt', 'caption', 'capturedDate', 'exif', 'height', 'id', 'src', 'tags', 'thumbnail', 'uploadedAt', 'width']);
   assert.equal(a.photos[1].thumbnail, `${base(A)}media/${P}/640.jpg`);
   assert.equal(a.photos[1].blurhash, blurhash);
+  assert.equal(a.photos[1].location, 'New York, NY');
   const b = await (await status(await f.call('catalog', { headers: { Cookie: signedCookie(B) } }, B), 200)).json();
   assert.deepEqual(b.photos.map(photo => photo.id), [P, R]);
   assert.equal(b.photos[0].src, `${base(B)}media/${P}/2560.jpg`);
   assert.equal(b.photos[0].blurhash, blurhash);
+  assert.equal(b.photos[0].location, 'New York, NY');
+  assert.equal(b.photos[1].location, undefined);
   assert.equal(b.photos[1].blurhash, undefined);
   assert.doesNotMatch(JSON.stringify(a), /passwordHash|accessVersion|must-not-return|wrong\.example/);
   for (const id of [A, B]) {
@@ -390,6 +394,7 @@ test('link requires session secret, valid storage and metadata; unlisted/unknown
     f => { f.release.albums[0].photoIds.push(Q); f.save(); },
     f => { f.release.albums[0].coverId = R; f.save(); },
     f => { f.release.photos = []; f.save(); },
+    f => { f.release.photos[0].location = { latitude: 1 }; f.save(); },
   ];
   for (const mutate of mutations) {
     const f = linkFixture(); mutate(f);

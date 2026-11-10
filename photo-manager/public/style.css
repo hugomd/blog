@@ -46,6 +46,16 @@
   #editor input,#editor textarea,#editor select{font-size:16px}
   #editor h2,#delete-confirmation h2,#editor p,#delete-confirmation p{overflow-wrap:anywhere}
 }
+.library-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.album-files-heading{flex-wrap:wrap;gap:12px}
+.album-file-actions,.album-date-sort{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.album-file-actions button{min-height:44px}
+.album-photo-preview{padding:0;border:0;background:none;flex-shrink:0}
+.album-edit-details{display:block;margin-top:4px;padding:0;border:0;border-radius:0;background:none;color:#d6cdb3;font-size:11px;min-height:24px;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:700px){.album-edit-details{min-height:44px}}
+.photostream-chooser .choice img{height:100%}
+.photostream-chooser .choice:has(input:checked) .media-image{outline:2px solid #d6cdb3;outline-offset:2px}
+@media(max-width:700px){.page-heading:has(.library-actions){flex-wrap:wrap}.page-heading:has(.library-actions)>div:first-child{flex-basis:100%}.library-actions{justify-content:flex-start}}
 .publication-changes{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;font-variant-numeric:tabular-nums}
 .publication-changes th,.publication-changes td{padding:10px 8px;border-bottom:1px solid #292929;text-align:right}
 .publication-changes th{font-weight:500;color:#aaa}

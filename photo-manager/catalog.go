@@ -19,6 +19,7 @@ type photo struct {
 	Filename     string            `json:"filename,omitempty"`
 	Alt          string            `json:"alt"`
 	Caption      string            `json:"caption"`
+	Location     string            `json:"location,omitempty"`
 	Tags         []string          `json:"tags"`
 	Published    bool              `json:"published"`
 	Archived     bool              `json:"archived,omitempty"`

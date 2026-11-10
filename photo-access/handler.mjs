@@ -178,6 +178,10 @@ function catalog(album, release) {
       if (typeof source[key] !== 'string') fail(503);
       result[key] = source[key];
     }
+    if (source.location !== undefined) {
+      if (typeof source.location !== 'string') fail(503);
+      result.location = source.location;
+    }
     if (source.tags !== null && (!Array.isArray(source.tags) || !source.tags.every(tag => typeof tag === 'string'))) fail(503);
     result.tags = source.tags || [];
     for (const key of ['width', 'height']) {

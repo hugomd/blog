@@ -47,13 +47,23 @@
       <button class="control icon-control" id="close" aria-label="Close viewer" title="Close viewer"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/times.svg").Content | safeHTML }}</span></button>
       <div class="tools">
         <span id="count" class="meta" aria-live="polite"></span>
-        <button class="control icon-control" id="details" aria-label="Media information" title="Media information" aria-pressed="false" aria-controls="info"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/info-circle.svg").Content | safeHTML }}</span></button>
+        <button class="control icon-control" id="zoom-toggle" aria-label="Zoom in 20%" title="Zoom in 20%" aria-pressed="false" aria-controls="zoom"><span class="zoom-in-icon" aria-hidden="true">{{ (resources.Get "icons/fontawesome/search-plus.svg").Content | safeHTML }}</span><span class="zoom-out-icon" aria-hidden="true" hidden>{{ (resources.Get "icons/fontawesome/search-minus.svg").Content | safeHTML }}</span></button>
         <button class="control icon-control" id="previous" aria-label="Previous item" title="Previous item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-left.svg").Content | safeHTML }}</span></button>
         <button class="control icon-control" id="next" aria-label="Next item" title="Next item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-right.svg").Content | safeHTML }}</span></button>
       </div>
     </div>
+    <div class="photo-info">
+      <button class="date-toggle" id="details" aria-label="Photo information" aria-expanded="false" aria-controls="info"><span id="photo-date">Photo info</span><span class="date-chevron" aria-hidden="true">{{ (resources.Get "icons/fontawesome/chevron-down.svg").Content | safeHTML }}</span></button>
+      <aside id="info" class="info" aria-label="Media information" hidden>
+        <dl class="camera-info">
+          <div id="info-camera"><dt aria-label="Camera">{{ (resources.Get "icons/fontawesome/camera.svg").Content | safeHTML }}</dt><dd id="camera-value"></dd></div>
+          <div id="info-lens"><dt aria-label="Lens">{{ (resources.Get "icons/fontawesome/dot-circle.svg").Content | safeHTML }}</dt><dd id="lens-value"></dd></div>
+        </dl>
+        <dl id="info-fields" class="info-fields"></dl>
+        <div id="info-tags" class="tags" aria-label="Tags"></div>
+      </aside>
+    </div>
     <img id="zoom" class="zoom" alt="">
-    <aside id="info" class="info" aria-label="Media information" hidden></aside>
     <p id="media-error" class="media-error" role="alert" hidden>This video couldn’t be played. Try reopening it or check your connection.</p>
     <p id="caption" class="caption"></p>
   </dialog>

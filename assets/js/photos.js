@@ -1,12 +1,15 @@
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const state = { catalog: null, photos: [], index: 0, info: false, busy: false };
+const state = { catalog: null, photos: [], index: 0, info: false, infoProgress: 0, busy: false, zoomed: false };
 const stream = $('#stream'), viewer = $('#viewer'), info = $('#info');
 const privatePath = location.pathname.match(/^\/photos\/private\/[a-f0-9]{32}\//)?.[0];
 const linkAccess = document.body.dataset.privateAccess === 'link';
 let zoom = $('#zoom');
 let swipe;
+let pan;
+let offset = { x: 0, y: 0 };
 let loadRequest;
+let infoFrame;
 const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
 // A valid transparent image leaves the BlurHash background visible without alt-text flashes.
 const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -77,10 +80,16 @@ function releaseMedia() {
 
 function clearPrivate() {
   loadRequest?.abort(); loadRequest = null;
+  cancelAnimationFrame(infoFrame); state.infoProgress = 0;
   cancelSwipe();
+  setZoom(false);
   releaseMedia();
   viewer.close(); zoom.getAnimations().forEach(animation => animation.cancel());
-  zoom.removeAttribute('src'); zoom.alt = ''; info.innerHTML = ''; $('#caption').textContent = ''; $('#count').textContent = '';
+  zoom.removeAttribute('src'); zoom.alt = ''; $('#caption').textContent = ''; $('#count').textContent = '';
+  for (const id of ['camera-value', 'lens-value', 'info-fields', 'info-tags']) $(`#${id}`).textContent = '';
+  info.hidden = true; $('#photo-date').textContent = 'Photo info';
+  $('#details').setAttribute('aria-expanded', 'false'); $('#details').removeAttribute('title');
+  $('#details').setAttribute('aria-label', 'Photo information');
   zoom.style.backgroundImage = '';
   document.body.style.overflow = '';
   state.catalog = null; state.photos = []; state.busy = false; state.info = false;
@@ -228,24 +237,80 @@ function layoutPhotos() {
 }
 function message(text) { $('#status').textContent = text; $('#status').hidden = false; }
 
-function formatDate(value) {
+function renderInfo(animate = false) {
+  cancelAnimationFrame(infoFrame);
+  const surface = $('.photo-info'), button = $('#details');
+  button.setAttribute('aria-expanded', state.info);
+  info.inert = !state.info;
+  info.setAttribute('aria-hidden', !state.info);
+  info.hidden = false;
+  const width = surface.offsetWidth, height = 44 + info.offsetHeight;
+  surface.style.height = `${height}px`;
+  const start = state.infoProgress, end = state.info ? 1 : 0;
+  const milliseconds = animate && duration() ? 200 * Math.abs(end - start) : 0;
+  const started = performance.now();
+  function draw(now) {
+    const elapsed = milliseconds ? Math.min(1, (now - started) / milliseconds) : 1;
+    const progress = start + (end - start) * elapsed;
+    state.infoProgress = progress;
+    const eased = 1 - (1 - progress) ** 3;
+    const x = (160 + (width - 160) * eased) / width;
+    const y = (44 + (height - 44) * eased) / height;
+    const radius = 22 + 2 * eased;
+    surface.style.transform = `translateX(-50%) scale(${x},${y})`;
+    surface.style.borderRadius = `${radius / x}px / ${radius / y}px`;
+    // Grow one glass surface without stretching or moving the date or metadata.
+    button.style.transform = `translateY(${22 / y - 22}px) scale(${1 / x},${1 / y})`;
+    info.style.transform = `translateY(${44 / y - 44}px) scale(${1 / x},${1 / y})`;
+    info.style.opacity = Math.max(0, (progress - .35) / .65);
+    $('.date-chevron').style.transform = `rotate(${180 * eased}deg)`;
+    info.hidden = progress === 0;
+    if (elapsed < 1) infoFrame = requestAnimationFrame(draw);
+  }
+  draw(started);
+}
+
+function formatDate(value, compact = false) {
   if (!value) return '';
   const date = new Date(`${value}T00:00:00Z`), day = date.getUTCDate();
   const suffix = day % 100 >= 11 && day % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th';
-  return `${date.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })} ${day}${suffix}, ${date.getUTCFullYear()}`;
+  return `${date.toLocaleString('en-US', { month: compact ? 'short' : 'long', timeZone: 'UTC' })} ${day}${suffix}${compact ? '' : `, ${date.getUTCFullYear()}`}`;
 }
 
 function target(p = state.photos[state.index]) {
-  const narrow = innerWidth <= 540;
-  const area = { x: narrow ? 12 : 64, y: 84, w: innerWidth - (narrow ? 24 : 128) - (state.info && !narrow ? 300 : 0), h: innerHeight - 160 - (state.info && narrow ? innerHeight * .38 : 0) };
-  const scale = Math.min(area.w / p.width, area.h / p.height);
+  const scale = Math.min(innerWidth / p.width, innerHeight / p.height);
   const width = p.width * scale, height = p.height * scale;
-  return { left: area.x + (area.w - width) / 2, top: area.y + (area.h - height) / 2, width, height };
+  return { left: (innerWidth - width) / 2, top: (innerHeight - height) / 2, width, height };
 }
 function place() {
   const rect = target();
   for (const [key, value] of Object.entries(rect)) zoom.style[key] = `${value}px`;
+  if (state.zoomed) {
+    offset.x = Math.max(-rect.width * .1, Math.min(rect.width * .1, offset.x));
+    offset.y = Math.max(-rect.height * .1, Math.min(rect.height * .1, offset.y));
+    zoom.style.transform = `translate(${offset.x}px,${offset.y}px) scale(1.2)`;
+  }
   return rect;
+}
+function cancelPan() {
+  const gesture = pan;
+  pan = null;
+  viewer.classList.remove('panning');
+  if (gesture && viewer.hasPointerCapture(gesture.id)) viewer.releasePointerCapture(gesture.id);
+}
+function setZoom(value) {
+  cancelSwipe(); cancelPan();
+  state.zoomed = value;
+  offset = { x: 0, y: 0 };
+  zoom.style.transform = '';
+  viewer.classList.toggle('zoomed', value);
+  const button = $('#zoom-toggle');
+  button.setAttribute('aria-pressed', value);
+  button.setAttribute('aria-label', value ? 'Zoom out' : 'Zoom in 20%');
+  button.title = value ? 'Zoom out' : 'Zoom in 20%';
+  button.querySelector('.zoom-in-icon').hidden = value;
+  button.querySelector('.zoom-out-icon').hidden = !value;
+  if (viewer.open && state.photos.length) place();
 }
 function animatePhoto(thumbnail, full, closing = false) {
   const transform = `translate(${thumbnail.left + thumbnail.width / 2 - full.left - full.width / 2}px,${thumbnail.top + thumbnail.height / 2 - full.top - full.height / 2}px) scale(${thumbnail.width / full.width},${thumbnail.height / full.height})`;
@@ -294,13 +359,14 @@ function renderViewer(changePhoto = false) {
       });
       display.src = p.src;
     } else {
-      display.alt = p.alt; display.src = emptyImage;
+      display.alt = p.alt; display.src = emptyImage; display.draggable = false;
       const thumbnail = new Image(); thumbnail.src = p.thumbnail;
       thumbnail.decode().then(() => {
         if (zoom === display && viewer.open && display.src === emptyImage) display.src = thumbnail.src;
       }).catch(() => {});
     }
     zoom.replaceWith(display); zoom = display;
+    setZoom(false);
     if (!isVideo(p)) {
       const full = new Image(); full.src = p.src;
       full.decode().then(() => { if (zoom === display && viewer.open) display.src = full.src; }).catch(() => {});
@@ -308,17 +374,26 @@ function renderViewer(changePhoto = false) {
   }
   $('#count').textContent = `${state.index + 1} / ${state.photos.length}`;
   const date = formatDate(p.capturedDate);
-  $('#caption').innerHTML = [escape(p.caption), date ? `<em><time datetime="${escape(p.capturedDate)}">${date}</time></em>` : ''].filter(Boolean).join(' · ');
-  $('#details').setAttribute('aria-pressed', state.info);
-  info.hidden = !state.info;
-  const fields = { ...p.exif, ...(date ? { 'Capture date': date } : {}), Dimensions: `${p.width} × ${p.height}`, ...(isVideo(p) ? { Duration: videoDuration(p.duration) } : {}) };
-  info.innerHTML = `<dl>${Object.entries(fields).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${key === 'Capture date' ? `<em>${escape(value)}</em>` : escape(value)}</dd></div>`).join('')}</dl>${p.tags?.length ? `<div class="tags" aria-label="Tags">${p.tags.map(tag => `<span class="tag">${escape(tag)}</span>`).join('')}</div>` : ''}`;
+  $('#caption').textContent = p.caption || '';
+  $('#photo-date').innerHTML = date ? `<time datetime="${escape(p.capturedDate)}">${escape(formatDate(p.capturedDate, true))}</time>` : 'Photo info';
+  $('#details').setAttribute('aria-label', date ? `Photo information for ${date}` : 'Photo information');
+  $('#details').title = date || 'Photo information';
+  $('#zoom-toggle').hidden = isVideo(p);
+  viewer.classList.toggle('playing-video', isVideo(p));
+  for (const [key, id] of [['Camera', 'camera'], ['Lens', 'lens']]) {
+    $(`#info-${id}`).hidden = !p.exif?.[key];
+    $(`#${id}-value`).textContent = p.exif?.[key] || '';
+  }
+  const fields = { ...(date ? { Captured: date } : {}), ...p.exif, ...(p.location ? { Location: p.location } : {}), ...(isVideo(p) ? { Duration: videoDuration(p.duration) } : {}) };
+  $('#info-fields').innerHTML = Object.entries(fields).filter(([key, value]) => value && !['Camera', 'Lens', 'Dimensions'].includes(key)).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('');
+  $('#info-tags').innerHTML = (p.tags || []).map(tag => `<span class="tag">${escape(tag)}</span>`).join('');
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
+  renderInfo(!changePhoto);
   place();
 }
 async function open(index) {
   if (state.busy) return;
-  state.busy = true; state.index = index;
+  state.busy = true; state.index = index; state.info = false;
   const thumb = stream.children[index].querySelector('img'), from = thumb.getBoundingClientRect();
   viewer.showModal(); viewer.focus({ preventScroll: true });
   document.body.style.overflow = 'hidden'; renderViewer(true);
@@ -329,6 +404,8 @@ async function open(index) {
 async function close(event) {
   if (state.busy || !viewer.open) return;
   cancelSwipe();
+  setZoom(false);
+  state.info = false; renderInfo();
   state.busy = true;
   if (zoom instanceof HTMLVideoElement) zoom.pause();
   const button = stream.children[state.index], thumb = button.querySelector('img');
@@ -362,6 +439,7 @@ stream.addEventListener('click', event => {
 $('#close').onclick = close;
 $('#previous').onclick = () => step(-1);
 $('#next').onclick = () => step(1);
+$('#zoom-toggle').onclick = () => { if (!state.busy) setZoom(!state.zoomed); };
 $('#details').onclick = () => { if (!state.busy) { state.info = !state.info; renderViewer(); } };
 $('#retry').onclick = load;
 $('#album-login').onsubmit = async event => {
@@ -384,6 +462,9 @@ $('#album-login').onsubmit = async event => {
 $('.skip').onclick = event => { event.preventDefault(); $('#main').focus(); };
 viewer.addEventListener('cancel', event => { event.preventDefault(); close(); });
 viewer.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && state.info && !state.busy) {
+    event.preventDefault(); state.info = false; renderViewer(); $('#details').focus(); return;
+  }
   if (event.target instanceof HTMLVideoElement) return;
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); step(event.key === 'ArrowLeft' ? -1 : 1); }
 });
@@ -434,7 +515,7 @@ async function settleSwipe(commit) {
 }
 viewer.addEventListener('touchstart', event => {
   if (event.touches.length !== 1) { cancelSwipe(); return; }
-  if (state.busy || !viewer.open || innerWidth > 700 || state.photos.length < 2 || (visualViewport?.scale || 1) > 1
+  if (state.busy || state.zoomed || !viewer.open || innerWidth > 700 || state.photos.length < 2 || (visualViewport?.scale || 1) > 1
       || !(event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement)))) return;
   const touch = event.touches[0];
   swipe = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, lastX: touch.clientX, time: event.timeStamp, velocity: 0 };
@@ -464,8 +545,26 @@ viewer.addEventListener('touchend', event => {
   settleSwipe(Math.abs(swipe.dx) >= Math.min(100, innerWidth * .2) || (Math.abs(swipe.dx) >= 20 && flick));
 }, { passive: false });
 viewer.addEventListener('touchcancel', () => { settleSwipe(false); });
-viewer.addEventListener('click', event => { if (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement))) close(event); });
-addEventListener('resize', () => { cancelSwipe(); layoutPhotos(); if (viewer.open) place(); });
+viewer.addEventListener('pointerdown', event => {
+  if (!state.zoomed || state.busy || event.target !== zoom || event.button !== 0) return;
+  if (!event.isPrimary) { cancelPan(); return; }
+  event.preventDefault();
+  pan = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: offset.x, startY: offset.y };
+  viewer.setPointerCapture(event.pointerId);
+  viewer.classList.add('panning');
+});
+viewer.addEventListener('pointermove', event => {
+  if (!pan || pan.id !== event.pointerId) return;
+  offset = { x: pan.startX + event.clientX - pan.x, y: pan.startY + event.clientY - pan.y };
+  place();
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  viewer.addEventListener(type, event => { if (pan?.id === event.pointerId) cancelPan(); });
+}
+viewer.addEventListener('click', event => {
+  if (!state.zoomed && (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement)))) close(event);
+});
+addEventListener('resize', () => { cancelSwipe(); cancelPan(); layoutPhotos(); if (viewer.open) { place(); renderInfo(); } });
 addEventListener('hashchange', async () => {
   if (privatePath && new URLSearchParams(location.hash.slice(1)).has('key')) { await openShareLink(); return; }
   cancelSwipe();

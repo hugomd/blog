@@ -428,6 +428,7 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
 		Alt          string   `json:"alt"`
 		Caption      string   `json:"caption"`
+		Location     *string  `json:"location"`
 		Tags         []string `json:"tags"`
 		CapturedDate string   `json:"capturedDate"`
 		Published    bool     `json:"published"`
@@ -440,6 +441,12 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 		input.Alt, input.Caption = strings.TrimSpace(input.Alt), strings.TrimSpace(input.Caption)
 		if len(input.Alt) > 1000 || len(input.Caption) > 4000 || len(input.Tags) > 30 {
 			return badRequest("Alt text, caption or tags are too long.")
+		}
+		if input.Location != nil {
+			*input.Location = strings.TrimSpace(*input.Location)
+			if len(*input.Location) > 300 {
+				return badRequest("Location must be at most 300 bytes.")
+			}
 		}
 		if input.CapturedDate != "" {
 			if _, err := time.Parse("2006-01-02", input.CapturedDate); err != nil {
@@ -476,6 +483,9 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 				return &requestError{409, "Restore this archived photo before editing it."}
 			}
 			p.Alt, p.Caption, p.Tags, p.Published, p.CapturedDate = input.Alt, input.Caption, tags, input.Published, input.CapturedDate
+			if input.Location != nil {
+				p.Location = *input.Location
+			}
 			c.Photos[i] = p
 			for i := range c.Albums {
 				item := &c.Albums[i]
@@ -499,6 +509,42 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 			return nil
 		}
 		return &requestError{404, "Photo not found."}
+	})
+}
+
+func (a *app) addToPhotostream(w http.ResponseWriter, r *http.Request) error {
+	var input struct {
+		PhotoIDs []string `json:"photoIds"`
+	}
+	if err := decodeRequest(w, r, &input); err != nil {
+		return err
+	}
+	return a.mutate(w, r, func(c *catalog) error {
+		if len(input.PhotoIDs) == 0 {
+			return badRequest("Select at least one photo or video.")
+		}
+		selected := make(map[string]bool, len(input.PhotoIDs))
+		for _, id := range input.PhotoIDs {
+			if selected[id] {
+				return badRequest("Select each photo or video only once.")
+			}
+			selected[id] = true
+		}
+		found := 0
+		for i, p := range c.Photos {
+			if !selected[p.ID] {
+				continue
+			}
+			if p.Archived || p.Archiving || p.Deleting {
+				return &requestError{409, "A selected item is archived or being removed. Reload and choose again."}
+			}
+			c.Photos[i].Published = true
+			found++
+		}
+		if found != len(selected) {
+			return &requestError{404, "A selected photo or video no longer exists. Reload and choose again."}
+		}
+		return nil
 	})
 }
 
@@ -761,6 +807,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/photos/{id}/image", a.handler(a.previewImage))
 	mux.HandleFunc("GET /api/photos/{id}/video", a.handler(a.previewVideo))
 	mux.HandleFunc("PATCH /api/photos/{id}", a.change(a.editPhoto))
+	mux.HandleFunc("POST /api/photostream", a.change(a.addToPhotostream))
 	mux.HandleFunc("DELETE /api/photos/{id}", a.change(a.deletePhoto))
 	mux.HandleFunc("POST /api/photos/{id}/{action}", a.change(func(w http.ResponseWriter, r *http.Request) error {
 		if action := r.PathValue("action"); action != "archive" && action != "restore" {
