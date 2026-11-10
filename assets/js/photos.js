@@ -5,7 +5,7 @@ const stream = $('#stream'), viewer = $('#viewer'), info = $('#info');
 const privatePath = location.pathname.match(/^\/photos\/private\/[a-f0-9]{32}\//)?.[0];
 const linkAccess = document.body.dataset.privateAccess === 'link';
 let zoom = $('#zoom');
-let swipeStart;
+let swipe;
 let loadRequest;
 const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
 
@@ -25,6 +25,7 @@ function releaseMedia() {
 
 function clearPrivate() {
   loadRequest?.abort(); loadRequest = null;
+  cancelSwipe();
   releaseMedia();
   viewer.close(); zoom.getAnimations().forEach(animation => animation.cancel());
   zoom.removeAttribute('src'); zoom.alt = ''; info.innerHTML = ''; $('#caption').textContent = ''; $('#count').textContent = '';
@@ -179,8 +180,8 @@ function formatDate(value) {
   return `${date.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })} ${day}${suffix}, ${date.getUTCFullYear()}`;
 }
 
-function target() {
-  const p = state.photos[state.index], narrow = innerWidth <= 540;
+function target(p = state.photos[state.index]) {
+  const narrow = innerWidth <= 540;
   const area = { x: narrow ? 12 : 64, y: 84, w: innerWidth - (narrow ? 24 : 128) - (state.info && !narrow ? 300 : 0), h: innerHeight - 160 - (state.info && narrow ? innerHeight * .38 : 0) };
   const scale = Math.min(area.w / p.width, area.h / p.height);
   const width = p.width * scale, height = p.height * scale;
@@ -201,6 +202,7 @@ function animatePhoto(thumbnail, full, closing = false) {
   });
 }
 function renderViewer(changePhoto = false) {
+  cancelSwipe();
   const p = state.photos[state.index];
   if (changePhoto) {
     releaseMedia();
@@ -264,6 +266,7 @@ async function open(index) {
 }
 async function close(event) {
   if (state.busy || !viewer.open) return;
+  cancelSwipe();
   state.busy = true;
   if (zoom instanceof HTMLVideoElement) zoom.pause();
   const button = stream.children[state.index], thumb = button.querySelector('img');
@@ -283,6 +286,7 @@ async function close(event) {
 }
 function step(delta) {
   if (state.busy) return;
+  cancelSwipe();
   stream.children[state.index].querySelector('img').style.visibility = '';
   state.index = (state.index + delta + state.photos.length) % state.photos.length;
   stream.children[state.index].scrollIntoView({ block: 'nearest', behavior: 'instant' });
@@ -321,23 +325,85 @@ viewer.addEventListener('keydown', event => {
   if (event.target instanceof HTMLVideoElement) return;
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); step(event.key === 'ArrowLeft' ? -1 : 1); }
 });
+
+function cancelSwipe() {
+  if (!swipe) return;
+  swipe.animations?.forEach(animation => animation.cancel());
+  if (swipe.animations) state.busy = false;
+  swipe.preview?.remove();
+  zoom.style.transform = '';
+  viewer.classList.remove('swiping');
+  swipe = null;
+}
+function dragSwipe(dx) {
+  const delta = dx < 0 ? 1 : -1;
+  if (swipe.delta !== delta) {
+    swipe.preview?.remove();
+    const p = state.photos[(state.index + delta + state.photos.length) % state.photos.length];
+    const preview = new Image();
+    preview.className = 'zoom swipe-preview'; preview.alt = ''; preview.setAttribute('aria-hidden', 'true');
+    preview.src = p.thumbnail;
+    for (const [key, value] of Object.entries(target(p))) preview.style[key] = `${value}px`;
+    viewer.append(preview); swipe.preview = preview; swipe.delta = delta;
+  }
+  swipe.dx = dx;
+  zoom.style.transform = `translateX(${dx}px)`;
+  swipe.preview.style.transform = `translateX(${dx + swipe.delta * innerWidth}px)`;
+}
+async function settleSwipe(commit) {
+  const gesture = swipe;
+  if (gesture?.animations) return;
+  if (!gesture?.active) { cancelSwipe(); return; }
+  state.busy = true;
+  const end = commit ? -gesture.delta * innerWidth : 0;
+  const options = { duration: duration() ? 240 : 0, easing: 'cubic-bezier(.22,.75,.2,1)', fill: 'forwards' };
+  gesture.animations = [
+    zoom.animate([{ transform: zoom.style.transform }, { transform: `translateX(${end}px)` }], options),
+    gesture.preview.animate([{ transform: gesture.preview.style.transform }, { transform: `translateX(${end + gesture.delta * innerWidth}px)` }], options),
+  ];
+  await Promise.allSettled(gesture.animations.map(animation => animation.finished));
+  // Resize, navigation or private-album revocation can cancel a settling swipe.
+  if (swipe !== gesture) return;
+  cancelSwipe();
+  if (commit) step(gesture.delta);
+}
 viewer.addEventListener('touchstart', event => {
-  swipeStart = innerWidth <= 700 && event.touches.length === 1 && (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement))) ? event.touches[0] : null;
+  if (event.touches.length !== 1) { cancelSwipe(); return; }
+  if (state.busy || !viewer.open || innerWidth > 700 || state.photos.length < 2 || (visualViewport?.scale || 1) > 1
+      || !(event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement)))) return;
+  const touch = event.touches[0];
+  swipe = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, lastX: touch.clientX, time: event.timeStamp, velocity: 0 };
 }, { passive: true });
-viewer.addEventListener('touchend', event => {
-  if (!swipeStart) return;
-  const dx = event.changedTouches[0].clientX - swipeStart.clientX, dy = event.changedTouches[0].clientY - swipeStart.clientY;
-  swipeStart = null;
-  if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
-  // Suppress the synthesized tap so swiping never also closes the viewer.
+viewer.addEventListener('touchmove', event => {
+  if (!swipe || swipe.animations) return;
+  const touch = Array.from(event.touches).find(touch => touch.identifier === swipe.id);
+  if (!touch || event.touches.length !== 1 || (visualViewport?.scale || 1) > 1) { cancelSwipe(); return; }
+  const dx = touch.clientX - swipe.x, dy = touch.clientY - swipe.y;
+  if (!swipe.active) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+    if (Math.abs(dx) <= Math.abs(dy) * 1.5) { cancelSwipe(); return; }
+    swipe.active = true; viewer.classList.add('swiping');
+  }
   event.preventDefault();
-  step(dx < 0 ? 1 : -1);
+  const elapsed = event.timeStamp - swipe.time;
+  if (elapsed > 0) swipe.velocity = (touch.clientX - swipe.lastX) / elapsed;
+  swipe.lastX = touch.clientX; swipe.time = event.timeStamp;
+  dragSwipe(dx);
 }, { passive: false });
-viewer.addEventListener('touchcancel', () => { swipeStart = null; });
+viewer.addEventListener('touchend', event => {
+  if (!swipe || swipe.animations) return;
+  if (!swipe.active) { cancelSwipe(); return; }
+  // Even a short horizontal drag snaps back without synthesizing a close tap.
+  event.preventDefault();
+  const flick = event.timeStamp - swipe.time < 100 && Math.abs(swipe.velocity) > .5 && swipe.velocity * swipe.dx > 0;
+  settleSwipe(Math.abs(swipe.dx) >= Math.min(100, innerWidth * .2) || (Math.abs(swipe.dx) >= 20 && flick));
+}, { passive: false });
+viewer.addEventListener('touchcancel', () => { settleSwipe(false); });
 viewer.addEventListener('click', event => { if (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement))) close(event); });
-addEventListener('resize', () => { layoutPhotos(); if (viewer.open) place(); });
+addEventListener('resize', () => { cancelSwipe(); layoutPhotos(); if (viewer.open) place(); });
 addEventListener('hashchange', async () => {
   if (privatePath && new URLSearchParams(location.hash.slice(1)).has('key')) { await openShareLink(); return; }
+  cancelSwipe();
   // Browser Back may arrive during the zoom. Keep its thumbnail in the DOM
   // until the transition and close have finished, then change collections.
   await Promise.allSettled(zoom.getAnimations().map(animation => animation.finished));

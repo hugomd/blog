@@ -9,6 +9,7 @@ main{padding:12px 0 calc(140px + env(safe-area-inset-bottom))}.intro{padding:30p
 .skeleton .photo{background:#171717;cursor:default}.skeleton .photo:nth-child(3n+1){--ratio:.75}.skeleton .photo::after{display:none}.status.loading{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .video-badge{position:absolute;bottom:12px;right:12px;display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #ffffff60;border-radius:20px;background:#000c;color:#fff;font:13px/1.2 system-ui,sans-serif;pointer-events:none}
 video.zoom{object-fit:contain;cursor:auto;touch-action:auto;background:#111}
+.swipe-preview{pointer-events:none}#viewer.swiping .zoom{will-change:transform}
 .media-error{position:absolute;z-index:4;bottom:72px;left:24px;right:24px;margin:0;padding:12px 16px;background:#181818ed;border:1px solid #666;border-radius:12px;font:14px/1.5 system-ui,sans-serif}
 video:focus-visible{outline:2px solid #ccc;outline-offset:4px}
 .albums{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:36px 16px;padding:0 12px}.album{min-width:0}.album .photo{aspect-ratio:4/3}.album img{width:100%;height:100%;object-fit:cover}.album h2{font-weight:500;font-size:26px;margin:12px 8px 0}.album p{margin:5px 8px;color:#aaa;font:12px system-ui,sans-serif}.album-placeholder{display:grid;place-items:center;width:100%;height:100%;background:#111;color:#777;font-size:36px}.status{padding:40px 4vw 80px;color:#aaa}.retry{margin:0 4vw 30px}
