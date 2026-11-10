@@ -14,7 +14,106 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
+
+type pausedBatchStorage struct {
+	*localStorage
+	pause *pausedOperationStorage
+}
+
+func (s *pausedBatchStorage) Write(ctx context.Context, bucket, key string, body []byte, contentType, cache string, expected *string) error {
+	return s.pause.Write(ctx, bucket, key, body, contentType, cache, expected)
+}
+
+func TestUploadBatchProcessesAfterTransferWithoutBrowser(t *testing.T) {
+	for _, invalidMiddle := range []bool{false, true} {
+		t.Run(fmt.Sprintf("invalidMiddle=%t", invalidMiddle), func(t *testing.T) {
+			local := &localStorage{root: t.TempDir()}
+			pause := &pausedOperationStorage{storage: local, started: make(chan struct{}, 1), release: make(chan struct{})}
+			b := newBrowser(t, &pausedBatchStorage{local, pause})
+			var ids, kept []string
+			for i, name := range []string{"first.png", "middle.png", "last.png"} {
+				body := smallPNG(t)
+				if invalidMiddle && i == 1 {
+					body = []byte("This is not an image")
+				}
+				plan := b.planUpload(name, len(body))
+				b.transfer(plan, body)
+				ids = append(ids, plan.Upload.ID)
+				if !invalidMiddle || i != 1 {
+					kept = append(kept, plan.Upload.ID)
+				}
+			}
+			b.request("GET", "/api/catalog", nil, 200)
+			if len(b.state.Catalog.Photos) != 0 {
+				t.Fatal("Transferring the batch should not wait for or start conversion")
+			}
+			pause.paused.Store(true)
+			b.client.Timeout = 2 * time.Second
+			accepted := b.async("POST", "/api/uploads/process", map[string]any{"ids": ids})
+			select {
+			case <-pause.started:
+			case <-time.After(5 * time.Second):
+				t.Fatal("Batch did not continue after acknowledgement")
+			}
+			var progress struct {
+				Operation struct{ Completed, Total int }
+			}
+			json.Unmarshal(b.request("GET", "/api/operation", nil, 200), &progress)
+			if progress.Operation.Completed != 0 || progress.Operation.Total != 3 {
+				t.Fatalf("Expected accepted batch progress, got %+v", progress)
+			}
+			b.request("GET", "/api/catalog", nil, 200)
+			if len(b.state.Catalog.Photos) != 0 {
+				t.Fatal("Processing was reported complete before the catalog write")
+			}
+			b.request("POST", "/api/uploads", map[string]any{"filename": "another.png", "size": 10}, 423)
+			b.request("POST", "/api/publish", nil, 423)
+			b.client.CloseIdleConnections()
+			close(pause.release)
+			outcome := "succeeded"
+			if invalidMiddle {
+				outcome = "failed"
+			}
+			finished := b.waitOperation(outcome)
+			if finished.ID != accepted.ID || (invalidMiddle && (!strings.Contains(finished.Error, "middle.png") || !strings.Contains(finished.Error, "1 of 3"))) {
+				t.Fatalf("Batch lost its outcome or per-file error: %+v", finished)
+			}
+			json.Unmarshal(b.request("GET", "/api/operation", nil, 200), &progress)
+			if progress.Operation.Completed != 3 || progress.Operation.Total != 3 {
+				t.Fatalf("Batch progress was lost on completion: %+v", progress)
+			}
+			b.request("GET", "/api/catalog", nil, 200)
+			if len(b.state.Catalog.Photos) != len(kept) {
+				t.Fatal("A failed file prevented later uploads from being processed")
+			}
+			for i, p := range b.state.Catalog.Photos {
+				if p.ID != kept[i] || p.Published || p.BlurHash == "" {
+					t.Fatalf("Lost or published an uploaded private draft: %+v", p)
+				}
+			}
+			for _, target := range [][2]string{{"private", "uploads/"}, {"private", "multipart/"}, {"public", ""}} {
+				keys, err := local.List(t.Context(), target[0], target[1])
+				if err != nil || len(keys) != 0 {
+					t.Fatalf("Unexpected leftover/public objects: %v %v", keys, err)
+				}
+			}
+			revision := b.state.Catalog.Revision
+			b.stop()
+			b = newBrowser(t, local)
+			if restored := b.waitOperation(outcome); restored.ID != accepted.ID {
+				t.Fatal("Completed batch outcome did not survive restart")
+			}
+			b.async("POST", "/api/uploads/process", map[string]any{"ids": kept})
+			b.waitOperation("succeeded")
+			b.request("GET", "/api/catalog", nil, 200)
+			if b.state.Catalog.Revision != revision || len(b.state.Catalog.Photos) != len(kept) {
+				t.Fatal("Explicit batch retry duplicated already committed uploads")
+			}
+		})
+	}
+}
 
 type interruptedUploadStorage struct {
 	*localStorage

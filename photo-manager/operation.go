@@ -11,11 +11,13 @@ import (
 )
 
 type operation struct {
-	ID     string `json:"id"`
-	State  string `json:"state"`
-	Method string `json:"method,omitempty"`
-	Path   string `json:"path,omitempty"`
-	Error  string `json:"error,omitempty"`
+	ID        string `json:"id"`
+	State     string `json:"state"`
+	Method    string `json:"method,omitempty"`
+	Path      string `json:"path,omitempty"`
+	Error     string `json:"error,omitempty"`
+	Completed int    `json:"completed,omitempty"`
+	Total     int    `json:"total,omitempty"`
 }
 
 type operationContext struct{}
@@ -104,6 +106,7 @@ func (a *app) change(fn func(http.ResponseWriter, *http.Request) error) http.Han
 			if a.background.Err() != nil {
 				return
 			}
+			job = a.operationStatus() // Keep progress recorded by a batch handler.
 			job.State = "succeeded"
 			if result.status >= 400 {
 				job.State = "failed"

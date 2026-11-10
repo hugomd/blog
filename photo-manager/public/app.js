@@ -5,7 +5,6 @@ let busy = false, dirty = false, conflicted = false, filter = 'all', search = ''
 let publicationTimer;
 let operationTimer;
 let transfer = null;
-const operationWaiters = new Set();
 const operationStarted = Symbol('operation started');
 const editor = $('#editor');
 const deletion = $('#delete-confirmation');
@@ -85,8 +84,8 @@ function revealPreviews(container) {
   }
 }
 
-async function api(path, { method = 'GET', body, headers = {}, awaitOperation = false } = {}) {
-  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && (/^\/photos\/[^/]+\/(archive|restore)$/.test(path) || /^\/uploads\/[^/]+\/complete$/.test(path)));
+async function api(path, { method = 'GET', body, headers = {} } = {}) {
+  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && (/^\/photos\/[^/]+\/(archive|restore)$/.test(path) || path === '/uploads/process'));
   const response = await fetch(`/api${path}`, {
     method, headers: { ...(method === 'GET' ? {} : { 'If-Match': state.etag }), ...(backgroundChange ? { Prefer: 'respond-async' } : {}), ...(body && !(body instanceof File) ? { 'Content-Type': 'application/json' } : {}), ...headers },
     body: body instanceof File ? body : body ? JSON.stringify(body) : undefined,
@@ -106,9 +105,7 @@ async function api(path, { method = 'GET', body, headers = {}, awaitOperation = 
     state.operation = result.operation;
     dirty = false; deletion.close(); editor.close();
     renderOperation(); refreshButtons();
-    const completion = awaitOperation ? new Promise((resolve, reject) => operationWaiters.add({ resolve, reject })) : null;
     watchOperation();
-    if (completion) return completion;
     throw operationStarted; // Do not run a caller's synchronous success message.
   }
   return result;
@@ -135,11 +132,17 @@ function refreshButtons() {
   $('#publish').disabled = busy || publishing() || changing() || conflicted || (!state.publicationChanges?.changed && state.publication?.state !== 'failed');
   $('#republish').disabled = busy || publishing() || changing() || conflicted || state.publicationChanges?.changed || state.publishedRevision == null;
   $('#republish').title = state.publicationChanges?.changed ? 'Publish or undo saved publication changes before republishing.' : 'Rebuild published manifests and fill missing BlurHashes without re-uploading media.';
+  $('#cancel-upload').disabled = busy || !transfer || transfer.processing || transfer.controller.signal.aborted;
 }
 function renderOperation() {
   $('#operation-progress').hidden = !operating();
   if (!operating()) return;
-  $('#operation-progress span').textContent = `${state.operation.path.endsWith('/complete') ? 'Processing uploaded media' : state.operation.method === 'DELETE' ? 'Deleting' : state.operation.path.endsWith('/archive') ? 'Archiving' : state.operation.path.endsWith('/restore') ? 'Restoring' : 'Saving'} in the background. You can browse or leave this page.`;
+  const job = state.operation;
+  const uploads = job.path.endsWith('/process') || job.path.endsWith('/complete');
+  $('#operation-progress span').textContent = `${uploads ? `Processing uploaded files${job.total ? ` · ${job.completed || 0} / ${job.total} finished` : ''}` : job.method === 'DELETE' ? 'Deleting' : job.path.endsWith('/archive') ? 'Archiving' : job.path.endsWith('/restore') ? 'Restoring' : 'Saving'} in the background. You can browse or leave this page.`;
+  const progress = $('#operation-progress progress');
+  if (job.total) { progress.max = job.total; progress.value = job.completed || 0; }
+  else progress.removeAttribute('value');
   status('Change accepted. Waiting for storage to finish…');
 }
 async function watchOperation() {
@@ -151,14 +154,10 @@ async function watchOperation() {
       if (job.state === 'failed') {
         status('Change failed. Library reloaded; check the current state before retrying.'); showError(new Error(job.error));
       } else status('Change complete. Publish separately to apply saved catalog changes to the website.');
-      for (const waiter of operationWaiters) job.state === 'failed' ? waiter.reject(new Error(job.error || 'Media processing failed.')) : waiter.resolve({});
-      operationWaiters.clear();
     } else state.operation = job;
     renderOperation(); refreshButtons();
   } catch (error) {
     showError(error);
-    for (const waiter of operationWaiters) waiter.reject(error);
-    operationWaiters.clear();
   }
   if (operating() && !$('#studio').hidden) operationTimer = setTimeout(watchOperation, 1000);
 }
@@ -490,44 +489,53 @@ async function upload(files) {
   dirty = false;
   const batch = transfer = { controller: new AbortController(), id: null, processing: false };
   const { signal } = batch.controller;
+  const ids = [];
   $('#error').hidden = true; $('#upload-progress').hidden = false; refreshButtons();
   try {
-    for (const [i, file] of [...files].entries()) {
-      signal.throwIfAborted();
-      const video = /\.(mp4|mov)$/i.test(file.name) || ['video/mp4', 'video/quicktime'].includes(file.type);
-      const limit = video ? 512 : 30;
-      if (!file.size || file.size > limit * 1048576) throw new Error(`${file.name} must be nonempty and at most ${limit} MiB. Remaining files were not uploaded.`);
-      const label = `${i + 1} of ${files.length} · ${file.name}`;
-      $('#upload-progress span').textContent = `Preparing ${label}…`;
-      $('#upload-progress progress').removeAttribute('value');
-      const session = await api('/uploads', { method: 'POST', body: { filename: file.name, size: file.size, contentType: file.type || (video ? /\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4' : 'application/octet-stream') } });
-      batch.id = session.upload.id;
-      signal.throwIfAborted();
-      await sendParts(file, session, batch.controller, label);
-      signal.throwIfAborted(); batch.processing = true;
-      $('#upload-progress span').textContent = `Server processing ${label}. You can browse. Cancel stops the remaining queue; accepted processing may finish.`;
-      $('#upload-progress progress').removeAttribute('value');
-      Object.assign(state, await api(`/uploads/${encodeURIComponent(batch.id)}/complete`, { method: 'POST', awaitOperation: true }));
-      batch.id = null; batch.processing = false;
-      signal.throwIfAborted();
-      render(); status(`${i + 1} file${i ? 's' : ''} uploaded as private drafts. Publish separately when ready.`);
+    try {
+      for (const [i, file] of [...files].entries()) {
+        signal.throwIfAborted();
+        const video = /\.(mp4|mov)$/i.test(file.name) || ['video/mp4', 'video/quicktime'].includes(file.type);
+        const limit = video ? 512 : 30;
+        if (!file.size || file.size > limit * 1048576) throw new Error(`${file.name} must be nonempty and at most ${limit} MiB. Remaining files were not uploaded.`);
+        const label = `${i + 1} of ${files.length} · ${file.name}`;
+        $('#upload-progress span').textContent = `Preparing ${label}…`;
+        $('#upload-progress progress').removeAttribute('value');
+        const session = await api('/uploads', { method: 'POST', body: { filename: file.name, size: file.size, contentType: file.type || (video ? /\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4' : 'application/octet-stream') } });
+        batch.id = session.upload.id;
+        signal.throwIfAborted();
+        await sendParts(file, session, batch.controller, label);
+        signal.throwIfAborted();
+        ids.push(batch.id); batch.id = null;
+      }
+    } catch (error) {
+      const cancelled = signal.aborted && error.name === 'AbortError';
+      batch.controller.abort();
+      await discardUpload(batch.id); batch.id = null;
+      status(cancelled ? 'Remaining transfers cancelled.' : 'Upload stopped. Remaining files were not uploaded.');
+      if (!cancelled) showError(error);
     }
+    if (!ids.length) return;
+    batch.processing = true; refreshButtons();
+    $('#upload-progress span').textContent = `${ids.length} file${ids.length === 1 ? '' : 's'} transferred. Starting background processing…`;
+    $('#upload-progress progress').removeAttribute('value');
+    try { await api('/uploads/process', { method: 'POST', body: { ids } }); }
+    catch (error) { if (error !== operationStarted) throw error; }
+    status(`${ids.length} file${ids.length === 1 ? '' : 's'} transferred. Processing continues if you leave this page. Publish separately when ready.`);
   } catch (error) {
-    const cancelled = signal.aborted && error.name === 'AbortError';
-    batch.controller.abort();
-    await (batch.cleanup ||= discardUpload(batch.id));
-    if (cancelled) status('Upload cancelled. Completed library items are kept; accepted server processing may still finish.');
-    else { status('Upload stopped. Remaining files were not uploaded.'); showError(error); }
+    // An acknowledgement can be lost after acceptance. Do not delete transferred
+    // originals: the worker may already own them. Reload to check its outcome.
+    status('Could not confirm background processing. Reload to check what was accepted before retrying.'); showError(error);
   } finally {
     transfer = null; $('#upload-progress').hidden = true; $('#files').value = ''; refreshButtons();
   }
 }
 
 $('#cancel-upload').onclick = () => {
-  if (!transfer) return;
+  if (!transfer || transfer.processing) return;
   transfer.controller.abort();
-  if (transfer.id) transfer.cleanup ||= discardUpload(transfer.id);
-  $('#upload-progress span').textContent = transfer.processing ? 'Queue cancelled. Waiting for accepted server processing; completed items are kept.' : 'Cancelling transfer…';
+  refreshButtons();
+  $('#upload-progress span').textContent = 'Stopping transfers… Fully transferred files will still be processed.';
 };
 $('#files').onchange = event => upload(event.target.files);
 document.addEventListener('click', event => {
@@ -593,7 +601,7 @@ window.addEventListener('hashchange', () => {
   if (dirty && !confirm('Discard unsaved edits?')) { history.replaceState(null, '', previousHash); return; }
   dirty = false; previousHash = location.hash; editor.close(); render();
 });
-window.addEventListener('beforeunload', event => { if (dirty || busy || (transfer && !transfer.processing)) event.preventDefault(); });
+window.addEventListener('beforeunload', event => { if (dirty || busy || transfer) event.preventDefault(); });
 async function boot() {
   try {
     Object.assign(state, await api('/catalog'));

@@ -71,6 +71,9 @@ func storeRoot(store storage) string {
 	if paused, ok := store.(*pausedOperationStorage); ok {
 		return storeRoot(paused.storage)
 	}
+	if paused, ok := store.(*pausedBatchStorage); ok {
+		return paused.root
+	}
 	return ""
 }
 

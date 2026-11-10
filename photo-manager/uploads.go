@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -138,6 +139,75 @@ func (a *app) localUploadPart(w http.ResponseWriter, r *http.Request) error {
 	}
 	respond(w, 200, map[string]bool{"ok": true})
 	return nil
+}
+
+// The browser transfers the entire selection before handing it to one worker.
+// Reuse single-file completion so conversions remain serialized and each saved
+// draft survives a later file's failure or the browser leaving the page.
+func (a *app) processUploads(w http.ResponseWriter, r *http.Request) error {
+	var input struct {
+		IDs []string `json:"ids"`
+	}
+	if err := decodeRequest(w, r, &input); err != nil {
+		return err
+	}
+	if len(input.IDs) == 0 {
+		return badRequest("Choose at least one upload to process.")
+	}
+	seen := map[string]bool{}
+	validID := regexp.MustCompile(`^[a-f0-9]{32}$`)
+	for _, id := range input.IDs {
+		if !validID.MatchString(id) || seen[id] {
+			return badRequest("Upload IDs must be valid and unique.")
+		}
+		seen[id] = true
+	}
+	recordProgress := func(completed int) error {
+		if r.Context().Value(operationContext{}) != true {
+			return nil
+		}
+		job := a.operationStatus()
+		job.Completed, job.Total = completed, len(input.IDs)
+		if err := a.saveOperation(r.Context(), job); err != nil {
+			return err
+		}
+		a.setOperation(job)
+		return nil
+	}
+	if err := recordProgress(0); err != nil {
+		return err
+	}
+	var failures []string
+	for i, id := range input.IDs {
+		if err := r.Context().Err(); err != nil {
+			return err
+		}
+		request := r.Clone(r.Context())
+		request.SetPathValue("id", id)
+		result := &operationResponse{header: http.Header{}, status: 200}
+		a.handler(a.completeUpload)(result, request)
+		if result.status >= 400 {
+			var failure struct{ Error string }
+			json.Unmarshal(result.body.Bytes(), &failure)
+			name := id
+			if job, err := a.loadUpload(r.Context(), id); err == nil {
+				name = job.Filename
+			}
+			failures = append(failures, name+": "+failure.Error)
+			// Best effort, just like a cancelled browser upload. Cancellation
+			// refuses committed items, including a save with failed cleanup.
+			if err := a.cancelUpload(&operationResponse{header: http.Header{}, status: 200}, request); err != nil {
+				log.Printf("Cannot clean up failed batch upload: %T", err)
+			}
+		}
+		if err := recordProgress(i + 1); err != nil {
+			return err
+		}
+	}
+	if len(failures) != 0 {
+		return badRequest(fmt.Sprintf("%d of %d uploads could not finish processing. Completed library items are kept. %s", len(failures), len(input.IDs), strings.Join(failures, "; ")))
+	}
+	return a.getCatalog(w, r)
 }
 
 func (a *app) completeUpload(w http.ResponseWriter, r *http.Request) error {

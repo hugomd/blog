@@ -11,10 +11,18 @@ processing needs temporary disk space.
   Each starts as a private draft. HEIC/RAW files must first be exported as JPEGs.
   Studio sends 8 MiB chunks directly to private R2 using one-hour signed URLs,
   with three simultaneous transfers, byte progress, bounded retries and Cancel.
-  Original bytes no longer pass through the Studio container. Keep the page
-  open during transfer; once processing is accepted, it runs server-side.
+  Original bytes no longer pass through the Studio container. The entire
+  selection transfers before Studio submits one background processing batch;
+  image conversion never holds up the next file's transfer. Keep the page open
+  until the batch is accepted, then processing continues server-side even if
+  you leave. Progress shows how many files have finished. Cancelling transfers
+  or a transfer failure stops the remaining transfers; fully transferred files
+  still enter background processing. A failed conversion is reported by filename
+  without preventing later files from becoming private drafts. Failed,
+  uncommitted uploads are cleaned up best effort; committed items are kept.
   Reloading does not resume browser chunks. A server restart requires inspection
-  and explicit retry, not automatic replay.
+  and explicit retry, not automatic replay. Background batches retain the
+  existing 30-minute operation timeout and one-hour upload expiry.
 - The Go service corrects EXIF orientation and creates JPEG variants with a
   maximum long edge of 640, 1280 and 2560 pixels, without upscaling. PNG
   transparency is flattened onto white. Input is limited to 30 MiB, 40 MP and

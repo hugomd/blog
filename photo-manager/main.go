@@ -751,6 +751,7 @@ func (a *app) routes() http.Handler {
 	})
 	mux.HandleFunc("GET /api/catalog", a.handler(a.getCatalog))
 	mux.HandleFunc("POST /api/uploads", a.handler(a.createUpload))
+	mux.HandleFunc("POST /api/uploads/process", a.change(a.processUploads))
 	mux.HandleFunc("POST /api/uploads/{id}/complete", a.change(a.completeUpload))
 	mux.HandleFunc("DELETE /api/uploads/{id}", a.handler(a.cancelUpload))
 	if a.config.LocalRoot != "" {
