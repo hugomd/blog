@@ -122,6 +122,11 @@ as `/photos/private/<album ID>/media/<photo ID>/{640.jpg,video.mp4}`; source URL
 originals and admin metadata are never trusted or passed through. Unknown catalog
 kinds fail closed. Public catalogs keep their existing public-domain URLs.
 
+Images and video posters may also include an optional `blurhash` string. The
+gallery decodes it locally for loading placeholders; missing or invalid hashes
+fall back to a neutral tile. Protected hashes follow the same authenticated,
+album-scoped catalog projection as the photographs and are never in the shell.
+
 Each video has `photos/<32 lowercase hex ID>/{640,1280,2560}.jpg` poster derivatives
 and `photos/<ID>/video.mp4`. The gallery labels video posters with a play badge and
 duration, and opens a native-controls video with a poster and no autoplay. Closing,

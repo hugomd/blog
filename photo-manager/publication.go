@@ -45,10 +45,14 @@ func (next catalog) changesFrom(live catalog) publicationChanges {
 	}
 	photos := map[string]photo{}
 	for _, p := range live.Photos {
+		// BlurHash is derived, optional metadata. Legacy drafts deliberately
+		// need not be rewritten when publication backfills their live hashes.
+		p.BlurHash = ""
 		photos[p.ID] = p
 	}
 	samePhotoOrder := len(live.Photos) == len(next.Photos)
 	for i, p := range next.Photos {
+		p.BlurHash = ""
 		if i >= len(live.Photos) || live.Photos[i].ID != p.ID {
 			samePhotoOrder = false
 		}

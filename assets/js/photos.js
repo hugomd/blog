@@ -8,6 +8,8 @@ let zoom = $('#zoom');
 let swipe;
 let loadRequest;
 const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
+// A valid transparent image leaves the BlurHash background visible without alt-text flashes.
+const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 const isVideo = photo => photo.kind === 'video';
 function videoDuration(value) {
@@ -16,6 +18,56 @@ function videoDuration(value) {
 }
 function videoBadge(photo) {
   return isVideo(photo) ? `<span class="video-badge" aria-hidden="true">▶ ${videoDuration(photo.duration)}</span>` : '';
+}
+function blurhashBackground(photo) {
+  const hash = photo.blurhash;
+  const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~';
+  if (typeof hash !== 'string' || hash.length < 6 || hash.length > 166 || [...hash].some(c => !alphabet.includes(c))) return 'none';
+  const base83 = value => [...value].reduce((result, c) => result * 83 + alphabet.indexOf(c), 0);
+  const size = base83(hash[0]), nx = size % 9 + 1, ny = Math.floor(size / 9) + 1;
+  if (size > 80 || hash.length !== 4 + 2 * nx * ny || !(photo.width > 0 && photo.height > 0)) return 'none';
+  const linear = value => value / 255 <= .04045 ? value / 255 / 12.92 : ((value / 255 + .055) / 1.055) ** 2.4;
+  const srgb = value => Math.round(255 * (value <= .0031308 ? 12.92 * value : 1.055 * value ** (1 / 2.4) - .055));
+  const maximum = (base83(hash[1]) + 1) / 166;
+  const dc = base83(hash.slice(2, 6));
+  if (dc > 0xffffff) return 'none';
+  const colors = [[linear(dc >> 16), linear(dc >> 8 & 255), linear(dc & 255)]];
+  for (let i = 1; i < nx * ny; i++) {
+    const value = base83(hash.slice(4 + i * 2, 6 + i * 2));
+    if (value >= 19 ** 3) return 'none';
+    colors.push([Math.floor(value / 361), Math.floor(value / 19) % 19, value % 19].map(n => {
+      const v = (n - 9) / 9;
+      return Math.sign(v) * v * v * maximum;
+    }));
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(32 * Math.min(1, photo.width / photo.height)));
+  canvas.height = Math.max(1, Math.round(32 * Math.min(1, photo.height / photo.width)));
+  const context = canvas.getContext('2d');
+  if (!context) return 'none';
+  const pixels = context.createImageData(canvas.width, canvas.height);
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const rgb = [0, 0, 0];
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          const basis = Math.cos(Math.PI * x * i / canvas.width) * Math.cos(Math.PI * y * j / canvas.height);
+          for (let c = 0; c < 3; c++) rgb[c] += colors[i + j * nx][c] * basis;
+        }
+      }
+      const offset = 4 * (x + y * canvas.width);
+      for (let c = 0; c < 3; c++) pixels.data[offset + c] = srgb(Math.max(0, Math.min(1, rgb[c])));
+      pixels.data[offset + 3] = 255;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+  return `url(${canvas.toDataURL()})`;
+}
+function revealImages(container) {
+  for (const image of container.querySelectorAll('img')) {
+    if (image.complete && image.naturalWidth) image.classList.add('loaded');
+    else image.addEventListener('load', () => image.classList.add('loaded'), { once: true });
+  }
 }
 function releaseMedia() {
   if (zoom instanceof HTMLVideoElement) {
@@ -29,6 +81,7 @@ function clearPrivate() {
   releaseMedia();
   viewer.close(); zoom.getAnimations().forEach(animation => animation.cancel());
   zoom.removeAttribute('src'); zoom.alt = ''; info.innerHTML = ''; $('#caption').textContent = ''; $('#count').textContent = '';
+  zoom.style.backgroundImage = '';
   document.body.style.overflow = '';
   state.catalog = null; state.photos = []; state.busy = false; state.info = false;
   stream.innerHTML = ''; $('#albums').innerHTML = '';
@@ -143,8 +196,9 @@ function render() {
     $('#albums').innerHTML = state.catalog.albums.map(a => {
       const members = a.photoIds.filter(id => byID.has(id));
       const cover = byID.get(a.coverId) || byID.get(members[0]);
-      return `<a class="album" href="${escape(albumURL(a.slug))}"><div class="photo">${cover ? `<img src="${escape(cover.thumbnail)}" width="${cover.width}" height="${cover.height}" alt="${escape(cover.alt)}" loading="lazy">${videoBadge(cover)}` : '<span class="album-placeholder" aria-hidden="true">◧</span>'}</div><h2>${escape(a.title)}</h2><p>${members.length} item${members.length === 1 ? '' : 's'}</p></a>`;
+      return `<a class="album" href="${escape(albumURL(a.slug))}"><div class="photo" style="background-image:${cover ? blurhashBackground(cover) : 'none'}">${cover ? `<img src="${escape(cover.thumbnail)}" width="${cover.width}" height="${cover.height}" alt="${escape(cover.alt)}" loading="lazy">${videoBadge(cover)}` : '<span class="album-placeholder" aria-hidden="true">◧</span>'}</div><h2>${escape(a.title)}</h2><p>${members.length} item${members.length === 1 ? '' : 's'}</p></a>`;
     }).join('');
+    revealImages($('#albums'));
     if (!state.catalog.albums.length) message('No albums published yet.');
     return;
   }
@@ -152,7 +206,8 @@ function render() {
   // standalone photos, in the manifest's newest-first order.
   state.photos = isAlbum ? (album?.photoIds || []).map(id => byID.get(id)).filter(Boolean) : photos;
   stream.setAttribute('aria-label', isAlbum ? `${album?.title || 'Album'} photographs` : 'Photostream');
-  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="${isVideo(p) ? 'Play video' : 'Open'} ${escape(p.alt)}${isVideo(p) ? `, ${videoDuration(p.duration)}` : ''}" data-photo="${i}"><img src="${escape(p.thumbnail)}" ${isAlbum || isVideo(p) ? '' : `srcset="${escape(p.thumbnail)} 640w, ${escape(p.src)} 2560w" sizes="(max-width:700px) 100vw, (max-width:900px) 50vw, 33vw"`} width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < (isAlbum ? 4 : 3) ? 'eager' : 'lazy'}">${videoBadge(p)}</button>`).join('');
+  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height};background-image:${blurhashBackground(p)}" aria-label="${isVideo(p) ? 'Play video' : 'Open'} ${escape(p.alt)}${isVideo(p) ? `, ${videoDuration(p.duration)}` : ''}" data-photo="${i}"><img src="${escape(p.thumbnail)}" ${isAlbum || isVideo(p) ? '' : `srcset="${escape(p.thumbnail)} 640w, ${escape(p.src)} 2560w" sizes="(max-width:700px) 100vw, (max-width:900px) 50vw, 33vw"`} width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < (isAlbum ? 4 : 3) ? 'eager' : 'lazy'}">${videoBadge(p)}</button>`).join('');
+  revealImages(stream);
   layoutPhotos();
   if (!state.photos.length) message(isAlbum ? album ? 'No photographs in this album yet.' : 'This album isn’t currently published.' : 'No photographs published yet. Check back soon.');
 }
@@ -210,6 +265,7 @@ function renderViewer(changePhoto = false) {
     // Fresh pixels immediately, even when a previous full image is still loading.
     const display = isVideo(p) ? document.createElement('video') : new Image();
     display.id = 'zoom'; display.className = 'zoom';
+    display.style.backgroundImage = stream.children[state.index].style.backgroundImage;
     if (isVideo(p)) {
       display.controls = true; display.playsInline = true; display.preload = 'metadata';
       display.poster = p.thumbnail; display.setAttribute('aria-label', p.alt || 'Video');
@@ -237,7 +293,13 @@ function renderViewer(changePhoto = false) {
         }
       });
       display.src = p.src;
-    } else { display.alt = p.alt; display.src = p.thumbnail; }
+    } else {
+      display.alt = p.alt; display.src = emptyImage;
+      const thumbnail = new Image(); thumbnail.src = p.thumbnail;
+      thumbnail.decode().then(() => {
+        if (zoom === display && viewer.open && display.src === emptyImage) display.src = thumbnail.src;
+      }).catch(() => {});
+    }
     zoom.replaceWith(display); zoom = display;
     if (!isVideo(p)) {
       const full = new Image(); full.src = p.src;
@@ -342,7 +404,10 @@ function dragSwipe(dx) {
     const p = state.photos[(state.index + delta + state.photos.length) % state.photos.length];
     const preview = new Image();
     preview.className = 'zoom swipe-preview'; preview.alt = ''; preview.setAttribute('aria-hidden', 'true');
-    preview.src = p.thumbnail;
+    preview.style.backgroundImage = stream.children[(state.index + delta + state.photos.length) % state.photos.length].style.backgroundImage;
+    preview.src = emptyImage;
+    const thumbnail = new Image(); thumbnail.src = p.thumbnail;
+    thumbnail.decode().then(() => { if (swipe?.preview === preview) preview.src = thumbnail.src; }).catch(() => {});
     for (const [key, value] of Object.entries(target(p))) preview.style[key] = `${value}px`;
     viewer.append(preview); swipe.preview = preview; swipe.delta = delta;
   }

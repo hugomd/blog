@@ -10,6 +10,7 @@ import (
 	_ "image/png"
 	"strings"
 
+	"github.com/buckket/go-blurhash"
 	"github.com/disintegration/imaging"
 	"github.com/rwcarlsen/goexif/exif"
 )
@@ -17,6 +18,21 @@ import (
 type derivative struct {
 	Size int
 	Body []byte
+}
+
+// Hash only the small, already oriented and flattened JPEG, never the original.
+// Invalid legacy previews are optional metadata, not a publication failure.
+func previewBlurHash(body []byte) string {
+	config, err := jpeg.DecodeConfig(bytes.NewReader(body))
+	if err != nil || config.Width < 1 || config.Height < 1 || config.Width > 640 || config.Height > 640 {
+		return ""
+	}
+	img, err := jpeg.Decode(bytes.NewReader(body))
+	if err != nil {
+		return ""
+	}
+	hash, _ := blurhash.Encode(4, 3, imaging.Fit(img, 32, 32, imaging.Lanczos))
+	return hash
 }
 
 func processImage(body []byte) (int, int, map[string]string, string, []derivative, error) {

@@ -266,12 +266,16 @@ func (a *app) upload(w http.ResponseWriter, r *http.Request) error {
 		if err := a.store.Write(r.Context(), "private", "originals/"+id, body, "application/octet-stream", "no-store", nil); err != nil {
 			return err
 		}
+		hash := ""
 		for _, variant := range variants {
+			if variant.Size == 640 {
+				hash = previewBlurHash(variant.Body)
+			}
 			if err := a.store.Write(r.Context(), "private", fmt.Sprintf("photos/%s/%d.jpg", id, variant.Size), variant.Body, "image/jpeg", "no-store", nil); err != nil {
 				return err
 			}
 		}
-		c.Photos = append(c.Photos, photo{ID: id, Filename: filename, Tags: []string{}, UploadedAt: now(), CapturedDate: capturedDate, Width: width, Height: height, Exif: exif})
+		c.Photos = append(c.Photos, photo{ID: id, Filename: filename, Tags: []string{}, UploadedAt: now(), CapturedDate: capturedDate, Width: width, Height: height, Exif: exif, BlurHash: hash})
 		return nil
 	})
 }

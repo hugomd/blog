@@ -264,6 +264,9 @@ func (a *app) completeUpload(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	for _, variant := range variants {
+		if variant.Size == 640 {
+			p.BlurHash = previewBlurHash(variant.Body)
+		}
 		if err := a.store.Write(ctx, "private", fmt.Sprintf("photos/%s/%d.jpg", id, variant.Size), variant.Body, "image/jpeg", "private, no-store", nil); err != nil {
 			return err
 		}

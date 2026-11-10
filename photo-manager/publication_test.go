@@ -232,3 +232,103 @@ func TestPublicationChangesCompareLiveContent(t *testing.T) {
 	saved = b.request("POST", "/api/photos/"+kept.ID+"/archive", nil, 200)
 	expect(false, counts{Live: 3, Next: 3, Unchanged: 3}, counts{Live: 2, Next: 2, Unchanged: 2}, saved)
 }
+
+func TestPublicationBackfillsLegacyBlurHashesWithoutChangingDrafts(t *testing.T) {
+	store := &localStorage{root: t.TempDir()}
+	a := &app{store: store, config: configuration{PrivateAlbums: true, PublicURL: "/media"}}
+	c := catalog{Version: 2, Revision: 7, Photos: []photo{}, Albums: []album{}}
+	for i := range 5 {
+		c.Photos = append(c.Photos, photo{ID: identifier(), Tags: []string{}, Exif: map[string]string{}, Published: i < 3, UploadedAt: "2026-01-01", Width: 53, Height: 29})
+	}
+	c.Albums = append(c.Albums, album{ID: identifier(), Title: "Private", Slug: "private", Published: true, Access: "password", PasswordHash: "fixture-only", AccessVersion: "v1", PhotoIDs: []string{c.Photos[0].ID, c.Photos[3].ID}, CoverID: c.Photos[3].ID})
+	write := func(bucket, key string, value any) {
+		t.Helper()
+		body, err := encode(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := store.Write(t.Context(), bucket, key, body, "application/json", "no-store", nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Seed a previously valid publication with old, hash-less metadata. Missing
+	// and corrupt private previews must not break metadata-only republication.
+	live := c.publicRelease("/media")
+	live.ProtectedRelease = identifier()
+	write("private", "catalog.json", c)
+	write("public", "index.json", live)
+	write("protected", "releases/"+live.ProtectedRelease+".json", c.protectedRelease())
+	_, _, _, _, variants, err := processImage(smallPNG(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, i := range []int{0, 2, 3} {
+		body := variants[0].Body
+		if i == 2 {
+			body = []byte("invalid JPEG")
+		}
+		if err := store.Write(t.Context(), "private", "photos/"+c.Photos[i].ID+"/640.jpg", body, "image/jpeg", "no-store", nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b := newBrowser(t, store)
+	p := b.state.Catalog.Photos[0]
+	p.Caption = "An ordinary metadata edit"
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p, c.Albums[0].ID), 200)
+	before, err := store.Read(t.Context(), "private", "catalog.json")
+	if err != nil || before == nil {
+		t.Fatal("Missing draft catalog")
+	}
+	check := func() {
+		t.Helper()
+		json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+		protected, _, err := a.loadProtected(t.Context(), live)
+		if err != nil || len(live.Photos) != 3 || len(protected.Photos) != 2 {
+			t.Fatalf("Wrong authorized projections: %+v, %v", protected, err)
+		}
+		for _, projection := range []catalog{live, protected} {
+			for _, published := range projection.Photos {
+				if published.ID == c.Photos[0].ID || published.ID == c.Photos[3].ID {
+					decodePhotoBlurHash(t, published.BlurHash)
+					if published.BlurHash != previewBlurHash(variants[0].Body) {
+						t.Fatal("Legacy backfill did not describe the private preview")
+					}
+				} else {
+					body, _ := encode(published)
+					if published.BlurHash != "" || bytes.Contains(body, []byte(`"blurhash"`)) {
+						t.Fatal("Missing/invalid preview should omit optional BlurHash")
+					}
+				}
+			}
+		}
+		for _, published := range live.Photos {
+			if published.ID == c.Photos[3].ID || published.ID == c.Photos[4].ID {
+				t.Fatal("Private photo metadata escaped into public projection")
+			}
+		}
+		after, err := store.Read(t.Context(), "private", "catalog.json")
+		if err != nil || after == nil || before.ETag != after.ETag || !bytes.Equal(before.Body, after.Body) {
+			t.Fatal("Derived metadata changed the durable job's draft catalog")
+		}
+		var response struct {
+			Changes publicationChanges `json:"publicationChanges"`
+		}
+		if err := json.Unmarshal(b.request("GET", "/api/catalog", nil, 200), &response); err != nil {
+			t.Fatal(err)
+		}
+		if response.Changes.Changed || response.Changes.Photos.Unchanged != 3 || response.Changes.ProtectedPhotos.Unchanged != 2 {
+			t.Fatalf("Hash-only differences left pending publication: %+v", response.Changes)
+		}
+	}
+	b.publish("succeeded")
+	check()
+	// The next ordinary publication reuses live hashes even when the old private
+	// previews are no longer readable; media already live is not recopied.
+	for _, i := range []int{0, 3} {
+		if err := store.Delete(t.Context(), "private", "photos/"+c.Photos[i].ID+"/640.jpg"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b.publish("succeeded")
+	check()
+}

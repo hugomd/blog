@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -32,6 +33,7 @@ type photo struct {
 	Exif         map[string]string `json:"exif"`
 	Thumbnail    string            `json:"thumbnail,omitempty"`
 	Src          string            `json:"src,omitempty"`
+	BlurHash     string            `json:"blurhash,omitempty"`
 }
 
 func (p photo) files() []string {
@@ -245,6 +247,39 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 	if len(protected.Albums) > 0 && !a.config.PrivateAlbums {
 		return badRequest("Configure protected album storage before publishing private albums.")
 	}
+	// Derive metadata only for the authorized projections, without changing the
+	// draft catalog/revision/ETag the durable publication job is pinned to.
+	// Reuse live hashes first, including photos moving between access modes.
+	hashes := map[string]string{}
+	for _, prior := range []catalog{previous, previousProtected} {
+		for _, p := range prior.Photos {
+			if p.BlurHash != "" {
+				hashes[p.ID] = p.BlurHash
+			}
+		}
+	}
+	for _, target := range []*catalog{&release, &protected} {
+		for i := range target.Photos {
+			p := &target.Photos[i]
+			if p.BlurHash != "" {
+				continue
+			}
+			hash, known := hashes[p.ID]
+			if !known {
+				// A 640px JPEG is small; bound reads and decoded dimensions even
+				// if a legacy object is corrupt. Missing previews stay neutral.
+				if source, err := a.store.Open(ctx, "private", "photos/"+p.ID+"/640.jpg", 0, 0); err == nil {
+					body, err := io.ReadAll(io.LimitReader(source, 2<<20))
+					source.Close()
+					if err == nil {
+						hash = previewBlurHash(body)
+					}
+				}
+				hashes[p.ID] = hash
+			}
+			p.BlurHash = hash
+		}
+	}
 	type copyJob struct{ bucket, key string }
 	keys := []copyJob{}
 	for _, target := range []struct {
@@ -263,7 +298,7 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 			}
 		}
 	}
-	// Copy within R2, with a bounded number of requests and no image bytes in Go.
+	// Copy media within R2 with a bounded number of requests.
 	// Finish every copy before changing the discoverable public manifest.
 	copyContext, cancel := context.WithCancel(ctx)
 	defer cancel()

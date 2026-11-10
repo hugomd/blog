@@ -22,6 +22,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/buckket/go-blurhash"
 	"github.com/rwcarlsen/goexif/exif"
 )
 
@@ -269,6 +270,19 @@ func smallPNG(t *testing.T) []byte {
 	return b.Bytes()
 }
 
+func decodePhotoBlurHash(t *testing.T, hash string) image.Image {
+	t.Helper()
+	x, y, err := blurhash.Components(hash)
+	if err != nil || x != 4 || y != 3 {
+		t.Fatalf("Invalid 4×3 BlurHash %q: %v", hash, err)
+	}
+	img, err := blurhash.Decode(hash, 32, 32, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return img
+}
+
 func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	store := &localStorage{root: t.TempDir()}
 	b := newBrowser(t, store)
@@ -277,6 +291,25 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	p := b.state.Catalog.Photos[0]
 	if p.Width != 2400 || p.Height != 4000 || p.Published {
 		t.Fatalf("Wrong oriented dimensions or default publication: %+v", p)
+	}
+	placeholder := decodePhotoBlurHash(t, p.BlurHash)
+	// Original quadrants rotate clockwise to blue/red/yellow/green. Check
+	// independent decoded colors, not just equality with our encoder helper.
+	for _, sample := range []struct {
+		x, y int
+		want color.RGBA
+	}{{8, 8, color.RGBA{20, 20, 230, 255}}, {24, 8, color.RGBA{230, 20, 20, 255}}, {8, 24, color.RGBA{220, 220, 20, 255}}, {24, 24, color.RGBA{20, 220, 20, 255}}} {
+		got := color.RGBAModel.Convert(placeholder.At(sample.x, sample.y)).(color.RGBA)
+		channels := [][2]uint8{{got.R, sample.want.R}, {got.G, sample.want.G}, {got.B, sample.want.B}}
+		// Low-frequency reconstruction mixes neighboring quadrants; preserve
+		// the hue/channel dominance, not the original sharp RGB magnitudes.
+		for _, high := range channels {
+			for _, low := range channels {
+				if high[1] > 200 && low[1] == 20 && int(high[0])-int(low[0]) < 50 {
+					t.Fatalf("BlurHash lost oriented color at %d,%d: %+v", sample.x, sample.y, got)
+				}
+			}
+		}
 	}
 	want := map[string]string{"Make": "FUJIFILM", "Camera": "X-E4", "Lens": "XF35mmF1.4 R", "ISO": "640", "Shutter": "1/250 s", "Aperture": "ƒ/2.8", "Focal length": "35 mm"}
 	if !reflect.DeepEqual(p.Exif, want) || p.CapturedDate != "2022-09-11" {
@@ -332,6 +365,9 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	}
 	if !reflect.DeepEqual(live.Photos[0].Exif, want) {
 		t.Fatal("Camera metadata missing from public manifest")
+	}
+	if live.Photos[0].BlurHash != p.BlurHash || !bytes.Contains(manifest, []byte(`"blurhash"`)) {
+		t.Fatal("Upload BlurHash missing from public JSON contract")
 	}
 	copy := b.request("GET", live.Photos[0].Thumbnail, nil, 200)
 	if bytes.Contains(copy, []byte("Exif\x00\x00")) {

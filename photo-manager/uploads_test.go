@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image/color"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -122,6 +123,11 @@ func TestMultipartImagesPreserveOriginalAndConcurrentEdits(t *testing.T) {
 	if p.ID != plan.Upload.ID || p.Published || p.Kind != "" || p.Width != 53 || p.Height != 29 {
 		t.Fatalf("Invalid uploaded draft: %+v", p)
 	}
+	placeholder := decodePhotoBlurHash(t, p.BlurHash)
+	background := color.RGBAModel.Convert(placeholder.At(4, 4)).(color.RGBA)
+	if background.R < 240 || background.G < 240 || background.B < 240 {
+		t.Fatalf("Transparent PNG BlurHash was not flattened onto white: %+v", background)
+	}
 	original, err := store.Read(t.Context(), "private", "originals/"+p.ID)
 	if err != nil || original == nil || !bytes.Equal(original.Body, body) {
 		t.Fatal("Chunk upload changed original bytes")
@@ -192,6 +198,11 @@ func TestUploadedVideoPublishesSeeksArchivesAndDeletes(t *testing.T) {
 	if p.Kind != "video" || p.Duration < .9 || p.Width != 96 || p.Height != 64 || b.state.Catalog.Version != 4 {
 		t.Fatalf("Bad processed video: %+v", p)
 	}
+	decodePhotoBlurHash(t, p.BlurHash)
+	poster, err := store.Read(t.Context(), "private", "photos/"+p.ID+"/640.jpg")
+	if err != nil || poster == nil || previewBlurHash(poster.Body) != p.BlurHash {
+		t.Fatal("Video BlurHash does not describe its generated poster")
+	}
 	publicOnly := &app{store: store}
 	if _, _, err := publicOnly.load(t.Context(), "private", "catalog.json"); err != nil {
 		t.Fatalf("Public-only video library incorrectly requires protected storage: %v", err)
@@ -216,6 +227,9 @@ func TestUploadedVideoPublishesSeeksArchivesAndDeletes(t *testing.T) {
 	protected, _, err := (&app{store: store, config: configuration{PrivateAlbums: true}}).loadProtected(t.Context(), live)
 	if err != nil || len(protected.Photos) != 1 || protected.Photos[0].Kind != "video" {
 		t.Fatal("Private projection lost shared video")
+	}
+	if live.Photos[0].BlurHash != p.BlurHash || protected.Photos[0].BlurHash != p.BlurHash {
+		t.Fatal("Public/protected manifests lost video poster BlurHash")
 	}
 	encoded, err := store.Read(t.Context(), "private", "photos/"+p.ID+"/video.mp4")
 	if err != nil || encoded == nil {

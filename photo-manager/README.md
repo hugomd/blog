@@ -19,6 +19,9 @@ processing needs temporary disk space.
   maximum long edge of 640, 1280 and 2560 pixels, without upscaling. PNG
   transparency is flattened onto white. Input is limited to 30 MiB, 40 MP and
   16,000 pixels on either axis; processing is serialized to bound memory usage.
+  New uploads also store an optional standard `blurhash` string for image or
+  video-poster placeholders. The 4×3-component hash is encoded from the oriented,
+  flattened 640px JPEG, reduced to at most 32px on its long edge.
 - Videos are limited to 512 MiB and ten minutes. FFmpeg accepts MP4/MOV
   (including HEVC), creates metadata-stripped H.264/AAC faststart MP4 playback
   and three JPEG posters. Output is bounded to 1920×1080 landscape or
@@ -118,8 +121,8 @@ Public bucket:
 - `index.json`: the currently published snapshot, containing `version`,
   `revision`, `publishedAt`, `photos` and `albums`. Photos contain `id`, `alt`,
   `caption`, `tags`, `capturedDate`, `uploadedAt`, dimensions, allowlisted `exif`,
-  `thumbnail` and `src`. Albums reference the same IDs through ordered
-  `photoIds` and `coverId`. Standalone photos are in `photos` too.
+  `thumbnail`, `src` and optional `blurhash`. Albums reference the same IDs through
+  ordered `photoIds` and `coverId`. Standalone photos are in `photos` too.
   Videos also contain `kind: "video"` and duration in seconds; their `src` is
   the MP4 and `thumbnail` is the poster. Missing `kind` still means image.
 
@@ -139,7 +142,15 @@ Publishing uses native R2 `CopyObject`, retaining the private source, rather tha
 downloading JPEGs into Go and uploading them again. Credentials need source read
 and destination write access. At most four derivative copies run concurrently;
 photos already in the current index are not recopied. Only re-encoded derivatives
-are copied, never originals. Library thumbnails use 640px previews; photo details
+are copied, never originals. An ordinary background publication also fills missing
+legacy BlurHashes from private `640.jpg` previews, reusing hashes from the prior
+live public/protected release when available. These best-effort reads are bounded;
+missing or invalid previews omit the hash so clients can use neutral placeholders.
+Backfill only enriches the authorized release projections, never exposes private-only
+photos publicly, and does not rewrite the working catalog or change its ETag/revision.
+Derived hash-only differences do not count as pending publication changes. No
+re-upload or separate migration is required; existing live manifests remain unchanged
+until the next publication. Library thumbnails use 640px previews; photo details
 keep 1280px previews. Authenticated image/poster and video preview endpoints
 check current library membership, then issue `307` redirects to 15-minute signed
 GET/HEAD URLs for private R2 derivatives. Image and video bytes, including video

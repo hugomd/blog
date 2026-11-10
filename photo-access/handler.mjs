@@ -186,6 +186,7 @@ function catalog(album, release) {
     }
     if (source.exif !== null && (!record(source.exif) || !Object.values(source.exif).every(value => typeof value === 'string'))) fail(503);
     result.exif = source.exif || {};
+    if (typeof source.blurhash === 'string' && source.blurhash.length >= 6 && source.blurhash.length <= 166) result.blurhash = source.blurhash;
     if (source.kind !== undefined) {
       if (!['image', 'video'].includes(source.kind)) fail(503);
       result.kind = source.kind;

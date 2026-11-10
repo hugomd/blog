@@ -196,6 +196,10 @@ test('unauthenticated shell is generic, uses base href and strips inherited cach
 
 test('catalog is curated, whitelisted and album scoped, including shared public photos', async () => {
   const f = fixture();
+  const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+  f.release.photos[0].blurhash = blurhash;
+  f.release.photos[2].blurhash = { private: 'not visitor metadata' };
+  f.save();
   const a = await (await status(await f.call('catalog', { headers: { Cookie: signedCookie() } }), 200)).json();
   assert.deepEqual(a.photos.map(photo => photo.id), [Q, P]);
   assert.equal(a.albums.length, 1);
@@ -203,9 +207,12 @@ test('catalog is curated, whitelisted and album scoped, including shared public 
   assert.equal(a.albums[0].access, 'password');
   assert.deepEqual(Object.keys(a.photos[0]).sort(), ['alt', 'caption', 'capturedDate', 'exif', 'height', 'id', 'src', 'tags', 'thumbnail', 'uploadedAt', 'width']);
   assert.equal(a.photos[1].thumbnail, `${base(A)}media/${P}/640.jpg`);
+  assert.equal(a.photos[1].blurhash, blurhash);
   const b = await (await status(await f.call('catalog', { headers: { Cookie: signedCookie(B) } }, B), 200)).json();
   assert.deepEqual(b.photos.map(photo => photo.id), [P, R]);
   assert.equal(b.photos[0].src, `${base(B)}media/${P}/2560.jpg`);
+  assert.equal(b.photos[0].blurhash, blurhash);
+  assert.equal(b.photos[1].blurhash, undefined);
   assert.doesNotMatch(JSON.stringify(a), /passwordHash|accessVersion|must-not-return|wrong\.example/);
   for (const id of [A, B]) {
     const image = await status(await f.call(`media/${P}/640.jpg`, { headers: { Cookie: signedCookie(id) } }, id), 200);
