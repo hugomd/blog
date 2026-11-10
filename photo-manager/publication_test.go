@@ -150,6 +150,7 @@ func TestResumedPublicationRejectsChangedCatalog(t *testing.T) {
 
 func TestPublicationChangesCompareLiveContent(t *testing.T) {
 	b := newBrowser(t, &localStorage{root: t.TempDir()})
+	b.request("POST", "/api/publish?republish=1", nil, http.StatusConflict)
 	type counts struct{ Live, Next, Added, Updated, Removed, Unchanged int }
 	expect := func(changed bool, photos, albums counts, response ...[]byte) {
 		t.Helper()
@@ -272,9 +273,6 @@ func TestPublicationBackfillsLegacyBlurHashesWithoutChangingDrafts(t *testing.T)
 		}
 	}
 	b := newBrowser(t, store)
-	p := b.state.Catalog.Photos[0]
-	p.Caption = "An ordinary metadata edit"
-	b.request("PATCH", "/api/photos/"+p.ID, edit(p, c.Albums[0].ID), 200)
 	before, err := store.Read(t.Context(), "private", "catalog.json")
 	if err != nil || before == nil {
 		t.Fatal("Missing draft catalog")
@@ -320,8 +318,27 @@ func TestPublicationBackfillsLegacyBlurHashesWithoutChangingDrafts(t *testing.T)
 			t.Fatalf("Hash-only differences left pending publication: %+v", response.Changes)
 		}
 	}
-	b.publish("succeeded")
+	b.request("POST", "/api/publish?republish=1", nil, http.StatusAccepted)
+	b.waitPublication("succeeded")
 	check()
+	// Republish must reject both public edits and protected-only edits. Ordinary
+	// publication still applies them deliberately and retains the derived hashes.
+	for _, i := range []int{0, 3} {
+		p := b.state.Catalog.Photos[i]
+		p.Caption = "An ordinary metadata edit"
+		b.request("PATCH", "/api/photos/"+p.ID, edit(p, c.Albums[0].ID), 200)
+		liveBefore := b.request("GET", "/media/index.json", nil, 200)
+		b.request("POST", "/api/publish?republish=1", nil, http.StatusConflict)
+		if !bytes.Equal(liveBefore, b.request("GET", "/media/index.json", nil, 200)) {
+			t.Fatal("Rejected republication changed the live manifests")
+		}
+		before, err = store.Read(t.Context(), "private", "catalog.json")
+		if err != nil || before == nil {
+			t.Fatal("Missing draft catalog")
+		}
+		b.publish("succeeded")
+		check()
+	}
 	// The next ordinary publication reuses live hashes even when the old private
 	// previews are no longer readable; media already live is not recopied.
 	for _, i := range []int{0, 3} {

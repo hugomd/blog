@@ -6,6 +6,7 @@
 .video-badge{position:absolute;bottom:10px;left:10px;background:#000c;color:#eee;border:1px solid #ffffff40;border-radius:5px;padding:4px 7px;font-size:10px;font-variant-numeric:tabular-nums;pointer-events:none}
 .upload-progress{overflow-wrap:anywhere}.upload-progress button{margin-top:12px;min-height:40px}
 @media(max-width:700px){.editor-image video{max-height:190px}.page-heading h1{font-size:30px}.upload-progress{bottom:12px}}
+@media(max-width:700px){.topbar .actions{flex-wrap:wrap;gap:10px}#publish-status{flex-basis:100%}}
 .publication-progress{position:sticky;top:0;z-index:4;padding:14px 25px;background:#282821;border-bottom:1px solid #545448;font-size:12px}.publication-progress progress{max-width:460px}
 @media(max-width:700px){
   body:has(dialog[open]){overflow:hidden}

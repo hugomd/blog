@@ -64,6 +64,9 @@ processing needs temporary disk space.
   photos and albums are counted separately as added, updated, removed or unchanged,
   alongside live and next-release totals. Private-only edits do not require
   publication. Album order/cover changes count as album updates, not new photos.
+- **Republish** rebuilds an existing publication, filling missing BlurHashes
+  without re-uploading media. It requires no pending public or protected changes;
+  publish or undo those saved edits first. The server enforces this too.
 - Publication runs in the background with image-copy progress. You can browse,
   reload or close the page; edits, uploads, archive and delete are locked until
   it finishes. A pod replacement resumes the saved job. Failures expose a retry

@@ -72,6 +72,8 @@ function refreshButtons() {
   document.querySelectorAll('button').forEach(button => { button.disabled = busy || ((publishing() || changing()) && !button.matches('.photo-card,#close-editor,#reload,#cancel-delete,#logout,#cancel-upload')) || button.hasAttribute('data-boundary') || (conflicted && !button.matches('#reload,#close-editor,#cancel-delete,#cancel-upload,[data-reload]')); });
   document.querySelectorAll('#album-form input,#album-form textarea,#album-form select,#editor-body input,#editor-body textarea,#editor-body select').forEach(input => { input.disabled = publishing() || changing(); });
   $('#publish').disabled = busy || publishing() || changing() || conflicted || (!state.publicationChanges?.changed && state.publication?.state !== 'failed');
+  $('#republish').disabled = busy || publishing() || changing() || conflicted || state.publicationChanges?.changed || state.publishedRevision == null;
+  $('#republish').title = state.publicationChanges?.changed ? 'Publish or undo saved publication changes before republishing.' : 'Rebuild published manifests and fill missing BlurHashes without re-uploading media.';
 }
 function renderOperation() {
   $('#operation-progress').hidden = !operating();
@@ -493,23 +495,26 @@ editor.addEventListener('click', event => {
 });
 $('#reload').onclick = () => { if (!dirty || confirm('Discard unsaved edits and reload?')) location.reload(); };
 $('#logout').onclick = () => work(async () => { if (dirty && !confirm('Discard unsaved edits and sign out?')) return; await api('/logout', { method: 'POST' }); dirty = false; location.reload(); });
-$('#publish').onclick = () => work(async () => {
+async function reviewPublication(republish = false) {
   if (dirty) { showError(new Error('Save or discard the open edits before publishing.')); return; }
   const latest = await api('/catalog');
   if (latest.etag !== state.etag) { conflicted = true; throw new Error('The library changed. Reload before publishing.'); }
   Object.assign(state, latest); renderPublication();
   const changes = state.publicationChanges;
-  if (publishing() || (!changes.changed && state.publication?.state !== 'failed')) return;
+  if (republish && (changes.changed || state.publishedRevision == null)) throw new Error('Republish requires an existing publication with no pending publication changes. Publish or undo saved changes first.');
+  if (publishing() || (!republish && !changes.changed && state.publication?.state !== 'failed')) return;
   const projections = [['Public', changes.photos, changes.albums]];
   if (changes.protectedPhotos && changes.protectedAlbums) projections.push(['Private · share-link and password protected', changes.protectedPhotos, changes.protectedAlbums]);
   const counts = projections.map(([title, photos, albums]) => `<table class="publication-changes"><caption>${title}</caption><thead><tr><th scope="col">Change</th><th scope="col">Photos</th><th scope="col">Albums</th></tr></thead><tbody>${[['Live now', 'live'], ['Added', 'added'], ['Updated', 'updated'], ['Removed', 'removed'], ['Unchanged', 'unchanged'], ['After publishing', 'next']].map(([label, key]) => `<tr><th scope="row">${label}</th><td>${photos[key]}</td><td>${albums[key]}</td></tr>`).join('')}</tbody></table>`).join('');
-  openDialog(`<div class="simple-dialog"><h2 id="dialog-title">Publish changes?</h2>${counts}${changes.changed && projections.every(([, photos, albums]) => [photos, albums].every(count => count.added + count.updated + count.removed === 0)) ? '<p>Order, access, link, or password changes will be applied.</p>' : ''}<p class="muted">Saved access, regenerated links, and password changes take effect now; replaced links and old viewing sessions are revoked. Draft photos stay private. Previous releases are retained; unpublishing is not permanent deletion.</p><div class="editor-footer"><span class="hint">${state.development ? 'Local preview only. No R2 writes.' : 'Images copy first. The live index updates last.'}</span><button class="primary" id="confirm-publish">Publish now ↗</button></div></div>`, false);
+  openDialog(republish ? `<div class="simple-dialog"><h2 id="dialog-title">Republish current library?</h2><p>Rebuild the public and protected manifests and fill missing BlurHashes from existing image previews and video posters. No re-upload is needed.</p><p class="muted">Published photos, album order and access settings stay the same. Private drafts stay private. Missing or unreadable previews keep neutral placeholders.</p><div class="editor-footer"><span class="hint">${state.development ? 'Local preview only. No R2 writes.' : 'Runs in the background. You can leave this page.'}</span><button class="primary" id="confirm-publish">Republish now ↗</button></div></div>` : `<div class="simple-dialog"><h2 id="dialog-title">Publish changes?</h2>${counts}${changes.changed && projections.every(([, photos, albums]) => [photos, albums].every(count => count.added + count.updated + count.removed === 0)) ? '<p>Order, access, link, or password changes will be applied.</p>' : ''}<p class="muted">Saved access, regenerated links, and password changes take effect now; replaced links and old viewing sessions are revoked. Draft photos stay private. Previous releases are retained; unpublishing is not permanent deletion.</p><div class="editor-footer"><span class="hint">${state.development ? 'Local preview only. No R2 writes.' : 'Images copy first. The live index updates last.'}</span><button class="primary" id="confirm-publish">Publish now ↗</button></div></div>`, false);
   $('#confirm-publish').onclick = () => work(async () => {
-    Object.assign(state, await api('/publish', { method: 'POST' }));
+    Object.assign(state, await api(republish ? '/publish?republish=1' : '/publish', { method: 'POST' }));
     editor.close(); renderPublication(); status('Publication started. It will continue if you close this page.');
     await watchPublication();
   });
-});
+}
+$('#publish').onclick = () => work(() => reviewPublication());
+$('#republish').onclick = () => work(() => reviewPublication(true));
 $('#login-form').onsubmit = async event => {
   event.preventDefault();
   const button = event.target.querySelector('button'); button.disabled = true;

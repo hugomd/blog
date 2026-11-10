@@ -136,6 +136,19 @@ func (a *app) startPublication(w http.ResponseWriter, r *http.Request) error {
 	if err := checkETag(r, etag); err != nil {
 		return err
 	}
+	if r.URL.Query().Get("republish") == "1" {
+		live, liveETag, err := a.load(r.Context(), "public", "index.json")
+		if err != nil {
+			return err
+		}
+		protected, _, err := a.loadProtected(r.Context(), live)
+		if err != nil {
+			return err
+		}
+		if liveETag == "" || c.publicRelease(a.config.PublicURL).changesFrom(live).Changed || c.protectedRelease().changesFrom(protected).Changed {
+			return &requestError{409, "Republish requires an existing publication with no pending publication changes. Publish or undo saved changes first."}
+		}
+	}
 	for _, item := range c.Albums {
 		if item.Access == "password" && (!a.config.PrivateAlbums || item.PasswordHash == "" || item.AccessVersion == "") {
 			return badRequest("Configure protected storage and an album password before publishing.")
