@@ -183,6 +183,7 @@ function render() {
   const isAlbums = route === 'albums', isAlbum = route.startsWith('album/');
   stream.classList.toggle('list', !isAlbums && !isAlbum);
   $('#skeleton').classList.toggle('list', !isAlbums && !isAlbum);
+  $('#count').hidden = !isAlbum;
   layoutPhotos();
   if (!state.catalog) return;
   const photos = state.catalog.photos.filter(p => !p.archived && !p.deleting && (p.kind === undefined || p.kind === 'image' || isVideo(p)));
@@ -260,6 +261,8 @@ function renderInfo(animate = false) {
     surface.style.transform = `translateX(-50%) scale(${x},${y})`;
     surface.style.borderRadius = `${radius / x}px / ${radius / y}px`;
     // Grow one glass surface without stretching or moving the date or metadata.
+    button.style.width = `${width * x}px`;
+    button.style.left = `${width * (1 - x) / 2}px`;
     button.style.transform = `translateY(${22 / y - 22}px) scale(${1 / x},${1 / y})`;
     info.style.transform = `translateY(${44 / y - 44}px) scale(${1 / x},${1 / y})`;
     info.style.opacity = Math.max(0, (progress - .35) / .65);
@@ -384,7 +387,7 @@ function renderViewer(changePhoto = false) {
     $(`#info-${id}`).hidden = !p.exif?.[key];
     $(`#${id}-value`).textContent = p.exif?.[key] || '';
   }
-  const fields = { ...(date ? { Captured: date } : {}), ...p.exif, ...(p.location ? { Location: p.location } : {}), ...(isVideo(p) ? { Duration: videoDuration(p.duration) } : {}) };
+  const fields = { ...p.exif, ...(p.location ? { Location: p.location } : {}), ...(isVideo(p) ? { Duration: videoDuration(p.duration) } : {}) };
   $('#info-fields').innerHTML = Object.entries(fields).filter(([key, value]) => value && !['Camera', 'Lens', 'Dimensions'].includes(key)).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('');
   $('#info-tags').innerHTML = (p.tags || []).map(tag => `<span class="tag">${escape(tag)}</span>`).join('');
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
@@ -564,7 +567,14 @@ for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
 viewer.addEventListener('click', event => {
   if (!state.zoomed && (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement)))) close(event);
 });
-addEventListener('resize', () => { cancelSwipe(); cancelPan(); layoutPhotos(); if (viewer.open) { place(); renderInfo(); } });
+addEventListener('resize', () => {
+  cancelSwipe(); cancelPan(); layoutPhotos();
+  if (state.zoomed && innerWidth <= 700) setZoom(false);
+  if (viewer.open) {
+    if (!viewer.contains(document.activeElement)) viewer.focus({ preventScroll: true });
+    place(); renderInfo();
+  }
+});
 addEventListener('hashchange', async () => {
   if (privatePath && new URLSearchParams(location.hash.slice(1)).has('key')) { await openShareLink(); return; }
   cancelSwipe();
