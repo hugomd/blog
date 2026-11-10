@@ -2,16 +2,30 @@
 
 A small Go service for managing the blog’s photostream and optional albums.
 The frontend is embedded in the binary: no Node build, database or persistent
-volume. Images **and all manifests** live in R2 in production.
+data volume. Media **and all manifests** live in R2 in production; video
+processing needs temporary disk space.
 
 ## Editing and publishing
 
-- Upload multiple JPEGs/PNGs (or drop them on the library). Each starts as a
-  private draft. HEIC/RAW files must first be exported as JPEGs.
+- Upload multiple JPEGs/PNGs or MP4/MOV videos (or drop them on the library).
+  Each starts as a private draft. HEIC/RAW files must first be exported as JPEGs.
+  Studio sends 8 MiB chunks directly to private R2 using one-hour signed URLs,
+  with three simultaneous transfers, byte progress, bounded retries and Cancel.
+  Original bytes no longer pass through the Studio container. Keep the page
+  open during transfer; once processing is accepted, it runs server-side.
+  Reloading does not resume browser chunks. A server restart requires inspection
+  and explicit retry, not automatic replay.
 - The Go service corrects EXIF orientation and creates JPEG variants with a
   maximum long edge of 640, 1280 and 2560 pixels, without upscaling. PNG
   transparency is flattened onto white. Input is limited to 30 MiB, 40 MP and
   16,000 pixels on either axis; processing is serialized to bound memory usage.
+- Videos are limited to 512 MiB and ten minutes. FFmpeg accepts MP4/MOV
+  (including HEVC), creates metadata-stripped H.264/AAC faststart MP4 playback
+  and three JPEG posters. Output is bounded to 1920×1080 landscape or
+  1080×1920 portrait at 30 fps without upscaling. Originals stay private.
+  The blog and authenticated Studio previews use native video controls;
+  protected videos require the same album session as protected images and
+  support byte ranges for seeking.
 - Re-encoded images contain **no embedded source metadata**. The manifest
   preserves only camera make/model, lens, ISO, shutter speed, aperture and
   focal length, plus an editable capture date. GPS, camera serial numbers,
@@ -59,7 +73,8 @@ volume. Images **and all manifests** live in R2 in production.
   failed rather than replaying a possibly committed edit; reload to inspect the
   actual state before retrying. Archive/deletion intent markers remain available
   for cleanup retries. Request bodies/passwords are not persisted in job status.
-  Uploads and creating draft albums remain synchronous. API clients without
+  Upload completion uses the same background worker; creating upload plans and
+  draft albums remains synchronous. API clients without
   `Prefer: respond-async` retain the synchronous mutation response contract.
 - **Archive photo** keeps originals, derivatives, metadata and private album
   memberships/order, but removes the photo from the current public index and
@@ -89,6 +104,8 @@ Private bucket (never enable public access):
 
 - `originals/<id>`: untouched originals, including original metadata.
 - `photos/<id>/{640,1280,2560}.jpg`: private preview/ready-to-publish images.
+- `photos/<id>/video.mp4`: optimized playback for videos only.
+- `uploads/<id>.json`: private multipart-upload plan/recovery metadata.
 - `catalog.json`: versioned-schema working catalog, including drafts and albums.
 - `publication.json`: latest job identity, catalog ETag/revision and outcome.
   Intermediate progress is in memory; a restarted job recounts its copies.
@@ -96,12 +113,15 @@ Private bucket (never enable public access):
 Public bucket:
 
 - `photos/<id>/{640,1280,2560}.jpg`: approved web images only.
+- `photos/<id>/video.mp4`: approved optimized video playback, never originals.
 - `releases/<id>.json`: historical public snapshots, redacted when archiving.
 - `index.json`: the currently published snapshot, containing `version`,
   `revision`, `publishedAt`, `photos` and `albums`. Photos contain `id`, `alt`,
   `caption`, `tags`, `capturedDate`, `uploadedAt`, dimensions, allowlisted `exif`,
   `thumbnail` and `src`. Albums reference the same IDs through ordered
   `photoIds` and `coverId`. Standalone photos are in `photos` too.
+  Videos also contain `kind: "video"` and duration in seconds; their `src` is
+  the MP4 and `thumbnail` is the poster. Missing `kind` still means image.
 
 Images and a historical release are written before the final conditional write
 of `index.json`. Failure before that final write leaves the previous live index
@@ -109,6 +129,11 @@ intact, although some unreferenced public files may have uploaded. A lost
 connection can leave a write's outcome unknown: reload to check, rather than
 blindly retrying an upload. Failed private uploads can leave unreferenced
 originals/derivatives; there is no automatic garbage collector.
+Signed upload plans expire after one hour but expiration is not garbage
+collection. Configure an R2 incomplete-multipart lifecycle rule (R2 defaults to
+seven days); abandoned plan records and already-completed, unimported originals
+still need scoped operator cleanup. Explicit Cancel removes unfinished uploads;
+completion retries finish post-commit cleanup without deleting library media.
 
 Publishing uses native R2 `CopyObject`, retaining the private source, rather than
 downloading JPEGs into Go and uploading them again. Credentials need source read
@@ -172,7 +197,9 @@ and condition the index write on its ETag.
 
 From the repository root, `./bin/hermit install` installs the pinned Go toolchain.
 `.agents/setup` also downloads modules and warms the build cache for fresh orbs.
-From this directory:
+Install FFmpeg/FFprobe with H.264, HEVC and AAC support before running the
+service or tests (Debian/Ubuntu: the `ffmpeg` package). They are included in the
+container image and standard Amp orbs, not installed by Hermit. From this directory:
 
 ```sh copy Copy Local Development Commands
 ../bin/go test -race ./...
@@ -211,6 +238,25 @@ authentication. Mutations additionally require an exact matching `Origin`.
 | `ADMIN_PASSWORD` / `ADMIN_PASSWORD_FILE` | At least 16 characters; only needed in password mode |
 | `PORT` | HTTP listen port, default 8080 |
 
+Direct browser upload requires CORS on the **private** R2 bucket, restricted to
+the exact Studio origin, allowing `PUT` and the `Content-Type` request header.
+For example (replace the origin if your deployment differs):
+
+```json
+[{"AllowedOrigins":["https://photos.internal.ii.md"],"AllowedMethods":["PUT"],"AllowedHeaders":["Content-Type"],"MaxAgeSeconds":3600}]
+```
+
+This does not make the bucket public. Browser requests use signed query
+credentials, never Studio cookies; no exposed ETag header is needed because the
+server lists authoritative parts before completion. The Studio CSP permits
+connections only to itself and the configured R2 endpoint origin. Signed URLs
+are bearer capabilities: do not log or share them. R2 credentials also require
+multipart initiation, part listing, completion and abort permissions. Without
+CORS, browser uploads fail even if server-to-R2 access works. Local filesystem
+development instead uses authenticated same-origin chunk endpoints; that fallback
+is never registered for R2-backed deployments. The legacy image-only
+`POST /api/photos` remains available for older clients, but Studio no longer uses it.
+
 All data APIs trust `X-Auth-Request-Email` in `AUTH_MODE=proxy`. **Do not expose
 that mode directly.** It requires the Traefik ForwardAuth gate to overwrite the
 header and a NetworkPolicy preventing ordinary pods from bypassing the proxy.
@@ -228,6 +274,9 @@ older Studio versions must not be restored afterward. Private share links need n
 password: anyone with the secret share URL can view or forward them. Both private
 access modes stay out of the public gallery; a photo also published independently
 or through a public album remains public.
+The first saved video permanently upgrades the working catalog to version 4;
+do not roll back to an image without video/schema-4 support. Public and protected
+release versions remain 1 for compatible image-only consumers.
 The proposed editor hostname is `photos.internal.ii.md`; confirm it and prepare
 DNS, R2 buckets/domain, sealed credentials, an immutable image digest and the
 shared certificate before deploying. No resources are provisioned by this app.
@@ -239,8 +288,13 @@ docker build -t blog-photo-manager:test photo-manager
 ```
 
 Run that command from the repository root. The multi-stage build runs the Go
-tests, embeds the frontend and produces a static, nonroot binary in a distroless
-image. It supports a read-only root filesystem and needs no writable volume.
+tests, embeds the frontend and produces a static, nonroot binary in Debian
+bookworm slim with FFmpeg/FFprobe. A read-only root filesystem requires a
+writable `/tmp` volume owned/writable by UID 65532 (mode 1777 also works).
+Allow space for a 512 MiB original plus playback, posters and transcode scratch;
+use a size-limited disk-backed `emptyDir`, not a RAM-backed volume under a small
+memory limit. Processing is serialized, but cluster CPU/memory/ephemeral-storage
+limits still need validation with representative videos before rollout.
 
 The `Photo manager` GitHub workflow tests/builds on relevant pull requests and
 pushes to `develop`. Image **publication is manual**: run `workflow_dispatch`

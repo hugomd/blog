@@ -42,11 +42,12 @@
     <a class="control" id="nav-stream" href="{{ "photos/" | relURL }}#stream" aria-current="page">Photostream</a>
     <a class="control" id="nav-albums" href="{{ "photos/" | relURL }}#albums">Albums</a>
   </nav>
-  <dialog id="viewer" aria-label="Photo viewer">
-    <div class="toolbar"><button class="control" id="close" aria-label="Close photo">✕ Close</button><div class="tools"><span id="count" class="meta" aria-live="polite"></span><button class="control" id="details" aria-pressed="false" aria-controls="info">ⓘ Info</button></div></div>
+  <dialog id="viewer" aria-label="Media viewer">
+    <div class="toolbar"><button class="control" id="close" aria-label="Close viewer">✕ Close</button><div class="tools"><span id="count" class="meta" aria-live="polite"></span><button class="control" id="details" aria-pressed="false" aria-controls="info">ⓘ Info</button></div></div>
     <img id="zoom" class="zoom" alt="">
-    <button class="control arrow" id="previous" aria-label="Previous photo">←</button><button class="control arrow" id="next" aria-label="Next photo">→</button>
-    <aside id="info" class="info" aria-label="Photo information" hidden></aside>
+    <button class="control arrow" id="previous" aria-label="Previous item">←</button><button class="control arrow" id="next" aria-label="Next item">→</button>
+    <aside id="info" class="info" aria-label="Media information" hidden></aside>
+    <p id="media-error" class="media-error" role="alert" hidden>This video couldn’t be played. Try reopening it or check your connection.</p>
     <p id="caption" class="caption"></p>
   </dialog>
 </body>

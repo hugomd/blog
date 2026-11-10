@@ -27,9 +27,19 @@ type photo struct {
 	CapturedDate string            `json:"capturedDate"`
 	Width        int               `json:"width"`
 	Height       int               `json:"height"`
+	Kind         string            `json:"kind,omitempty"`
+	Duration     float64           `json:"duration,omitempty"`
 	Exif         map[string]string `json:"exif"`
 	Thumbnail    string            `json:"thumbnail,omitempty"`
 	Src          string            `json:"src,omitempty"`
+}
+
+func (p photo) files() []string {
+	keys := []string{fmt.Sprintf("photos/%s/640.jpg", p.ID), fmt.Sprintf("photos/%s/1280.jpg", p.ID), fmt.Sprintf("photos/%s/2560.jpg", p.ID)}
+	if p.Kind == "video" {
+		keys = append(keys, "photos/"+p.ID+"/video.mp4")
+	}
+	return keys
 }
 
 type album struct {
@@ -78,25 +88,37 @@ func (a *app) load(ctx context.Context, bucket, key string) (catalog, string, er
 	if err := json.Unmarshal(value.Body, &result); err != nil {
 		return catalog{}, "", fmt.Errorf("invalid catalog: %w", err)
 	}
-	if result.Version != 1 && result.Version != 2 && result.Version != 3 {
+	if result.Version < 1 || result.Version > 4 {
 		return catalog{}, "", errors.New("unsupported catalog version")
 	}
+	for _, p := range result.Photos {
+		if p.Kind != "" && p.Kind != "video" {
+			return catalog{}, "", errors.New("unsupported media kind")
+		}
+	}
+	protected := false
 	for _, item := range result.Albums {
 		if item.Access != "" && item.Access != "public" && item.Access != "password" && item.Access != "link" {
 			return catalog{}, "", errors.New("unsupported album access")
 		}
+		protected = protected || item.protected()
 	}
-	if !a.config.PrivateAlbums && ((bucket == "private" && result.Version >= 2) || result.ProtectedRelease != "") {
+	if !a.config.PrivateAlbums && ((bucket == "private" && (result.Version == 2 || result.Version == 3 || protected)) || result.ProtectedRelease != "") {
 		return catalog{}, "", &requestError{503, "Restore protected album storage configuration before editing this library."}
 	}
 	return result, value.ETag, nil
 }
 
 func (a *app) save(ctx context.Context, c *catalog, etag string) (string, error) {
+	for _, p := range c.Photos {
+		if p.Kind == "video" {
+			c.Version = 4 // Old publishers must not omit video files or delete only posters.
+		}
+	}
 	for _, item := range c.Albums {
 		// Older publishers must reject modes they would otherwise treat as public.
 		if item.Access == "link" {
-			c.Version = 3
+			c.Version = max(c.Version, 3)
 		} else if item.Access == "password" {
 			c.Version = max(c.Version, 2)
 		}
@@ -167,6 +189,9 @@ func (c catalog) release(publicURL string, protected bool) catalog {
 		if !protected {
 			p.Thumbnail = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/640.jpg"
 			p.Src = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/2560.jpg"
+			if p.Kind == "video" {
+				p.Src = strings.TrimRight(publicURL, "/") + "/photos/" + p.ID + "/video.mp4"
+			}
 		}
 		release.Photos = append(release.Photos, p)
 		published[p.ID] = true
@@ -232,8 +257,8 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 		}
 		for _, p := range target.next.Photos {
 			if !alreadyPublished[p.ID] {
-				for _, size := range []int{640, 1280, 2560} {
-					keys = append(keys, copyJob{target.bucket, fmt.Sprintf("photos/%s/%d.jpg", p.ID, size)})
+				for _, key := range p.files() {
+					keys = append(keys, copyJob{target.bucket, key})
 				}
 			}
 		}
@@ -262,7 +287,11 @@ func (a *app) publish(ctx context.Context, c catalog, progress func(int, int)) e
 				if job.bucket == "protected" {
 					cache = "private, no-store"
 				}
-				if err := a.store.Copy(copyContext, "private", job.bucket, job.key, "image/jpeg", cache); err != nil {
+				contentType := "image/jpeg"
+				if strings.HasSuffix(job.key, ".mp4") {
+					contentType = "video/mp4"
+				}
+				if err := a.store.Copy(copyContext, "private", job.bucket, job.key, contentType, cache); err != nil {
 					select {
 					case failures <- err:
 					default:

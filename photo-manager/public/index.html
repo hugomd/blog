@@ -23,7 +23,7 @@
     <aside class="sidebar">
       <a class="brand" href="#photos"><span class="brand-mark" aria-hidden="true">◧</span> Photos<span class="studio-label">STUDIO</span></a>
       <nav aria-label="Photo management">
-        <a href="#photos" id="nav-photos">All photos <span id="photo-count"></span></a>
+        <a href="#photos" id="nav-photos">Library <span id="photo-count"></span></a>
         <a href="#albums" id="nav-albums">Albums <span id="album-count"></span></a>
         <a href="#archived" id="nav-archived">Archived <span id="archived-count"></span></a>
       </nav>
@@ -33,17 +33,17 @@
     <div class="workspace">
       <div id="sandbox" class="sandbox" hidden>LOCAL PREVIEW <span>Not connected to R2 or the live blog.</span></div>
       <header class="topbar">
-        <span>Hugo’s Blog <span class="slash">/</span> Photo management</span>
+        <span>Hugo’s Blog <span class="slash">/</span> Photos &amp; videos</span>
         <div class="actions"><span id="publish-status" class="muted"></span><button id="publish" class="primary">Publish changes ↗</button></div>
       </header>
       <div id="error" class="error" role="alert" hidden><span></span><button id="reload">Reload library</button></div>
-      <div id="publication-progress" class="publication-progress" role="status" hidden><span></span><progress aria-label="Images copied for publication"></progress></div>
+      <div id="publication-progress" class="publication-progress" role="status" hidden><span></span><progress aria-label="Media copied for publication"></progress></div>
       <div id="operation-progress" class="publication-progress" role="status" hidden><span></span><progress aria-label="Background change"></progress></div>
       <main id="main"></main>
-      <footer><span id="status" role="status">Ready.</span><span>Images + manifests · R2</span></footer>
+      <footer><span id="status" role="status">Ready.</span><span>Media + manifests · R2</span></footer>
     </div>
   </div>
-  <input id="files" type="file" accept="image/jpeg,image/png" multiple hidden>
+  <input id="files" type="file" accept="image/jpeg,image/png,video/mp4,video/quicktime,.mp4,.mov" multiple hidden>
   <dialog id="editor" aria-labelledby="dialog-title">
     <button id="close-editor" class="close" aria-label="Close editor">×</button>
     <div id="editor-body"></div>
@@ -51,6 +51,6 @@
   <dialog id="delete-confirmation" aria-labelledby="delete-title" aria-describedby="delete-description">
     <div id="delete-body" class="simple-dialog"></div>
   </dialog>
-  <div id="upload-progress" class="upload-progress" role="status" hidden><span></span><progress></progress></div>
+  <div id="upload-progress" class="upload-progress" role="status" hidden><span></span><progress aria-label="File bytes transferred"></progress><button id="cancel-upload" type="button">Cancel upload</button></div>
 </body>
 </html>

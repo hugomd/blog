@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -28,6 +29,7 @@ var assets embed.FS
 
 type configuration struct {
 	Origin, PublicURL, AuthMode, Password, AllowedEmail, LocalRoot string
+	UploadOrigin                                                   string
 	Development                                                    bool
 	PrivateAlbums                                                  bool
 	GalleryURL                                                     string
@@ -297,6 +299,83 @@ func (a *app) previewImage(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (a *app) previewVideo(w http.ResponseWriter, r *http.Request) error {
+	c, _, err := a.load(r.Context(), "private", "catalog.json")
+	if err != nil {
+		return err
+	}
+	id, found := r.PathValue("id"), false
+	for _, p := range c.Photos {
+		found = found || (p.ID == id && p.Kind == "video" && !p.Deleting)
+	}
+	if !found {
+		return &requestError{404, "Video not found."}
+	}
+	key := "photos/" + id + "/video.mp4"
+	size, err := a.store.Size(r.Context(), "private", key)
+	if err != nil {
+		return err
+	}
+	offset, length, status := int64(0), size, 200
+	if value := r.Header.Get("Range"); value != "" {
+		invalid := func() error {
+			w.Header().Set("Content-Range", fmt.Sprintf("bytes */%d", size))
+			return &requestError{416, "Requested range is unavailable."}
+		}
+		match := regexp.MustCompile(`^bytes=(\d*)-(\d*)$`).FindStringSubmatch(value)
+		if match == nil || (match[1] == "" && match[2] == "") {
+			return invalid()
+		}
+		if match[1] == "" {
+			suffix, err := strconv.ParseInt(match[2], 10, 64)
+			if err != nil || suffix < 1 {
+				return invalid()
+			}
+			length = min(suffix, size)
+			offset = size - length
+		} else {
+			start, err := strconv.ParseInt(match[1], 10, 64)
+			if err != nil || start >= size {
+				return invalid()
+			}
+			offset = start
+			end := size - 1
+			if match[2] != "" {
+				end, err = strconv.ParseInt(match[2], 10, 64)
+				if err != nil || end < start {
+					return invalid()
+				}
+			}
+			length = min(end, size-1) - start + 1
+		}
+		status = 206
+	}
+	var body io.ReadCloser
+	if r.Method != "HEAD" {
+		body, err = a.store.Open(r.Context(), "private", key, offset, length)
+		if err != nil {
+			return err
+		}
+		defer body.Close()
+	}
+	if status == 206 {
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", offset, offset+length-1, size))
+	}
+	w.Header().Set("Content-Type", "video/mp4")
+	w.Header().Set("Accept-Ranges", "bytes")
+	w.Header().Set("Content-Length", strconv.FormatInt(length, 10))
+	if r.Method == "HEAD" {
+		w.WriteHeader(status)
+		return nil
+	}
+	w.WriteHeader(status)
+	_, err = io.CopyN(w, body, length)
+	if err != nil {
+		log.Printf("Video preview stream interrupted: %T", err)
+	}
+	return nil
+}
+
 func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
 		Alt          string   `json:"alt"`
@@ -448,9 +527,11 @@ func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	found := false
+	var media photo
 	for i := range c.Photos {
 		if c.Photos[i].ID == id {
 			found = true
+			media = c.Photos[i]
 			// Persist intent before any destructive writes. A retry after a failed
 			// delete or restart resumes cleanup without allowing republication.
 			if !c.Photos[i].Deleting {
@@ -478,8 +559,8 @@ func (a *app) deletePhoto(w http.ResponseWriter, r *http.Request) error {
 		buckets = append(buckets, "protected")
 	}
 	for _, bucket := range buckets {
-		for _, size := range []int{640, 1280, 2560} {
-			if err := a.store.Delete(ctx, bucket, fmt.Sprintf("photos/%s/%d.jpg", id, size)); err != nil {
+		for _, key := range media.files() {
+			if err := a.store.Delete(ctx, bucket, key); err != nil {
 				return err
 			}
 		}
@@ -621,8 +702,15 @@ func (a *app) routes() http.Handler {
 		respond(w, 200, map[string]bool{"ok": true})
 	})
 	mux.HandleFunc("GET /api/catalog", a.handler(a.getCatalog))
+	mux.HandleFunc("POST /api/uploads", a.handler(a.createUpload))
+	mux.HandleFunc("POST /api/uploads/{id}/complete", a.change(a.completeUpload))
+	mux.HandleFunc("DELETE /api/uploads/{id}", a.handler(a.cancelUpload))
+	if a.config.LocalRoot != "" {
+		mux.HandleFunc("PUT /api/uploads/{id}/parts/{part}", a.handler(a.localUploadPart))
+	}
 	mux.HandleFunc("POST /api/photos", a.handler(a.upload))
 	mux.HandleFunc("GET /api/photos/{id}/image", a.handler(a.previewImage))
+	mux.HandleFunc("GET /api/photos/{id}/video", a.handler(a.previewVideo))
 	mux.HandleFunc("PATCH /api/photos/{id}", a.change(a.editPhoto))
 	mux.HandleFunc("DELETE /api/photos/{id}", a.change(a.deletePhoto))
 	mux.HandleFunc("POST /api/photos/{id}/{action}", a.change(func(w http.ResponseWriter, r *http.Request) error {
@@ -654,7 +742,7 @@ func (a *app) routes() http.Handler {
 	if a.config.LocalRoot != "" {
 		mux.HandleFunc("GET /media/{key...}", func(w http.ResponseWriter, r *http.Request) {
 			key := r.PathValue("key")
-			if !fs.ValidPath(key) || !(strings.HasSuffix(key, ".json") || strings.HasSuffix(key, ".jpg")) {
+			if !fs.ValidPath(key) || !(strings.HasSuffix(key, ".json") || strings.HasSuffix(key, ".jpg") || strings.HasSuffix(key, ".mp4")) {
 				http.NotFound(w, r)
 				return
 			}
@@ -668,7 +756,7 @@ func (a *app) routes() http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: blob:; connect-src 'self' "+a.config.UploadOrigin+"; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			if r.Method != "GET" && r.Method != "HEAD" {
 				origin := a.config.Origin
@@ -743,6 +831,8 @@ func main() {
 			log.Fatal("Use HTTPS R2/media URLs and separate private/public buckets")
 		}
 		r2 := newR2Storage(os.Getenv("R2_ENDPOINT"), os.Getenv("R2_ACCESS_KEY_ID"), os.Getenv("R2_SECRET_ACCESS_KEY"), os.Getenv("R2_PRIVATE_BUCKET"), os.Getenv("R2_PUBLIC_BUCKET"))
+		endpoint, _ := url.Parse(os.Getenv("R2_ENDPOINT"))
+		config.UploadOrigin = endpoint.Scheme + "://" + endpoint.Host
 		if protected := os.Getenv("R2_PROTECTED_BUCKET"); protected != "" {
 			if protected == os.Getenv("R2_PRIVATE_BUCKET") || protected == os.Getenv("R2_PUBLIC_BUCKET") {
 				log.Fatal("Protected delivery requires a separate, non-public bucket")

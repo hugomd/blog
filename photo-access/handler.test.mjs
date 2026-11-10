@@ -25,6 +25,8 @@ const name = id => `__Secure-photo_album_${id}`;
 class R2 {
   objects = new Map();
   reads = [];
+  heads = [];
+  ranges = [];
   writes = [];
   revision = 0;
   getFailure = null;
@@ -36,15 +38,27 @@ class R2 {
   }
   async get(key, options) {
     this.reads.push(key);
-    assert.equal(options, undefined, 'never forward request conditions or ranges to R2');
+    if (key.endsWith('/video.mp4') && options) {
+      assert.deepEqual(Object.keys(options), ['range']);
+      assert.deepEqual(Object.keys(options.range), ['offset', 'length']);
+      this.ranges.push(options.range);
+    } else assert.equal(options, undefined, 'JPEG and publication reads remain unconditional');
     if (this.getFailure?.(key)) throw new Error('sensitive storage diagnostics');
     const snapshot = this.objects.get(key);
     await Promise.resolve();
     if (!snapshot) return null;
-    return { etag: snapshot.etag, httpEtag: `"${snapshot.etag}"`,
-      body: new Response(snapshot.bytes).body,
+    const bytes = Buffer.from(snapshot.bytes);
+    const slice = options?.range ? bytes.subarray(options.range.offset, options.range.offset + options.range.length) : bytes;
+    return { etag: snapshot.etag, httpEtag: `"${snapshot.etag}"`, size: bytes.length,
+      body: new Response(slice).body,
       text: async () => snapshot.bytes,
       httpMetadata: { cacheControl: 'public, max-age=99999', contentType: 'text/secret' } };
+  }
+  async head(key) {
+    this.heads.push(key);
+    if (this.getFailure?.(key)) throw new Error('sensitive storage diagnostics');
+    const snapshot = this.objects.get(key);
+    return snapshot ? { size: Buffer.byteLength(snapshot.bytes), etag: snapshot.etag } : null;
   }
   async put(key, bytes, options) {
     this.writes.push({ key, bytes, options });
@@ -108,14 +122,14 @@ function signedCookie(id = A, claims = {}, secret = SECRET) {
   const payload = Buffer.from(JSON.stringify({ album: id, version: VERSION, exp: Math.floor(Date.now() / 1000) + 3600, ...claims })).toString('base64url');
   return `${name(id)}=${payload}.${createHmac('sha256', secret).update(payload).digest('base64url')}`;
 }
-function privateHeaders(result) {
+function privateHeaders(result, video = false) {
   assert.match(result.headers.get('Cache-Control'), /private.*no-store/);
   assert.equal(result.headers.get('CDN-Cache-Control'), 'no-store');
   assert.equal(result.headers.get('Cloudflare-CDN-Cache-Control'), 'no-store');
   assert.equal(result.headers.get('Referrer-Policy'), 'no-referrer');
   assert.equal(result.headers.get('X-Robots-Tag'), 'noindex, nofollow, noarchive');
   assert.equal(result.headers.get('X-Content-Type-Options'), 'nosniff');
-  for (const header of ['ETag', 'Last-Modified', 'Accept-Ranges', 'Content-Range', 'Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials']) {
+  for (const header of ['ETag', 'Last-Modified', ...(video !== true ? ['Accept-Ranges', 'Content-Range'] : []), 'Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials']) {
     assert.equal(result.headers.get(header), null, header);
   }
 }
@@ -668,4 +682,110 @@ test('Pages adapter exports the handler and routing invokes only private paths',
   assert.equal(adapter.onRequest, onRequest);
   const routes = JSON.parse(await readFile(new URL('../static/_routes.json', import.meta.url), 'utf8'));
   assert.deepEqual(routes, { version: 1, include: ['/photos/private/*'], exclude: [] });
+});
+
+function videoFixture() {
+  const f = fixture();
+  Object.assign(f.release.photos[0], { kind: 'video', duration: 12.75, width: 1280, height: 720 });
+  f.save();
+  f.bytes = '0123456789abcdefghijklmnopqrstuvwxyz';
+  f.privateBucket.seed(`photos/${P}/video.mp4`, f.bytes);
+  return f;
+}
+
+test('mixed catalog adds only kind/duration, rewrites MP4 and preserves image/poster URLs', async () => {
+  const f = videoFixture();
+  const data = await (await f.call('catalog', { headers: { Cookie: signedCookie() } })).json();
+  const p = data.photos.find(p => p.id === P), image = data.photos.find(p => p.id === Q);
+  assert.equal(p.kind, 'video'); assert.equal(p.duration, 12.75);
+  assert.equal(p.width, 1280); assert.equal(p.height, 720);
+  assert.equal(p.thumbnail, `${base(A)}media/${P}/640.jpg`);
+  assert.equal(p.src, `${base(A)}media/${P}/video.mp4`);
+  assert.deepEqual(Object.keys(p).sort(), [...Object.keys(image), 'kind', 'duration'].sort());
+  assert.equal(image.src, `${base(A)}media/${Q}/2560.jpg`);
+  assert.ok(!('kind' in image));
+  assert.doesNotMatch(JSON.stringify(data), /must-not-return|wrong\.example/);
+  for (const size of [640, 1280, 2560]) {
+    const poster = await status(await f.call(`media/${P}/${size}.jpg`, { headers: { Cookie: signedCookie(), Range: 'bytes=0-0' } }), 200);
+    assert.equal(await poster.text(), `JPEG:${P}:${size}`);
+  }
+});
+
+test('MP4 full and single range GET/HEAD return actual slices and exact headers', async () => {
+  const f = videoFixture(), length = f.bytes.length;
+  const cases = [[null, 200, 0, length - 1], ['bytes=0-0', 206, 0, 0], ['bytes=5-12', 206, 5, 12],
+    ['bytes=30-', 206, 30, length - 1], ['bytes=-5', 206, length - 5, length - 1],
+    ['bytes=-999', 206, 0, length - 1], ['bytes=10-999', 206, 10, length - 1]];
+  for (const method of ['GET', 'HEAD']) for (const [range, expected, start, end] of cases) {
+    const headers = { Cookie: signedCookie(), 'If-None-Match': '*', 'If-Modified-Since': 'Wed, 01 Jan 2099 00:00:00 GMT', 'If-Range': 'stale' };
+    if (range) headers.Range = range;
+    const before = f.privateBucket.reads.filter(key => key.endsWith('.mp4')).length;
+    const result = await f.call(`media/${P}/video.mp4`, { method, headers });
+    assert.equal(result.status, expected); privateHeaders(result, true);
+    assert.equal(result.headers.get('Content-Type'), 'video/mp4');
+    assert.equal(result.headers.get('Accept-Ranges'), 'bytes');
+    assert.equal(result.headers.get('Content-Length'), String(end - start + 1));
+    assert.equal(result.headers.get('Content-Range'), range ? `bytes ${start}-${end}/${length}` : null);
+    assert.equal(await result.text(), method === 'HEAD' ? '' : f.bytes.slice(start, end + 1));
+    if (method === 'HEAD') assert.equal(f.privateBucket.reads.filter(key => key.endsWith('.mp4')).length, before);
+    if (method === 'GET' && range) assert.deepEqual(f.privateBucket.ranges.at(-1), { offset: start, length: end - start + 1 });
+  }
+});
+
+test('MP4 unsatisfiable, malformed and multipart ranges fail 416 only after authentication', async () => {
+  const f = videoFixture();
+  for (const Range of ['bytes=36-', 'bytes=99-100', 'bytes=-0', 'bytes=9-2', 'bytes=-', 'bytes=0-1,4-5',
+    'items=0-1', 'bytes=wat', 'bytes=9007199254740992-', 'bytes=0-9007199254740992']) {
+    for (const method of ['GET', 'HEAD']) {
+      await status(await f.call(`media/${P}/video.mp4`, { method, headers: { Range } }), 401);
+      const result = await f.call(`media/${P}/video.mp4`, { method, headers: { Cookie: signedCookie(), Range } });
+      assert.equal(result.status, 416); privateHeaders(result, true);
+      assert.equal(result.headers.get('Content-Range'), `bytes */${f.bytes.length}`);
+      assert.equal(result.headers.get('Content-Length'), '0');
+      assert.equal(await result.text(), '');
+    }
+  }
+  assert.equal(f.privateBucket.reads.filter(key => key.endsWith('.mp4')).length, 0);
+});
+
+test('MP4 checks session, membership, exact kind, same origin and current pointer before storage on every seek', async () => {
+  for (const method of ['GET', 'HEAD']) {
+    const f = videoFixture();
+    const conditions = { Range: 'bytes=0-0', 'If-None-Match': '*', 'If-Range': 'anything' };
+    for (const Cookie of ['', signedCookie(B), signedCookie(A, { version: NEXT })]) {
+      await status(await f.call(`media/${P}/video.mp4`, { method, headers: { ...conditions, Cookie } }), 401);
+    }
+    await status(await f.call(`media/${R}/video.mp4`, { method, headers: { ...conditions, Cookie: signedCookie() } }), 404);
+    for (const kind of [undefined, 'image', 'unknown', null]) {
+      f.release.photos[0].kind = kind; f.save();
+      await status(await f.call(`media/${P}/video.mp4`, { method, headers: { ...conditions, Cookie: signedCookie() } }), 404);
+    }
+    for (const headers of [{ Origin: 'https://evil.example' }, { 'Sec-Fetch-Site': 'cross-site' }]) {
+      await status(await f.call(`media/${P}/video.mp4`, { method, headers: { ...conditions, ...headers, Cookie: signedCookie() } }), 403);
+    }
+    assert.equal(f.privateBucket.heads.length, 0);
+    assert.ok(!f.privateBucket.reads.some(key => key.endsWith('.mp4')));
+    f.release.photos[0].kind = 'video'; f.save();
+    assert.equal((await f.call(`media/${P}/video.mp4`, { method, headers: { ...conditions, Cookie: signedCookie() } })).status, 206);
+    f.release.albums[0].accessVersion = NEXT; f.save(NEXT);
+    f.publicBucket.seed('index.json', { protectedRelease: NEXT });
+    const before = f.privateBucket.heads.length;
+    await status(await f.call(`media/${P}/video.mp4?protectedRelease=${RELEASE}`, { method, headers: { ...conditions, Cookie: signedCookie() } }), 401);
+    f.release.albums[0].published = false; f.save(NEXT);
+    await status(await f.call(`media/${P}/video.mp4`, { method, headers: { ...conditions, Cookie: signedCookie(A, { version: NEXT }) } }), 404);
+    assert.equal(f.privateBucket.heads.length, before);
+  }
+});
+
+test('video metadata and missing MP4/storage failures fail closed; unknown catalog kinds rejected', async () => {
+  for (const changes of [{ kind: 'unknown' }, { kind: null }, { duration: 0 }, { duration: -1 }, { duration: '12' }, { duration: null }]) {
+    const f = videoFixture(); Object.assign(f.release.photos[0], changes); f.save();
+    await status(await f.call('catalog', { headers: { Cookie: signedCookie() } }), 503);
+  }
+  for (const mutate of [f => f.privateBucket.objects.delete(`photos/${P}/video.mp4`),
+    f => { f.privateBucket.getFailure = key => key.endsWith('.mp4'); },
+    f => { delete f.env.PROTECTED_PHOTOS.head; f.env.PROTECTED_PHOTOS.head = undefined; }]) {
+    const f = videoFixture(); mutate(f);
+    await status(await f.call(`media/${P}/video.mp4`, { headers: { Cookie: signedCookie() } }), 503);
+  }
 });

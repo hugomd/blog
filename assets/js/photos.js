@@ -9,8 +9,23 @@ let swipeStart;
 let loadRequest;
 const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
 
+const isVideo = photo => photo.kind === 'video';
+function videoDuration(value) {
+  const seconds = Math.max(0, Math.floor(Number(value) || 0));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+function videoBadge(photo) {
+  return isVideo(photo) ? `<span class="video-badge" aria-hidden="true">▶ ${videoDuration(photo.duration)}</span>` : '';
+}
+function releaseMedia() {
+  if (zoom instanceof HTMLVideoElement) {
+    zoom.pause(); zoom.removeAttribute('src'); zoom.removeAttribute('poster'); zoom.load();
+  }
+}
+
 function clearPrivate() {
   loadRequest?.abort(); loadRequest = null;
+  releaseMedia();
   viewer.close(); zoom.getAnimations().forEach(animation => animation.cancel());
   zoom.removeAttribute('src'); zoom.alt = ''; info.innerHTML = ''; $('#caption').textContent = ''; $('#count').textContent = '';
   document.body.style.overflow = '';
@@ -107,7 +122,7 @@ function render() {
   $('#skeleton').classList.toggle('list', !isAlbums && !isAlbum);
   layoutPhotos();
   if (!state.catalog) return;
-  const photos = state.catalog.photos.filter(p => !p.archived && !p.deleting);
+  const photos = state.catalog.photos.filter(p => !p.archived && !p.deleting && (p.kind === undefined || p.kind === 'image' || isVideo(p)));
   const byID = new Map(photos.map(p => [p.id, p]));
   const album = isAlbum ? state.catalog.albums.find(a => `album/${encodeURIComponent(a.slug)}` === route) : null;
   const title = isAlbums ? 'Albums' : isAlbum ? album?.title || 'Album unavailable' : 'Photostream';
@@ -127,7 +142,7 @@ function render() {
     $('#albums').innerHTML = state.catalog.albums.map(a => {
       const members = a.photoIds.filter(id => byID.has(id));
       const cover = byID.get(a.coverId) || byID.get(members[0]);
-      return `<a class="album" href="${escape(albumURL(a.slug))}"><div class="photo">${cover ? `<img src="${escape(cover.thumbnail)}" width="${cover.width}" height="${cover.height}" alt="${escape(cover.alt)}" loading="lazy">` : '<span class="album-placeholder" aria-hidden="true">◧</span>'}</div><h2>${escape(a.title)}</h2><p>${members.length} photograph${members.length === 1 ? '' : 's'}</p></a>`;
+      return `<a class="album" href="${escape(albumURL(a.slug))}"><div class="photo">${cover ? `<img src="${escape(cover.thumbnail)}" width="${cover.width}" height="${cover.height}" alt="${escape(cover.alt)}" loading="lazy">${videoBadge(cover)}` : '<span class="album-placeholder" aria-hidden="true">◧</span>'}</div><h2>${escape(a.title)}</h2><p>${members.length} item${members.length === 1 ? '' : 's'}</p></a>`;
     }).join('');
     if (!state.catalog.albums.length) message('No albums published yet.');
     return;
@@ -136,7 +151,7 @@ function render() {
   // standalone photos, in the manifest's newest-first order.
   state.photos = isAlbum ? (album?.photoIds || []).map(id => byID.get(id)).filter(Boolean) : photos;
   stream.setAttribute('aria-label', isAlbum ? `${album?.title || 'Album'} photographs` : 'Photostream');
-  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="Open ${escape(p.alt)}" data-photo="${i}"><img src="${escape(p.thumbnail)}" ${isAlbum ? '' : `srcset="${escape(p.thumbnail)} 640w, ${escape(p.src)} 2560w" sizes="(max-width:700px) 100vw, (max-width:900px) 50vw, 33vw"`} width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < (isAlbum ? 4 : 3) ? 'eager' : 'lazy'}"></button>`).join('');
+  stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="${isVideo(p) ? 'Play video' : 'Open'} ${escape(p.alt)}${isVideo(p) ? `, ${videoDuration(p.duration)}` : ''}" data-photo="${i}"><img src="${escape(p.thumbnail)}" ${isAlbum || isVideo(p) ? '' : `srcset="${escape(p.thumbnail)} 640w, ${escape(p.src)} 2560w" sizes="(max-width:700px) 100vw, (max-width:900px) 50vw, 33vw"`} width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < (isAlbum ? 4 : 3) ? 'eager' : 'lazy'}">${videoBadge(p)}</button>`).join('');
   layoutPhotos();
   if (!state.photos.length) message(isAlbum ? album ? 'No photographs in this album yet.' : 'This album isn’t currently published.' : 'No photographs published yet. Check back soon.');
 }
@@ -180,24 +195,59 @@ function animatePhoto(thumbnail, full, closing = false) {
   const transform = `translate(${thumbnail.left + thumbnail.width / 2 - full.left - full.width / 2}px,${thumbnail.top + thumbnail.height / 2 - full.top - full.height / 2}px) scale(${thumbnail.width / full.width},${thumbnail.height / full.height})`;
   const frames = [{ transform }, { transform: 'none' }];
   // Scale/travel from the actual thumbnail bounds in both directions; no fade.
-  return zoom.animate(closing ? frames.reverse() : frames, { duration: duration(), easing: 'cubic-bezier(.22,.75,.2,1)', fill: closing ? 'forwards' : 'none' }).finished;
+  return zoom.animate(closing ? frames.reverse() : frames, { duration: duration(), easing: 'cubic-bezier(.22,.75,.2,1)', fill: closing ? 'forwards' : 'none' }).finished.catch(error => {
+    // Revocation can clear the viewer while its opening transition is running.
+    if (error.name !== 'AbortError') throw error;
+  });
 }
 function renderViewer(changePhoto = false) {
   const p = state.photos[state.index];
   if (changePhoto) {
+    releaseMedia();
+    $('#media-error').hidden = true;
     // Fresh pixels immediately, even when a previous full image is still loading.
-    const display = new Image();
-    display.id = 'zoom'; display.className = 'zoom'; display.alt = p.alt; display.src = p.thumbnail;
+    const display = isVideo(p) ? document.createElement('video') : new Image();
+    display.id = 'zoom'; display.className = 'zoom';
+    if (isVideo(p)) {
+      display.controls = true; display.playsInline = true; display.preload = 'metadata';
+      display.poster = p.thumbnail; display.setAttribute('aria-label', p.alt || 'Video');
+      display.setAttribute('aria-describedby', 'caption media-error');
+      display.addEventListener('error', async () => {
+        if (zoom !== display || !viewer.open || !display.hasAttribute('src')) return;
+        if (privatePath) {
+          try {
+            const result = await fetch(`${privatePath}catalog`, { credentials: 'same-origin', cache: 'no-store' });
+            if (zoom !== display || !viewer.open) return;
+            if (result.status === 401) { showUnlock('Your viewing session has ended.'); return; }
+            if (result.status === 404) { clearPrivate(); message('This album isn’t available.'); return; }
+            if (result.ok) {
+              const current = await result.json();
+              if (zoom !== display || !viewer.open) return;
+              if (!current.photos?.some(item => item.id === p.id && isVideo(item))) {
+                clearPrivate(); message('This video isn’t available.'); return;
+              }
+            }
+          } catch { /* Keep a useful media error if the connection is offline. */ }
+        }
+        if (zoom === display && viewer.open) {
+          display.pause(); display.removeAttribute('src'); display.controls = false; display.load();
+          $('#media-error').hidden = false;
+        }
+      });
+      display.src = p.src;
+    } else { display.alt = p.alt; display.src = p.thumbnail; }
     zoom.replaceWith(display); zoom = display;
-    const full = new Image(); full.src = p.src;
-    full.decode().then(() => { if (zoom === display && viewer.open) display.src = full.src; }).catch(() => {});
+    if (!isVideo(p)) {
+      const full = new Image(); full.src = p.src;
+      full.decode().then(() => { if (zoom === display && viewer.open) display.src = full.src; }).catch(() => {});
+    }
   }
   $('#count').textContent = `${state.index + 1} / ${state.photos.length}`;
   const date = formatDate(p.capturedDate);
   $('#caption').innerHTML = [escape(p.caption), date ? `<em><time datetime="${escape(p.capturedDate)}">${date}</time></em>` : ''].filter(Boolean).join(' · ');
   $('#details').setAttribute('aria-pressed', state.info);
   info.hidden = !state.info;
-  const fields = { ...p.exif, ...(date ? { 'Capture date': date } : {}), Dimensions: `${p.width} × ${p.height}` };
+  const fields = { ...p.exif, ...(date ? { 'Capture date': date } : {}), Dimensions: `${p.width} × ${p.height}`, ...(isVideo(p) ? { Duration: videoDuration(p.duration) } : {}) };
   info.innerHTML = `<dl>${Object.entries(fields).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${key === 'Capture date' ? `<em>${escape(value)}</em>` : escape(value)}</dd></div>`).join('')}</dl>${p.tags?.length ? `<div class="tags" aria-label="Tags">${p.tags.map(tag => `<span class="tag">${escape(tag)}</span>`).join('')}</div>` : ''}`;
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
   place();
@@ -215,11 +265,13 @@ async function open(index) {
 async function close(event) {
   if (state.busy || !viewer.open) return;
   state.busy = true;
+  if (zoom instanceof HTMLVideoElement) zoom.pause();
   const button = stream.children[state.index], thumb = button.querySelector('img');
   const touch = event?.pointerType === 'touch' || (event?.detail > 0 && matchMedia('(pointer: coarse)').matches);
   // Navigation/resize can move the thumbnail: use its current position.
   try { await animatePhoto(thumb.getBoundingClientRect(), zoom.getBoundingClientRect(), true); }
   finally {
+    releaseMedia();
     viewer.close(); zoom.getAnimations().forEach(a => a.cancel());
     thumb.style.visibility = ''; document.body.style.overflow = '';
     // Closing a dialog can restore focus automatically, so touch needs an
@@ -266,10 +318,11 @@ $('#album-login').onsubmit = async event => {
 $('.skip').onclick = event => { event.preventDefault(); $('#main').focus(); };
 viewer.addEventListener('cancel', event => { event.preventDefault(); close(); });
 viewer.addEventListener('keydown', event => {
+  if (event.target instanceof HTMLVideoElement) return;
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); step(event.key === 'ArrowLeft' ? -1 : 1); }
 });
 viewer.addEventListener('touchstart', event => {
-  swipeStart = innerWidth <= 700 && event.touches.length === 1 && (event.target === viewer || event.target === zoom) ? event.touches[0] : null;
+  swipeStart = innerWidth <= 700 && event.touches.length === 1 && (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement))) ? event.touches[0] : null;
 }, { passive: true });
 viewer.addEventListener('touchend', event => {
   if (!swipeStart) return;
@@ -281,7 +334,7 @@ viewer.addEventListener('touchend', event => {
   step(dx < 0 ? 1 : -1);
 }, { passive: false });
 viewer.addEventListener('touchcancel', () => { swipeStart = null; });
-viewer.addEventListener('click', event => { if (event.target === viewer || event.target === zoom) close(event); });
+viewer.addEventListener('click', event => { if (event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement))) close(event); });
 addEventListener('resize', () => { layoutPhotos(); if (viewer.open) place(); });
 addEventListener('hashchange', async () => {
   if (privatePath && new URLSearchParams(location.hash.slice(1)).has('key')) { await openShareLink(); return; }

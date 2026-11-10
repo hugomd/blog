@@ -33,7 +33,10 @@ type object struct {
 type storage interface {
 	List(context.Context, string, string) ([]string, error)
 	Read(context.Context, string, string) (*object, error)
+	Size(context.Context, string, string) (int64, error)
+	Open(context.Context, string, string, int64, int64) (io.ReadCloser, error)
 	Write(context.Context, string, string, []byte, string, string, *string) error
+	WriteFile(context.Context, string, string, *os.File, string, string) error
 	Copy(context.Context, string, string, string, string, string) error
 	Delete(context.Context, string, string) error
 }
@@ -46,7 +49,7 @@ type r2Storage struct {
 func newR2Storage(endpoint, key, secret, privateBucket, publicBucket string) *r2Storage {
 	client := s3.NewFromConfig(aws.Config{
 		Region: "auto", Credentials: credentials.NewStaticCredentialsProvider(key, secret, ""),
-		HTTPClient: &http.Client{Timeout: 45 * time.Second}, RetryMaxAttempts: 1,
+		HTTPClient: &http.Client{Timeout: 10 * time.Minute}, RetryMaxAttempts: 1,
 		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
 		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
 	}, func(o *s3.Options) { o.BaseEndpoint = &endpoint; o.UsePathStyle = true })
@@ -68,6 +71,32 @@ func (s *r2Storage) Read(ctx context.Context, bucket, key string) (*object, erro
 		return nil, err
 	}
 	return &object{Body: body, ETag: aws.ToString(result.ETag)}, nil
+}
+
+func (s *r2Storage) Size(ctx context.Context, bucket, key string) (int64, error) {
+	result, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key})
+	if err != nil {
+		return 0, err
+	}
+	return aws.ToInt64(result.ContentLength), nil
+}
+
+// length=0 streams the complete object; otherwise request only the selected bytes.
+func (s *r2Storage) Open(ctx context.Context, bucket, key string, offset, length int64) (io.ReadCloser, error) {
+	input := &s3.GetObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key}
+	if length > 0 {
+		input.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	}
+	result, err := s.client.GetObject(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return result.Body, nil
+}
+
+func (s *r2Storage) WriteFile(ctx context.Context, bucket, key string, file *os.File, contentType, cache string) error {
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key, Body: file, ContentType: &contentType, CacheControl: &cache})
+	return err
 }
 
 // expected=nil is unconditional; expected="" creates only; otherwise match the ETag.
@@ -174,6 +203,63 @@ func (s *localStorage) Read(ctx context.Context, bucket, key string) (*object, e
 		return nil, err
 	}
 	return &object{Body: body, ETag: fmt.Sprintf("\"%x\"", sha256.Sum256(body))}, nil
+}
+
+func (s *localStorage) Size(ctx context.Context, bucket, key string) (int64, error) {
+	filename, err := s.filename(bucket, key)
+	if err != nil {
+		return 0, err
+	}
+	info, err := os.Stat(filename)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
+func (s *localStorage) Open(ctx context.Context, bucket, key string, offset, length int64) (io.ReadCloser, error) {
+	filename, err := s.filename(bucket, key)
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := file.Seek(offset, io.SeekStart); err != nil {
+		file.Close()
+		return nil, err
+	}
+	return file, nil // The caller bounds the response to length bytes.
+}
+
+func (s *localStorage) WriteFile(ctx context.Context, bucket, key string, file *os.File, contentType, cache string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	filename, err := s.filename(bucket, key)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(filename), 0700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(filename), ".upload-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	_, copyErr := io.Copy(tmp, file)
+	closeErr := tmp.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), filename)
 }
 
 func (s *localStorage) Copy(ctx context.Context, sourceBucket, destinationBucket, key, contentType, cache string) error {

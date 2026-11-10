@@ -73,15 +73,16 @@ to work. Never deploy the protected bucket with public access or CORS enabled.
 
 ## Publication and access
 
-Studio writes three JPEG derivatives per delivery audience, then a protected
-`releases/<random ID>.json` snapshot. The final conditional public `index.json`
+Studio writes three JPEG derivatives per delivery audience (plus an MP4 for each
+video), then a protected `releases/<random ID>.json` snapshot. The final conditional public `index.json`
 write commits both audiences using an opaque `protectedRelease` pointer.
 The public pointer reveals that protected content exists, but no album IDs or
 protected metadata. Uncommitted snapshots cannot be selected by a visitor.
 
-The gateway rereads the current pointer/snapshot on every protected request.
-It allows only a current published album's members and the 640/1280/2560 JPEG
-variants. It never serves bucket paths, originals, releases or credentials.
+The gateway rereads the current pointer/snapshot on every protected request,
+including every video seek. It allows only a current published album's members
+and the 640/1280/2560 JPEG variants, plus `video.mp4` for records explicitly marked
+`kind: "video"`. It never serves bucket paths, originals, releases or credentials.
 Both private modes require the album's current session for catalog/media reads.
 The album ID alone grants no access. Link exchanges verify SHA-256 of the exact
 UTF-8 lowercase hex64 token using a constant-time comparison. Only its hash and
@@ -97,11 +98,44 @@ Sessions are signed, album/version-scoped, HttpOnly, Secure, SameSite=Strict
 cookies lasting 12 hours. Link regeneration, password replacements, unpublication/republishing and
 access changes invalidate prior sessions **when published**. There is no manual
 lock control in the gallery. Protected responses are `private, no-store`, noindex,
-no-referrer, without cache validators, ranges or CORS. Downloaded screenshots
-and external copies cannot be revoked.
+no-referrer, without cache validators or CORS. JPEGs still ignore ranges and
+conditional requests, returning the full image with 200 after authentication.
+MP4 GET/HEAD support a single `bytes=start-end`, `bytes=start-` or `bytes=-suffix`
+range with 206, `Content-Range`, exact `Content-Length` and `Accept-Ranges: bytes`.
+Malformed, multipart and unsatisfiable ranges return 416 (`bytes */<size>`), only
+after authentication and membership checks. Client cache validators and `If-Range`
+are not forwarded or allowed to skip those checks. Full MP4 responses preserve the
+R2 stream's known length; JPEGs deliberately retain their length-stripping stream.
+Downloaded screenshots and external copies cannot be revoked.
 Links can open the generic album page from other sites through a top-level
 navigation. Cross-site embedded pages, catalog/media reads and auth requests
 remain denied; the page fetches its catalog on the blog origin.
+
+### Video catalog contract
+
+The version-1 delivery catalog retains the `photos` array for images and videos.
+Missing `kind` means image; explicit `image` is also accepted. Video records add
+only `kind: "video"` and a positive finite `duration` in seconds to the existing
+visitor metadata whitelist. `width`/`height` describe encoded video dimensions.
+The poster is the 640 JPEG and `src` is the MP4. Protected URLs are always rebuilt
+as `/photos/private/<album ID>/media/<photo ID>/{640.jpg,video.mp4}`; source URLs,
+originals and admin metadata are never trusted or passed through. Unknown catalog
+kinds fail closed. Public catalogs keep their existing public-domain URLs.
+
+Each video has `photos/<32 lowercase hex ID>/{640,1280,2560}.jpg` poster derivatives
+and `photos/<ID>/video.mp4`. The gallery labels video posters with a play badge and
+duration, and opens a native-controls video with a poster and no autoplay. Closing,
+navigating or clearing a revoked private session pauses and releases the source.
+Native seeking, keyboard controls and touch gestures on the video are not gallery
+navigation shortcuts; Escape still closes the viewer. A video failure displays an
+accessible error and rechecks private catalog authorization before retaining it.
+Already downloaded/buffered bytes cannot be revoked; requests already authorized
+may finish. There is no background polling or promise of immediate remote erasure.
+
+R2 implementation follows the [Workers API reference](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/):
+`head(key)` returns the complete object size without reading its body; ranged
+`get(key, { range: { offset, length } })` returns a bounded stream while `size`
+remains the full object size. No request headers are forwarded as R2 conditions.
 
 Persistent conditional writes in the protected bucket enforce five login
 attempts per IP/album/minute and 30 per album/minute, before password verification.

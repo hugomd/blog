@@ -4,12 +4,18 @@ const state = { catalog: { photos: [], albums: [] }, etag: 'new' };
 let busy = false, dirty = false, conflicted = false, filter = 'all', search = '';
 let publicationTimer;
 let operationTimer;
+let transfer = null;
+const operationWaiters = new Set();
 const operationStarted = Symbol('operation started');
 const editor = $('#editor');
 const deletion = $('#delete-confirmation');
 const image = (id, size = 640) => `/api/photos/${encodeURIComponent(id)}/image?size=${size}`;
 const publishing = () => state.publication?.state === 'running';
-const changing = () => state.operation?.state === 'running';
+const operating = () => state.operation?.state === 'running';
+const changing = () => operating() || !!transfer;
+const duration = seconds => Number.isFinite(seconds) ? `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}` : '';
+const videoBadge = photo => photo.kind === 'video' ? `<span class="video-badge">Video ${duration(photo.duration)}</span>` : '';
+const preview = photo => photo.kind === 'video' ? `<video controls preload="metadata" playsinline poster="${image(photo.id, 1280)}" src="/api/photos/${encodeURIComponent(photo.id)}/video" aria-label="${escape(photo.alt || photo.filename)}"></video>` : `<img src="${image(photo.id, 1280)}" alt="${escape(photo.alt)}">`;
 const photoById = id => state.catalog.photos.find(photo => photo.id === id);
 const albumIds = id => state.catalog.albums.filter(album => album.photoIds.includes(id)).map(album => album.id);
 const photoReady = (photo, albums = state.catalog.albums) => !photo.archived && !photo.archiving && !photo.deleting && (photo.published || albums.some(album => album.published && album.photoIds.includes(photo.id)));
@@ -18,8 +24,8 @@ const photoPublic = (photo, albums = state.catalog.albums) => photoReady(photo, 
 const accessLabel = album => album.access === 'link' ? 'Private share link' : album.access === 'password' ? 'Password protected' : 'Public';
 const badge = published => `<span class="badge ${published ? '' : 'draft'}">${published ? 'Ready to publish' : 'Draft'}</span>`;
 
-async function api(path, { method = 'GET', body, headers = {} } = {}) {
-  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && /^\/photos\/[^/]+\/(archive|restore)$/.test(path));
+async function api(path, { method = 'GET', body, headers = {}, awaitOperation = false } = {}) {
+  const backgroundChange = ['PUT', 'PATCH', 'DELETE'].includes(method) || (method === 'POST' && (/^\/photos\/[^/]+\/(archive|restore)$/.test(path) || /^\/uploads\/[^/]+\/complete$/.test(path)));
   const response = await fetch(`/api${path}`, {
     method, headers: { ...(method === 'GET' ? {} : { 'If-Match': state.etag }), ...(backgroundChange ? { Prefer: 'respond-async' } : {}), ...(body && !(body instanceof File) ? { 'Content-Type': 'application/json' } : {}), ...headers },
     body: body instanceof File ? body : body ? JSON.stringify(body) : undefined,
@@ -39,7 +45,9 @@ async function api(path, { method = 'GET', body, headers = {} } = {}) {
     state.operation = result.operation;
     dirty = false; deletion.close(); editor.close();
     renderOperation(); refreshButtons();
+    const completion = awaitOperation ? new Promise((resolve, reject) => operationWaiters.add({ resolve, reject })) : null;
     watchOperation();
+    if (completion) return completion;
     throw operationStarted; // Do not run a caller's synchronous success message.
   }
   return result;
@@ -61,14 +69,14 @@ function showError(error) {
 }
 function status(message) { $('#status').textContent = message; }
 function refreshButtons() {
-  document.querySelectorAll('button').forEach(button => { button.disabled = busy || ((publishing() || changing()) && !button.matches('.photo-card,#close-editor,#reload,#cancel-delete,#logout')) || button.hasAttribute('data-boundary') || (conflicted && button.id !== 'reload' && button.id !== 'close-editor' && button.id !== 'cancel-delete' && !button.hasAttribute('data-reload')); });
+  document.querySelectorAll('button').forEach(button => { button.disabled = busy || ((publishing() || changing()) && !button.matches('.photo-card,#close-editor,#reload,#cancel-delete,#logout,#cancel-upload')) || button.hasAttribute('data-boundary') || (conflicted && !button.matches('#reload,#close-editor,#cancel-delete,#cancel-upload,[data-reload]')); });
   document.querySelectorAll('#album-form input,#album-form textarea,#album-form select,#editor-body input,#editor-body textarea,#editor-body select').forEach(input => { input.disabled = publishing() || changing(); });
   $('#publish').disabled = busy || publishing() || changing() || conflicted || (!state.publicationChanges?.changed && state.publication?.state !== 'failed');
 }
 function renderOperation() {
-  $('#operation-progress').hidden = !changing();
-  if (!changing()) return;
-  $('#operation-progress span').textContent = `${state.operation.method === 'DELETE' ? 'Deleting' : state.operation.path.endsWith('/archive') ? 'Archiving' : state.operation.path.endsWith('/restore') ? 'Restoring' : 'Saving'} in the background. You can browse or leave this page.`;
+  $('#operation-progress').hidden = !operating();
+  if (!operating()) return;
+  $('#operation-progress span').textContent = `${state.operation.path.endsWith('/complete') ? 'Processing uploaded media' : state.operation.method === 'DELETE' ? 'Deleting' : state.operation.path.endsWith('/archive') ? 'Archiving' : state.operation.path.endsWith('/restore') ? 'Restoring' : 'Saving'} in the background. You can browse or leave this page.`;
   status('Change accepted. Waiting for storage to finish…');
 }
 async function watchOperation() {
@@ -80,10 +88,16 @@ async function watchOperation() {
       if (job.state === 'failed') {
         status('Change failed. Library reloaded; check the current state before retrying.'); showError(new Error(job.error));
       } else status('Change complete. Publish separately to apply saved catalog changes to the website.');
+      for (const waiter of operationWaiters) job.state === 'failed' ? waiter.reject(new Error(job.error || 'Media processing failed.')) : waiter.resolve({});
+      operationWaiters.clear();
     } else state.operation = job;
     renderOperation(); refreshButtons();
-  } catch (error) { showError(error); }
-  if (changing() && !$('#studio').hidden) operationTimer = setTimeout(watchOperation, 1000);
+  } catch (error) {
+    showError(error);
+    for (const waiter of operationWaiters) waiter.reject(error);
+    operationWaiters.clear();
+  }
+  if (operating() && !$('#studio').hidden) operationTimer = setTimeout(watchOperation, 1000);
 }
 function renderPublication() {
   const job = state.publication;
@@ -91,7 +105,7 @@ function renderPublication() {
   $('#publish-status').textContent = publishing() ? 'Publication in progress' : job?.state === 'failed' ? 'Publication failed' : state.publicationChanges?.changed ? 'Unpublished changes' : 'No changes to publish';
   $('#publication-progress').hidden = !publishing();
   if (!publishing()) return;
-  $('#publication-progress span').textContent = job.total ? `Copying image files · ${job.completed} / ${job.total}. You can leave this page.` : 'Preparing publication. You can leave this page.';
+  $('#publication-progress span').textContent = job.total ? `Copying media files · ${job.completed} / ${job.total}. You can leave this page.` : 'Preparing publication. You can leave this page.';
   const progress = $('#publication-progress progress');
   if (job.total) { progress.max = job.total; progress.value = job.completed; }
   else progress.removeAttribute('value');
@@ -141,9 +155,9 @@ function renderPhotos() {
     if (filter === 'standalone' && albumIds(photo.id).length) return false;
     return `${photo.filename} ${photo.alt} ${photo.caption} ${photo.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase());
   });
-  $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos</h1></div><button class="primary" data-upload>＋ Upload photos</button></div>
-    <div class="toolbar"><label class="search"><span class="hint">Search your library</span><input id="search" type="search" placeholder="Names, captions, tags…" value="${escape(search)}"></label><label><span class="hint">Show</span><select id="filter"><option value="all">All photos</option><option value="draft">Drafts</option><option value="ready">Ready to publish</option><option value="standalone">Not in an album</option></select></label></div>
-    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="${photo.deleting ? 'Retry deletion of' : 'Edit'} ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${photo.deleting ? '<span class="badge draft">Deletion incomplete</span>' : badge(photoReady(photo))}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><h2>${state.catalog.photos.length ? 'No matching photos.' : 'No photos yet.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop JPEGs or PNGs here, or choose photos to upload. Every photo starts as a private draft.'}</p><button data-upload>Choose photos →</button></div>`}`;
+  $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos & videos</h1></div><button class="primary" data-upload>＋ Upload files</button></div>
+    <div class="toolbar"><label class="search"><span class="hint">Search your library</span><input id="search" type="search" placeholder="Names, captions, tags…" value="${escape(search)}"></label><label><span class="hint">Show</span><select id="filter"><option value="all">All photos & videos</option><option value="draft">Drafts</option><option value="ready">Ready to publish</option><option value="standalone">Not in an album</option></select></label></div>
+    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="${photo.deleting ? 'Retry deletion of' : 'Edit'} ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong>${photo.deleting ? '<span class="badge draft">Deletion incomplete</span>' : badge(photoReady(photo))}</div><div class="card-subtitle">${albumIds(photo.id).length ? `${albumIds(photo.id).length} album${albumIds(photo.id).length === 1 ? '' : 's'}` : photo.kind === 'video' ? 'Standalone video' : 'Standalone photo'}${photo.capturedDate ? ` · ${escape(photo.capturedDate)}` : ''}</div></button>`).join('')}</div>` : `<div class="empty"><h2>${state.catalog.photos.length ? 'No matching photos or videos.' : 'No photos or videos yet.'}</h2><p>${state.catalog.photos.length ? 'Try another filter or search.' : 'Drop JPEGs, PNGs, MP4s or MOVs here, or choose files. Photos: up to 30 MiB; videos: up to 512 MiB. Every file starts as a private draft.'}</p><button data-upload>Choose files →</button></div>`}`;
   $('#filter').value = filter;
   $('#filter').onchange = event => { filter = event.target.value; renderPhotos(); refreshButtons(); };
   $('#search').oninput = event => {
@@ -156,14 +170,14 @@ function renderPhotos() {
 function renderArchived() {
   const photos = [...state.catalog.photos].reverse().filter(photo => photo.archived);
   $('#main').innerHTML = `<div class="page-heading"><div><h1>Archived</h1><p>Files and album memberships are kept. Restored photos follow their albums’ publication status.</p></div></div>
-    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="View archived ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong><span class="badge draft">${photo.deleting ? 'Deletion incomplete' : photo.archiving ? 'Archive incomplete' : 'Archived'}</span></div></button>`).join('')}</div>` : '<div class="empty"><h2>No archived photos.</h2><p>Archive a photo from its details to remove it from public manifests without deleting its files.</p></div>'}`;
+    ${photos.length ? `<div class="grid">${photos.map(photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="View archived ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : `<img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy">`}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong><span class="badge draft">${photo.deleting ? 'Deletion incomplete' : photo.archiving ? 'Archive incomplete' : 'Archived'}</span></div></button>`).join('')}</div>` : '<div class="empty"><h2>No archived photos or videos.</h2><p>Archive a photo or video from its details to remove it from public manifests without deleting its files.</p></div>'}`;
 }
 
 function renderAlbums() {
   $('#main').innerHTML = `<div class="page-heading"><div><h1>Albums</h1></div><button class="primary" id="create-album">＋ New album</button></div>
   ${state.catalog.albums.length ? `<div class="grid album-grid">${state.catalog.albums.map(album => {
     const cover = [album.coverId, ...album.photoIds].map(photoById).find(photo => photo && !photo.deleting && !photo.archived);
-    return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `<img src="${image(cover.id)}" alt="${escape(cover.alt)}" loading="lazy">` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${accessLabel(album)} · ${album.photoIds.length} photographs${privateAlbum(album) ? '' : ` · /${escape(album.slug)}/`}</div></a>`;
+    return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `<img src="${image(cover.id)}" alt="${escape(cover.alt)}" loading="lazy">${videoBadge(cover)}` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${accessLabel(album)} · ${album.photoIds.length} photos/videos${privateAlbum(album) ? '' : ` · /${escape(album.slug)}/`}</div></a>`;
   }).join('')}</div>` : '<div class="empty"><h2>No albums yet.</h2></div>'}`;
   $('#create-album').onclick = () => {
     openDialog(`<form id="create-form" class="simple-dialog"><h2 id="dialog-title">Create an album</h2><label>Album title<input name="title" placeholder="New York, September 2022" maxlength="150" required autofocus></label><p class="muted">Choose photos, a cover, and a URL after creating the album.</p><div class="editor-footer"><button class="primary">Create draft album →</button></div></form>`);
@@ -192,7 +206,7 @@ function renderAlbum(id) {
     ${shareURL ? `<div class="album-share"><label>Saved ${accessLabel(album).toLowerCase()} URL<input id="album-share-link" value="${escape(shareURL)}" readonly></label><button type="button" id="copy-album-link">Copy link</button><span id="copy-link-status" class="hint" role="status"></span></div>` : ''}
     ${album.access === 'link' && album.linkToken ? '<button type="button" id="regenerate-album-link">Regenerate link</button>' : ''}
     <p id="album-share-warning" class="hint access-warning" role="status"></p></div>
-    <div class="section-heading"><h2>Photographs <span class="muted">${album.photoIds.length}</span></h2><button type="button" id="choose-photos">＋ Choose photos</button></div>
+    <div class="section-heading"><h2>Photos & videos <span class="muted">${album.photoIds.length}</span></h2><button type="button" id="choose-photos">＋ Choose files</button></div>
     <p class="hint">Order is top to bottom. − removes album membership only. Archived photos retain their place here but never appear in public manifests. Delete permanently removes files.</p><ol class="ordered-list" id="ordered-list"></ol>
     <div class="editor-footer"><button type="button" class="danger" id="delete-album">Remove album</button><button class="primary" type="submit">Save album</button></div></form>`;
   let order = [...album.photoIds], cover = album.coverId, regenerateLink = false;
@@ -217,8 +231,8 @@ function renderAlbum(id) {
     $('#ordered-list').innerHTML = order.map((id, i) => {
       const photo = photoById(id);
       const visibility = photoPublic(photo, albums) ? privateAlbum(selected) ? 'Also public' : 'Public' : [...new Set(albums.filter(item => item.published && item.photoIds.includes(id)).map(accessLabel))].join(' · ');
-      return `<li>${photo.deleting ? '' : `<img src="${image(id)}" alt="${escape(photo.alt)}">`}<div class="order-title"><p>${escape(photo.caption || photo.filename)}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move photo ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move photo ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove photo ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
-    }).join('') || '<p class="muted">No photographs selected yet.</p>';
+      return `<li>${photo.deleting ? '' : `<img src="${image(id)}" alt="${escape(photo.alt)}">`}<div class="order-title"><p>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move item ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move item ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove item ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
+    }).join('') || '<p class="muted">No photos or videos selected yet.</p>';
     $('#ordered-list').onclick = event => {
       const move = event.target.closest('[data-move]'), remove = event.target.closest('[data-remove]');
       if (move) { const i = Number(move.dataset.move), target = i + Number(move.dataset.direction); if (target < 0 || target >= order.length) return; [order[i], order[target]] = [order[target], order[i]]; dirty = true; renderOrder(); }
@@ -260,7 +274,7 @@ function renderAlbum(id) {
     });
   };
   $('#choose-photos').onclick = () => {
-    openDialog(`<form id="choose-form" class="simple-dialog"><h2 id="dialog-title">Choose photographs</h2><p class="muted">Photos can belong to more than one album.</p><div class="grid">${state.catalog.photos.filter(photo => !photo.deleting).map(photo => `<label class="choice"><img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy"><input type="checkbox" name="photo" value="${photo.id}" ${order.includes(photo.id) ? 'checked' : ''}><span>${escape(photo.caption || photo.filename)}</span></label>`).join('') || '<p class="muted">Upload photos or finish pending deletions first.</p>'}</div><div class="editor-footer"><span class="hint">Changes are applied when you save the album.</span><button class="primary">Use selected photos</button></div></form>`, false);
+    openDialog(`<form id="choose-form" class="simple-dialog"><h2 id="dialog-title">Choose photos & videos</h2><p class="muted">Photos and videos can belong to more than one album.</p><div class="grid">${[...state.catalog.photos].reverse().filter(photo => !photo.deleting).map(photo => `<label class="choice"><img src="${image(photo.id)}" alt="${escape(photo.alt)}" loading="lazy"><input type="checkbox" name="photo" value="${photo.id}" ${order.includes(photo.id) ? 'checked' : ''}><span>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</span></label>`).join('') || '<p class="muted">Upload files or finish pending deletions first.</p>'}</div><div class="editor-footer"><span class="hint">Changes are applied when you save the album.</span><button class="primary">Use selected files</button></div></form>`, false);
     $('#choose-form').onsubmit = event => {
       event.preventDefault();
       const selected = new FormData(event.target).getAll('photo');
@@ -293,16 +307,17 @@ function closeEditor() {
 
 function editPhoto(id) {
   const photo = photoById(id);
+  const noun = photo.kind === 'video' ? 'video' : 'photo';
   if (photo.deleting) { confirmDeletePhoto(id); return; }
   if (photo.archived) {
-    openDialog(`<div class="simple-dialog"><h2 id="dialog-title">${escape(photo.caption || photo.filename)}</h2><img class="archived-preview" src="${image(id, 1280)}" alt="${escape(photo.alt)}"><p>Files, metadata, and album memberships are retained. Restoring makes this photo ready if it belongs to a published album; publish separately to update the website.</p>${photo.archiving ? '<p class="error">Manifest cleanup was interrupted. Retry archive before restoring.</p>' : ''}<div class="editor-footer"><button class="danger" data-delete-photo="${id}">Delete permanently</button><button class="primary" data-archive-photo="${id}" data-action="${photo.archiving ? 'archive' : 'restore'}">${photo.archiving ? 'Retry archive' : 'Restore photo'}</button></div></div>`, false);
+    openDialog(`<div class="simple-dialog"><h2 id="dialog-title">${escape(photo.caption || photo.filename)}</h2><div class="archived-preview">${preview(photo)}</div><p>Files, metadata, and album memberships are retained. Restoring makes this ${noun} ready if it belongs to a published album; publish separately to update the website.</p>${photo.archiving ? '<p class="error">Manifest cleanup was interrupted. Retry archive before restoring.</p>' : ''}<div class="editor-footer"><button class="danger" data-delete-photo="${id}">Delete permanently</button><button class="primary" data-archive-photo="${id}" data-action="${photo.archiving ? 'archive' : 'restore'}">${photo.archiving ? 'Retry archive' : `Restore ${noun}`}</button></div></div>`, false);
     return;
   }
-  openDialog(`<div class="photo-editor"><div class="editor-image"><img src="${image(id, 1280)}" alt="${escape(photo.alt)}"></div><form id="photo-form" class="editor-fields"><h2 id="dialog-title">Photo details</h2><p class="muted">${escape(photo.filename)} · ${photo.width} × ${photo.height}</p>
-    <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Optional. Describe what’s in the photo.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
+  openDialog(`<div class="photo-editor"><div class="editor-image">${preview(photo)}</div><form id="photo-form" class="editor-fields"><h2 id="dialog-title">${photo.kind === 'video' ? 'Video' : 'Photo'} details</h2><p class="muted">${escape(photo.filename)} · ${photo.width} × ${photo.height}${photo.kind === 'video' ? ` · ${duration(photo.duration)}` : ''}</p>
+    <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Optional. Describe what’s in the ${noun}.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
     <fieldset><legend>Albums · optional</legend>${state.catalog.albums.map(album => `<label class="check"><input type="checkbox" name="album" value="${album.id}" ${album.photoIds.includes(id) ? 'checked' : ''}>${escape(album.title)} · ${accessLabel(album)}</label>`).join('') || '<span class="hint">No albums yet.</span>'}</fieldset>
-    <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Publish publicly, independently of albums</label><p class="hint">Photos in published albums are automatically ready. Public albums or independent publication make a photo public even if it also belongs to private share-link or password-protected albums. To make it a draft, remove it from every published album and uncheck this setting. Previously public image URLs and old releases remain accessible.</p>
-    <dl class="exif">${Object.entries(photo.exif).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web images.</p><button type="button" data-archive-photo="${id}" data-action="archive">Archive photo</button><p class="hint">Keep files; remove this photo from all public manifests, including historical releases. Cached copies and direct image URLs may remain accessible.</p><div class="editor-footer"><button type="button" class="danger" data-delete-photo="${id}">Delete photo</button><button class="primary" type="submit">Save photo</button></div></form></div>`);
+    <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Publish publicly, independently of albums</label><p class="hint">Photos and videos in published albums are automatically ready. Public albums or independent publication make this ${noun} public even if it also belongs to private share-link or password-protected albums. To make it a draft, remove it from every published album and uncheck this setting. Previously public media URLs and old releases remain accessible.</p>
+    <dl class="exif">${Object.entries(photo.exif || {}).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web media.</p><button type="button" data-archive-photo="${id}" data-action="archive">Archive ${noun}</button><p class="hint">Keep files; remove this ${noun} from all public manifests, including historical releases. Cached copies and direct media URLs may remain accessible.</p><div class="editor-footer"><button type="button" class="danger" data-delete-photo="${id}">Delete ${noun}</button><button class="primary" type="submit">Save ${noun}</button></div></form></div>`);
   $('#photo-form').onsubmit = event => {
     event.preventDefault();
     const form = new FormData(event.target);
@@ -315,7 +330,8 @@ function editPhoto(id) {
 
 function confirmDeletePhoto(id) {
   const photo = photoById(id);
-  $('#delete-body').innerHTML = `<h2 id="delete-title">${photo.deleting ? 'Finish deleting this photo?' : 'Delete this photo?'}</h2><p><strong>${escape(photo.filename)}</strong>${photo.caption ? ` · ${escape(photo.caption)}` : ''}</p><p id="delete-description">This deletes the original and resized files from storage and removes the photo from your library, every album, and the current public manifest. This cannot be undone.</p><p class="muted">Other drafts won’t be published. Previously cached copies and metadata in historical releases may remain; CDN/privacy erasure needs separate cleanup.</p>${photo.deleting ? '<p class="hint">A previous deletion was interrupted. Retry to finish removing any remaining files.</p>' : ''}${dirty ? '<p class="hint">Unsaved edits will be discarded if you delete.</p>' : ''}<div class="editor-footer"><button id="cancel-delete" autofocus>Cancel</button><button class="danger" id="confirm-delete">${photo.deleting ? 'Retry deletion' : 'Delete permanently'}</button></div>`;
+  const noun = photo.kind === 'video' ? 'video' : 'photo';
+  $('#delete-body').innerHTML = `<h2 id="delete-title">${photo.deleting ? `Finish deleting this ${noun}?` : `Delete this ${noun}?`}</h2><p><strong>${escape(photo.filename)}</strong>${photo.caption ? ` · ${escape(photo.caption)}` : ''}</p><p id="delete-description">This deletes the original and generated files from storage and removes the ${noun} from your library, every album, and the current public manifest. This cannot be undone.</p><p class="muted">Other drafts won’t be published. Previously cached copies and metadata in historical releases may remain; CDN/privacy erasure needs separate cleanup.</p>${photo.deleting ? '<p class="hint">A previous deletion was interrupted. Retry to finish removing any remaining files.</p>' : ''}${dirty ? '<p class="hint">Unsaved edits will be discarded if you delete.</p>' : ''}<div class="editor-footer"><button id="cancel-delete" autofocus>Cancel</button><button class="danger" id="confirm-delete">${photo.deleting ? 'Retry deletion' : 'Delete permanently'}</button></div>`;
   deletion.showModal(); $('#cancel-delete').focus();
   $('#cancel-delete').onclick = () => { if (!busy) deletion.close(); };
   $('#confirm-delete').onclick = () => work(async () => {
@@ -332,23 +348,119 @@ function confirmDeletePhoto(id) {
 }
 deletion.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
 
+// XHR exposes bytes sent while fetch only exposes completion. Signed part requests
+// deliberately bypass api(): no catalog precondition or Studio headers go to R2.
+function putPart(url, bytes, signal, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const abort = () => xhr.abort();
+    const finish = (error) => {
+      signal.removeEventListener('abort', abort);
+      error ? reject(error) : resolve();
+    };
+    xhr.open('PUT', url);
+    xhr.withCredentials = new URL(url, location.href).origin === location.origin;
+    xhr.timeout = 120000;
+    xhr.upload.onprogress = event => onProgress(Math.min(event.loaded, bytes.size));
+    xhr.onload = () => finish(xhr.status >= 200 && xhr.status < 300 ? null : Object.assign(new Error(`Chunk upload failed (${xhr.status}).`), { retryable: [408, 429].includes(xhr.status) || xhr.status >= 500 }));
+    xhr.onerror = xhr.ontimeout = () => finish(Object.assign(new Error('Chunk upload interrupted. Check your connection.'), { retryable: true }));
+    xhr.onabort = () => finish(new DOMException('Upload cancelled', 'AbortError'));
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) { finish(new DOMException('Upload cancelled', 'AbortError')); return; }
+    xhr.send(bytes);
+  });
+}
+function uploadDelay(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); reject(new DOMException('Upload cancelled', 'AbortError')); };
+    const timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, ms);
+    signal.addEventListener('abort', abort, { once: true });
+    if (signal.aborted) abort();
+  });
+}
+async function sendParts(file, session, controller, label) {
+  const { signal } = controller;
+  const loaded = new Map();
+  const progress = $('#upload-progress progress'); progress.max = file.size; progress.value = 0;
+  const update = (number, bytes) => {
+    loaded.set(number, bytes);
+    const sent = [...loaded.values()].reduce((sum, value) => sum + value, 0);
+    progress.value = sent;
+    $('#upload-progress span').textContent = `Transferring ${label} · ${(sent / 1048576).toFixed(1)} / ${(file.size / 1048576).toFixed(1)} MiB. Keep this page open; you can browse.`;
+  };
+  let next = 0;
+  const worker = async () => {
+    while (next < session.parts.length) {
+      signal.throwIfAborted();
+      const part = session.parts[next++];
+      const start = (part.number - 1) * session.partSize;
+      const bytes = file.slice(start, Math.min(start + session.partSize, file.size));
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          update(part.number, 0);
+          await putPart(part.url, bytes, signal, count => update(part.number, count));
+          update(part.number, bytes.size); break;
+        } catch (error) {
+          update(part.number, 0);
+          if (signal.aborted || !error.retryable || attempt === 2) throw error;
+          await uploadDelay(500 * 2 ** attempt, signal);
+        }
+      }
+    }
+  };
+  try { await Promise.all(Array.from({ length: Math.min(3, session.parts.length) }, worker)); }
+  catch (error) { controller.abort(); throw error; }
+}
+async function discardUpload(id) {
+  if (!id) return;
+  // Cancellation is best effort and must not start a catalog operation or mask
+  // the original failure. The server never deletes a committed library item.
+  try { await fetch(`/api/uploads/${encodeURIComponent(id)}`, { method: 'DELETE', signal: AbortSignal.timeout(5000) }); } catch { /* Abandoned uploads require lifecycle/operator cleanup. */ }
+}
 async function upload(files) {
   if (!files.length || busy || publishing() || changing() || conflicted || editor.open || deletion.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
   dirty = false;
-  await work(async () => {
-    $('#upload-progress').hidden = false;
-    const progress = $('#upload-progress progress'); progress.max = files.length;
-    try {
-      for (const [i, file] of [...files].entries()) {
-        if (file.size > 30 * 1024 * 1024) throw new Error(`${file.name} exceeds 30 MB. Remaining files were not uploaded.`);
-        $('#upload-progress span').textContent = `Uploading ${i + 1} of ${files.length} · ${file.name}`; progress.value = i;
-        Object.assign(state, await api('/photos', { method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) } }));
-        status(`${i + 1} photo${i ? 's' : ''} uploaded as private drafts.`);
-      }
-    } finally { $('#upload-progress').hidden = true; location.hash = 'photos'; render(); $('#files').value = ''; }
-  });
+  const batch = transfer = { controller: new AbortController(), id: null, processing: false };
+  const { signal } = batch.controller;
+  $('#error').hidden = true; $('#upload-progress').hidden = false; refreshButtons();
+  try {
+    for (const [i, file] of [...files].entries()) {
+      signal.throwIfAborted();
+      const video = /\.(mp4|mov)$/i.test(file.name) || ['video/mp4', 'video/quicktime'].includes(file.type);
+      const limit = video ? 512 : 30;
+      if (!file.size || file.size > limit * 1048576) throw new Error(`${file.name} must be nonempty and at most ${limit} MiB. Remaining files were not uploaded.`);
+      const label = `${i + 1} of ${files.length} · ${file.name}`;
+      $('#upload-progress span').textContent = `Preparing ${label}…`;
+      $('#upload-progress progress').removeAttribute('value');
+      const session = await api('/uploads', { method: 'POST', body: { filename: file.name, size: file.size, contentType: file.type || (video ? /\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4' : 'application/octet-stream') } });
+      batch.id = session.upload.id;
+      signal.throwIfAborted();
+      await sendParts(file, session, batch.controller, label);
+      signal.throwIfAborted(); batch.processing = true;
+      $('#upload-progress span').textContent = `Server processing ${label}. You can browse. Cancel stops the remaining queue; accepted processing may finish.`;
+      $('#upload-progress progress').removeAttribute('value');
+      Object.assign(state, await api(`/uploads/${encodeURIComponent(batch.id)}/complete`, { method: 'POST', awaitOperation: true }));
+      batch.id = null; batch.processing = false;
+      signal.throwIfAborted();
+      render(); status(`${i + 1} file${i ? 's' : ''} uploaded as private drafts. Publish separately when ready.`);
+    }
+  } catch (error) {
+    const cancelled = signal.aborted && error.name === 'AbortError';
+    batch.controller.abort();
+    await (batch.cleanup ||= discardUpload(batch.id));
+    if (cancelled) status('Upload cancelled. Completed library items are kept; accepted server processing may still finish.');
+    else { status('Upload stopped. Remaining files were not uploaded.'); showError(error); }
+  } finally {
+    transfer = null; $('#upload-progress').hidden = true; $('#files').value = ''; refreshButtons();
+  }
 }
 
+$('#cancel-upload').onclick = () => {
+  if (!transfer) return;
+  transfer.controller.abort();
+  if (transfer.id) transfer.cleanup ||= discardUpload(transfer.id);
+  $('#upload-progress span').textContent = transfer.processing ? 'Queue cancelled. Waiting for accepted server processing; completed items are kept.' : 'Cancelling transfer…';
+};
 $('#files').onchange = event => upload(event.target.files);
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-upload],[data-photo],[data-delete-photo],[data-archive-photo]');
@@ -370,6 +482,7 @@ document.addEventListener('click', event => {
 document.addEventListener('dragover', event => { if (event.dataTransfer.types.includes('Files')) event.preventDefault(); });
 document.addEventListener('drop', event => { if (event.dataTransfer.files.length) { event.preventDefault(); upload(event.dataTransfer.files); } });
 $('#close-editor').onclick = closeEditor;
+editor.addEventListener('close', () => editor.querySelectorAll('video').forEach(video => video.pause()));
 editor.addEventListener('cancel', event => { event.preventDefault(); closeEditor(); });
 let editorBackdropPressed = false;
 editor.addEventListener('pointerdown', event => { editorBackdropPressed = event.target === editor; });
@@ -409,7 +522,7 @@ window.addEventListener('hashchange', () => {
   if (dirty && !confirm('Discard unsaved edits?')) { history.replaceState(null, '', previousHash); return; }
   dirty = false; previousHash = location.hash; editor.close(); render();
 });
-window.addEventListener('beforeunload', event => { if (dirty || busy) event.preventDefault(); });
+window.addEventListener('beforeunload', event => { if (dirty || busy || (transfer && !transfer.processing)) event.preventDefault(); });
 async function boot() {
   try {
     Object.assign(state, await api('/catalog'));

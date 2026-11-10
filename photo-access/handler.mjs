@@ -186,12 +186,57 @@ function catalog(album, release) {
     }
     if (source.exif !== null && (!record(source.exif) || !Object.values(source.exif).every(value => typeof value === 'string'))) fail(503);
     result.exif = source.exif || {};
+    if (source.kind !== undefined) {
+      if (!['image', 'video'].includes(source.kind)) fail(503);
+      result.kind = source.kind;
+    }
+    if (source.kind === 'video') {
+      if (!Number.isFinite(source.duration) || source.duration <= 0) fail(503);
+      result.duration = source.duration;
+    }
     result.thumbnail = `${albumPath(album.id)}media/${id}/640.jpg`;
-    result.src = `${albumPath(album.id)}media/${id}/2560.jpg`;
+    result.src = `${albumPath(album.id)}media/${id}/${source.kind === 'video' ? 'video.mp4' : '2560.jpg'}`;
     return result;
   });
   return { version: 1, photos, albums: [{ id: album.id, title: album.title, slug: album.slug, description: album.description,
     published: true, access: album.access, photoIds: [...album.photoIds], coverId: album.coverId }] };
+}
+
+async function video(request, bucket, photoID) {
+  const key = `photos/${photoID}/video.mp4`;
+  const metadata = await bucket.head(key);
+  if (!metadata || !Number.isSafeInteger(metadata.size) || metadata.size <= 0) fail(503);
+  const size = metadata.size;
+  const headers = { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes' };
+  let range;
+  const value = request.headers.get('Range');
+  if (value !== null) {
+    // Single byte ranges only. Never forward client conditions to R2: even a
+    // seek with If-None-Match/If-Range must authenticate against today's pointer.
+    const match = /^bytes=(\d*)-(\d*)$/.exec(value.trim());
+    let start, end;
+    if (match && (match[1] || match[2])) {
+      if (!match[1]) {
+        const suffix = Number(match[2]);
+        if (Number.isSafeInteger(suffix) && suffix > 0) { start = Math.max(0, size - suffix); end = size - 1; }
+      } else {
+        start = Number(match[1]); end = match[2] ? Number(match[2]) : size - 1;
+      }
+    }
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= size || end < start) {
+      return response(request, 416, null, { ...headers, 'Content-Range': `bytes */${size}`, 'Content-Length': '0' });
+    }
+    end = Math.min(end, size - 1);
+    range = { offset: start, length: end - start + 1 };
+    headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+  }
+  headers['Content-Length'] = String(range ? range.length : size);
+  if (request.method === 'HEAD') return response(request, range ? 206 : 200, null, headers);
+  const object = await bucket.get(key, range ? { range } : undefined);
+  if (!object?.body || object.size !== size) { await object?.body?.cancel(); fail(503); }
+  // Unlike JPEGs, keep R2's known-length stream and an explicit length so native
+  // video seeking receives exactly the requested bytes, without buffering.
+  return response(request, range ? 206 : 200, object.body, headers);
 }
 
 export async function onRequest(context) {
@@ -199,7 +244,7 @@ export async function onRequest(context) {
   try {
     const url = new URL(request.url);
     // Do not decode path components: encoded slashes/dots/IDs are not aliases.
-    const route = /^\/photos\/private\/([0-9a-f]{32})\/(|login|logout|catalog|media\/([0-9a-f]{32})\/(640|1280|2560)\.jpg)$/.exec(url.pathname);
+    const route = /^\/photos\/private\/([0-9a-f]{32})\/(|login|logout|catalog|media\/([0-9a-f]{32})\/(?:(640|1280|2560)\.jpg|video\.mp4))$/.exec(url.pathname);
     if (!route) fail(404);
     if (url.protocol !== 'https:') fail(403);
     const [, id, action, photoID, size] = route;
@@ -249,6 +294,12 @@ export async function onRequest(context) {
     await authorized(request, env.ALBUM_SESSION_SECRET, album, now);
     if (action === 'catalog') return json(request, catalog(album, release));
     if (!album.photoIds.includes(photoID)) fail(404);
+    if (!size) {
+      const matches = release.photos.filter(photo => record(photo) && photo.id === photoID);
+      if (matches.length !== 1) fail(503);
+      if (matches[0].kind !== 'video') fail(404);
+      return await video(request, env.PROTECTED_PHOTOS, photoID);
+    }
     const object = await env.PROTECTED_PHOTOS.get(`photos/${photoID}/${size}.jpg`);
     if (!object) fail(503); // A committed release with missing bytes is unavailable.
     if (request.method === 'HEAD') await object.body?.cancel();
