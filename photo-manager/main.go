@@ -193,6 +193,7 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 		item := &c.Albums[i]
 		item.PasswordSet = item.PasswordHash != ""
 		item.PasswordHash, item.AccessVersion = "", ""
+		item.LinkHash = ""
 	}
 	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development, "privateAlbumsEnabled": a.config.PrivateAlbums, "galleryURL": a.config.GalleryURL})
 	return nil
@@ -506,14 +507,15 @@ func (a *app) createAlbum(w http.ResponseWriter, r *http.Request) error {
 
 func (a *app) editAlbum(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
-		Title       string   `json:"title"`
-		Slug        string   `json:"slug"`
-		Description string   `json:"description"`
-		Published   bool     `json:"published"`
-		PhotoIDs    []string `json:"photoIds"`
-		CoverID     string   `json:"coverId"`
-		Access      string   `json:"access"`
-		Password    string   `json:"password"`
+		Title          string   `json:"title"`
+		Slug           string   `json:"slug"`
+		Description    string   `json:"description"`
+		Published      bool     `json:"published"`
+		PhotoIDs       []string `json:"photoIds"`
+		CoverID        string   `json:"coverId"`
+		Access         string   `json:"access"`
+		Password       string   `json:"password"`
+		RegenerateLink bool     `json:"regenerateLink"`
 	}
 	if err := decodeRequest(w, r, &input); err != nil {
 		return err
@@ -548,8 +550,11 @@ func (a *app) editAlbum(w http.ResponseWriter, r *http.Request) error {
 				if access == "" {
 					access = item.Access
 				}
-				if access != "" && access != "public" && access != "password" {
-					return badRequest("Choose public or password-protected access.")
+				if access != "" && access != "public" && access != "password" && access != "link" {
+					return badRequest("Choose public, private share link, or password-protected access.")
+				}
+				if input.RegenerateLink && access != "link" {
+					return badRequest("Choose private share link access before regenerating a link.")
 				}
 				next := album{ID: item.ID, Title: input.Title, Slug: input.Slug, Description: input.Description, Published: input.Published, PhotoIDs: selected, CoverID: input.CoverID}
 				if access == "password" {
@@ -572,6 +577,19 @@ func (a *app) editAlbum(w http.ResponseWriter, r *http.Request) error {
 					}
 				} else if input.Password != "" {
 					return badRequest("Choose password-protected access before setting a password.")
+				} else if access == "link" {
+					if !a.config.PrivateAlbums {
+						return badRequest("Protected album storage is not configured.")
+					}
+					next.Access, next.LinkToken, next.AccessVersion = "link", item.LinkToken, item.AccessVersion
+					if item.Access != "link" || next.LinkToken == "" || input.RegenerateLink {
+						next.LinkToken = identifier() + identifier()
+						next.AccessVersion = identifier()
+					}
+					if item.Published != next.Published {
+						next.AccessVersion = identifier()
+					}
+					next.LinkHash = fmt.Sprintf("%x", sha256.Sum256([]byte(next.LinkToken)))
 				}
 				c.Albums[i] = next
 				return nil

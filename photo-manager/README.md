@@ -27,11 +27,16 @@ volume. Images **and all manifests** live in R2 in production.
   Use the arrow buttons to reorder photos; remove an album without deleting
   its photos. The photostream orders all published photos by upload time,
   newest first, independent of album membership or later edits.
-- Albums can be public or password protected. A photo can belong to both;
+- Albums can be public, accessible with a private share link, or password protected.
+  A photo can belong to multiple albums with different access modes;
   independent public publication or any published public album keeps it public.
-  Studio labels that overlap **Also public**. Protected-only photos are omitted
+  Studio labels that overlap **Also public**. Private-only photos are omitted
   from the public photostream. Save, then Publish applies access/password changes.
-  Protected share links require the separate [delivery gateway](../photo-access/README.md)
+  Private share links contain a random key in `#key=...`, not a password.
+  Anyone with the full link can view or forward it; the album URL alone cannot
+  open the photos. **Regenerate link**, Save, then Publish revokes the old link
+  and its viewing sessions. Ordinary saves keep the link unchanged.
+  Both private modes require the separate [delivery gateway](../photo-access/README.md)
   and a third, non-public delivery bucket. Previously public URLs cannot be recalled.
 - **Save photo / Save album** changes the private working catalog only.
   **Publish changes** confirms and publishes all ready photos/albums together.
@@ -208,7 +213,11 @@ changes belong in `hugomd/jegigrat-k3s/config/photo-manager/`, not this reposito
 Protected delivery adds Pages bindings, a session secret and runtime prerequisites;
 follow the [protected album deployment notes](../photo-access/README.md) before
 enabling it. The working catalog upgrades permanently to version 2 when first
-protecting an album; older Studio versions must not be restored afterward.
+password-protecting an album, and version 3 when first using a private share link;
+older Studio versions must not be restored afterward. Private share links need no
+password: anyone with the secret share URL can view or forward them. Both private
+access modes stay out of the public gallery; a photo also published independently
+or through a public album remains public.
 The proposed editor hostname is `photos.internal.ii.md`; confirm it and prepare
 DNS, R2 buckets/domain, sealed credentials, an immutable image digest and the
 shared certificate before deploying. No resources are provisioned by this app.

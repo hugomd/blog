@@ -3,6 +3,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 const state = { catalog: null, photos: [], index: 0, info: false, busy: false };
 const stream = $('#stream'), viewer = $('#viewer'), info = $('#info');
 const privatePath = location.pathname.match(/^\/photos\/private\/[a-f0-9]{32}\//)?.[0];
+const linkAccess = document.body.dataset.privateAccess === 'link';
 let zoom = $('#zoom');
 let swipeStart;
 let loadRequest;
@@ -26,8 +27,32 @@ function clearPrivate() {
 function showUnlock(message = '') {
   clearPrivate();
   $('#album-unlock').hidden = false;
-  $('#unlock-error').textContent = message;
+  $('#album-login label').hidden = linkAccess;
+  $('#album-password').hidden = linkAccess;
+  $('#album-password').disabled = linkAccess;
+  $('#album-login button').hidden = linkAccess;
+  $('#unlock-error').textContent = message || (linkAccess ? 'Open the complete private share link to view this album.' : '');
   $('#status').hidden = true; $('#retry').hidden = true;
+}
+
+async function openShareLink() {
+  const fragment = new URLSearchParams(location.hash.slice(1));
+  if (!fragment.has('key')) { await load(); return; }
+  // Fragments never reach HTTP logs. Remove the bearer credential before any
+  // asynchronous work, and keep it out of storage and subsequent page URLs.
+  history.replaceState(history.state, '', location.pathname + location.search);
+  clearPrivate();
+  if (!linkAccess || fragment.getAll('key').length !== 1 || !/^[a-f0-9]{64}$/.test(fragment.get('key'))) {
+    showUnlock('This share link is invalid. Ask the owner for a new link.'); return;
+  }
+  try {
+    const response = await fetch(`${privatePath}login`, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: fragment.get('key') }) });
+    if (!response.ok) {
+      showUnlock(response.status === 401 ? 'This share link is invalid or has been replaced. Ask the owner for a new link.' : response.status === 404 ? 'This album isn’t available.' : 'The album couldn’t be opened. Please reopen the original share link.');
+      return;
+    }
+    await load();
+  } catch { showUnlock('The album couldn’t be opened. Please reopen the original share link.'); }
 }
 // The public manifest is the sole source of gallery content. Never fall back to
 // repository photos: doing so could reintroduce archived/unpublished images.
@@ -225,7 +250,7 @@ $('#details').onclick = () => { if (!state.busy) { state.info = !state.info; ren
 $('#retry').onclick = load;
 $('#album-login').onsubmit = async event => {
   event.preventDefault();
-  if (!privatePath) return;
+  if (!privatePath || linkAccess) return;
   const form = event.target, button = form.querySelector('button');
   button.disabled = true; $('#unlock-error').textContent = '';
   try {
@@ -272,6 +297,7 @@ viewer.addEventListener('touchcancel', () => { swipeStart = null; });
 viewer.addEventListener('click', event => { if (event.target === viewer || event.target === zoom) close(event); });
 addEventListener('resize', () => { layoutPhotos(); if (viewer.open) place(); });
 addEventListener('hashchange', async () => {
+  if (privatePath && new URLSearchParams(location.hash.slice(1)).has('key')) { await openShareLink(); return; }
   // Browser Back may arrive during the zoom. Keep its thumbnail in the DOM
   // until the transition and close have finished, then change collections.
   await Promise.allSettled(zoom.getAnimations().map(animation => animation.finished));
@@ -280,4 +306,5 @@ addEventListener('hashchange', async () => {
 });
 addEventListener('pageshow', event => { if (privatePath && event.persisted) load(); });
 render();
-load();
+if (privatePath) openShareLink();
+else load();

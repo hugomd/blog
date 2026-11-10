@@ -10,9 +10,9 @@ const publishing = () => state.publication?.state === 'running';
 const photoById = id => state.catalog.photos.find(photo => photo.id === id);
 const albumIds = id => state.catalog.albums.filter(album => album.photoIds.includes(id)).map(album => album.id);
 const photoReady = (photo, albums = state.catalog.albums) => !photo.archived && !photo.archiving && !photo.deleting && (photo.published || albums.some(album => album.published && album.photoIds.includes(photo.id)));
-const protectedAlbum = album => album.access === 'password';
-const photoPublic = (photo, albums = state.catalog.albums) => photoReady(photo, albums.filter(album => !protectedAlbum(album)));
-const accessLabel = album => protectedAlbum(album) ? 'Password protected' : 'Public';
+const privateAlbum = album => album.access === 'password' || album.access === 'link';
+const photoPublic = (photo, albums = state.catalog.albums) => photoReady(photo, albums.filter(album => !privateAlbum(album)));
+const accessLabel = album => album.access === 'link' ? 'Private share link' : album.access === 'password' ? 'Password protected' : 'Public';
 const badge = published => `<span class="badge ${published ? '' : 'draft'}">${published ? 'Ready to publish' : 'Draft'}</span>`;
 
 async function api(path, { method = 'GET', body, headers = {} } = {}) {
@@ -130,7 +130,7 @@ function renderAlbums() {
   $('#main').innerHTML = `<div class="page-heading"><div><h1>Albums</h1></div><button class="primary" id="create-album">＋ New album</button></div>
   ${state.catalog.albums.length ? `<div class="grid album-grid">${state.catalog.albums.map(album => {
     const cover = [album.coverId, ...album.photoIds].map(photoById).find(photo => photo && !photo.deleting && !photo.archived);
-    return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `<img src="${image(cover.id)}" alt="${escape(cover.alt)}" loading="lazy">` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${accessLabel(album)} · ${album.photoIds.length} photographs${protectedAlbum(album) ? '' : ` · /${escape(album.slug)}/`}</div></a>`;
+    return `<a class="photo-card" href="#album/${album.id}"><div class="photo-frame">${cover ? `<img src="${image(cover.id)}" alt="${escape(cover.alt)}" loading="lazy">` : '<div class="placeholder" aria-hidden="true">◧</div>'}</div><div class="card-line"><strong>${escape(album.title)}</strong>${badge(album.published)}</div><div class="card-subtitle">${accessLabel(album)} · ${album.photoIds.length} photographs${privateAlbum(album) ? '' : ` · /${escape(album.slug)}/`}</div></a>`;
   }).join('')}</div>` : '<div class="empty"><h2>No albums yet.</h2></div>'}`;
   $('#create-album').onclick = () => {
     openDialog(`<form id="create-form" class="simple-dialog"><h2 id="dialog-title">Create an album</h2><label>Album title<input name="title" placeholder="New York, September 2022" maxlength="150" required autofocus></label><p class="muted">Choose photos, a cover, and a URL after creating the album.</p><div class="editor-footer"><button class="primary">Create draft album →</button></div></form>`);
@@ -147,28 +147,43 @@ function renderAlbums() {
 function renderAlbum(id) {
   const album = state.catalog.albums.find(album => album.id === id);
   if (!album) { location.hash = 'albums'; return; }
-  const shareURL = protectedAlbum(album) && state.galleryURL ? `${state.galleryURL.replace(/\/?$/, '/')}private/${album.id}/` : '';
+  const shareURL = privateAlbum(album) && state.galleryURL && (album.access !== 'link' || album.linkToken) ? `${state.galleryURL.replace(/\/?$/, '/')}private/${encodeURIComponent(album.id)}/${album.access === 'link' ? `#key=${encodeURIComponent(album.linkToken)}` : ''}` : '';
+  const passwordSet = album.access === 'password' && album.passwordSet;
   $('#main').innerHTML = `<a class="back" href="#albums">← All albums</a><div class="page-heading"><div><h1>${escape(album.title)}</h1><p>Save edits, then publish to update the website.</p></div><div id="album-labels" class="album-labels">${badge(album.published)}<span class="badge">${accessLabel(album)}</span></div></div>
     <form id="album-form"><div class="album-form"><label>Title<input name="title" value="${escape(album.title)}" maxlength="150" required></label><label>URL slug<input name="slug" value="${escape(album.slug)}" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="100" required><small>Used for the album page’s address.</small></label><label class="wide">Description<textarea name="description" maxlength="4000">${escape(album.description)}</textarea></label><label class="check wide"><input name="published" type="checkbox" ${album.published ? 'checked' : ''}>Include this album and its photos in the next publication</label></div>
-    <div class="album-form access-settings"><label>Access<select name="access"><option value="public">Public</option><option value="password" ${!state.privateAlbumsEnabled && !protectedAlbum(album) ? 'disabled' : ''}>Password protected</option></select></label><label id="album-password-label">${album.passwordSet ? 'Change password' : 'New password'}<input name="password" type="password" autocomplete="new-password" placeholder="${album.passwordSet ? 'Leave empty to keep current password' : '12–128 characters'}"><small>12–128 characters. Share the password separately.</small></label></div>
-    ${!state.privateAlbumsEnabled ? '<p class="hint access-warning">Password protection is unavailable: protected storage is not configured. Public albums still work; protection cannot be saved.</p>' : ''}
-    <p class="hint">Access changes and password replacements apply after Save, then Publish; old viewing sessions end. Changing access cannot recall previously public URLs or downloads.</p>
-    ${shareURL ? `<div class="album-share"><label>Protected share link<input id="album-share-link" value="${escape(shareURL)}" readonly></label><button type="button" id="copy-album-link">Copy link</button><span id="copy-link-status" class="hint" role="status"></span><small class="hint">Available after publishing. Unlisted; the password is required.</small></div>` : ''}
+    <div class="album-form access-settings"><label>Access<select name="access" aria-describedby="album-access-help"><option value="public">Public</option><option value="link" ${!state.privateAlbumsEnabled && album.access !== 'link' ? 'disabled' : ''}>Private share link</option><option value="password" ${!state.privateAlbumsEnabled && album.access !== 'password' ? 'disabled' : ''}>Password protected</option></select></label><label id="album-password-label">${passwordSet ? 'Change password' : 'New password'}<input name="password" type="password" autocomplete="new-password" placeholder="${passwordSet ? 'Leave empty to keep current password' : '12–128 characters'}"><small>12–128 characters. Share the password separately.</small></label></div>
+    <p id="album-access-help" class="hint"></p>
+    ${!state.privateAlbumsEnabled ? '<p class="hint access-warning">Private share-link and password-protected albums are unavailable: protected storage is not configured. Public albums still work; nonpublic access cannot be saved.</p>' : ''}
+    <p class="hint">Access changes, link regeneration, and password replacements apply after Save, then Publish; old viewing sessions end. Changing access cannot recall previously public URLs or downloads.</p>
+    <div id="album-share-settings" ${!privateAlbum(album) ? 'hidden' : ''}>
+    ${shareURL ? `<div class="album-share"><label>Saved ${accessLabel(album).toLowerCase()} URL<input id="album-share-link" value="${escape(shareURL)}" readonly></label><button type="button" id="copy-album-link">Copy link</button><span id="copy-link-status" class="hint" role="status"></span></div>` : ''}
+    ${album.access === 'link' && album.linkToken ? '<button type="button" id="regenerate-album-link">Regenerate link</button>' : ''}
+    <p id="album-share-warning" class="hint access-warning" role="status"></p></div>
     <div class="section-heading"><h2>Photographs <span class="muted">${album.photoIds.length}</span></h2><button type="button" id="choose-photos">＋ Choose photos</button></div>
     <p class="hint">Order is top to bottom. − removes album membership only. Archived photos retain their place here but never appear in public manifests. Delete permanently removes files.</p><ol class="ordered-list" id="ordered-list"></ol>
     <div class="editor-footer"><button type="button" class="danger" id="delete-album">Remove album</button><button class="primary" type="submit">Save album</button></div></form>`;
-  let order = [...album.photoIds], cover = album.coverId;
+  let order = [...album.photoIds], cover = album.coverId, regenerateLink = false;
   $('#album-form select[name=access]').value = album.access || 'public';
   function renderOrder() {
     const selected = { ...album, access: $('#album-form select[name=access]').value, published: $('#album-form input[name=published]').checked, photoIds: order };
     const albums = state.catalog.albums.map(item => item.id === album.id ? selected : item);
     $('#album-labels').innerHTML = `${badge(selected.published)}<span class="badge">${accessLabel(selected)}</span>`;
-    $('#album-password-label').hidden = !protectedAlbum(selected);
-    $('#album-form input[name=password]').required = protectedAlbum(selected) && !album.passwordSet;
-    if (!protectedAlbum(selected)) $('#album-form input[name=password]').setCustomValidity('');
+    $('#album-access-help').textContent = selected.access === 'link' ? 'Not listed or searchable in the public gallery. Anyone with the full link can view and forward it. No entered password is required. Save first to create the key; Publish to activate it. Saving this access removes any existing password.' : selected.access === 'password' ? 'Not listed or searchable in the public gallery. Viewers need the share link and password.' : 'Listed in the public gallery. Anyone can view this album.';
+    $('#album-password-label').hidden = selected.access !== 'password';
+    $('#album-form input[name=password]').required = selected.access === 'password' && !passwordSet;
+    if (selected.access !== 'password') $('#album-form input[name=password]').setCustomValidity('');
+    const shareBlocked = selected.access !== album.access || (selected.access === 'link' && regenerateLink);
+    $('#album-share-settings').hidden = !privateAlbum(selected);
+    if ($('#album-share-link')) $('#album-share-link').value = shareBlocked ? '' : shareURL;
+    if ($('#copy-album-link')) $('#copy-album-link').toggleAttribute('data-boundary', shareBlocked || !state.privateAlbumsEnabled);
+    if ($('#regenerate-album-link')) {
+      $('#regenerate-album-link').hidden = selected.access !== 'link';
+      $('#regenerate-album-link').toggleAttribute('data-boundary', regenerateLink || !state.privateAlbumsEnabled);
+    }
+    $('#album-share-warning').textContent = selected.access === 'link' && regenerateLink ? 'Link regeneration staged, not saved. Save, then Publish to revoke the previous link AND its viewing sessions. Copying the old link is disabled. Save returns the new link; it works only after Publish.' : selected.access !== album.access ? 'Access change not saved. Save, then Publish before sharing the new access settings.' : !shareURL ? 'Save to create the link. A configured gallery URL is required to copy it; Publish before sharing.' : !album.published ? 'Saved link only. Include this album in the next publication, Save, then Publish before sharing.' : state.publicationChanges?.changed ? 'Saved link; unpublished changes remain. Publish before sharing changed access settings or a regenerated link. The previously published access remains active until then.' : 'Saved access settings have no pending publication changes. Anyone with the full private link can forward it; password-protected albums also require the password.';
     $('#ordered-list').innerHTML = order.map((id, i) => {
       const photo = photoById(id);
-      const visibility = photoPublic(photo, albums) ? protectedAlbum(selected) ? 'Also public' : 'Public' : 'Password protected';
+      const visibility = photoPublic(photo, albums) ? privateAlbum(selected) ? 'Also public' : 'Public' : [...new Set(albums.filter(item => item.published && item.photoIds.includes(id)).map(accessLabel))].join(' · ');
       return `<li>${photo.deleting ? '' : `<img src="${image(id)}" alt="${escape(photo.alt)}">`}<div class="order-title"><p>${escape(photo.caption || photo.filename)}</p><small>${photo.deleting ? 'Deletion incomplete · retry to finish' : photo.archiving ? 'Archive incomplete · retry in Archived' : photo.archived ? 'Archived · not in public manifests' : photoReady(photo, albums) ? `Ready to publish · ${visibility}` : `Draft · ${accessLabel(selected)}`}</small></div><div class="order-buttons"><button type="button" data-move="${i}" data-direction="-1" aria-label="Move photo ${i + 1} up" ${i === 0 ? 'disabled data-boundary' : ''}>↑</button><button type="button" data-move="${i}" data-direction="1" aria-label="Move photo ${i + 1} down" ${i === order.length - 1 ? 'disabled data-boundary' : ''}>↓</button><button type="button" data-remove="${id}" aria-label="Remove photo ${i + 1} from album" title="Remove from album; keep in library">−</button>${!photo.deleting && !photo.archived ? `<button type="button" data-archive-photo="${id}" data-action="archive" aria-label="Archive ${escape(photo.filename)}">Archive</button>` : ''}<button type="button" class="danger" data-delete-photo="${id}" aria-label="Delete ${escape(photo.filename)} permanently">${photo.deleting ? 'Retry delete' : 'Delete'}</button></div><label class="check cover-label"><input type="radio" name="cover" value="${id}" ${cover === id || (!cover && i === 0) ? 'checked' : ''}>Cover</label></li>`;
     }).join('') || '<p class="muted">No photographs selected yet.</p>';
     $('#ordered-list').onclick = event => {
@@ -180,7 +195,13 @@ function renderAlbum(id) {
     refreshButtons();
   }
   renderOrder();
+  if ($('#regenerate-album-link')) $('#regenerate-album-link').onclick = () => {
+    regenerateLink = true; dirty = true;
+    if ($('#copy-link-status')) $('#copy-link-status').textContent = '';
+    renderOrder();
+  };
   if (shareURL) $('#copy-album-link').onclick = async () => {
+    if ($('#copy-album-link').disabled || $('#album-form select[name=access]').value !== album.access || regenerateLink) return;
     try { await navigator.clipboard.writeText(shareURL); $('#copy-link-status').textContent = 'Link copied'; }
     catch { $('#album-share-link').select(); $('#copy-link-status').textContent = 'Select and copy the link manually.'; }
   };
@@ -195,13 +216,13 @@ function renderAlbum(id) {
     event.preventDefault();
     const form = new FormData(event.target);
     const access = form.get('access'), password = form.get('password');
-    if (access === 'password' && !state.privateAlbumsEnabled) { showError(new Error('Password protection is unavailable. Configure protected storage before saving a protected album.')); return; }
-    if (access === 'password' && (password || !album.passwordSet) && ([...password].length < 12 || [...password].length > 128)) {
+    if (privateAlbum({ access }) && !state.privateAlbumsEnabled) { showError(new Error('Private share-link and password-protected albums are unavailable. Configure protected storage before saving nonpublic access.')); return; }
+    if (access === 'password' && (password || !passwordSet) && ([...password].length < 12 || [...password].length > 128)) {
       const input = $('#album-form input[name=password]');
       input.setCustomValidity('Use 12–128 characters.'); input.reportValidity(); return;
     }
     work(async () => {
-      const result = await api(`/albums/${id}`, { method: 'PUT', body: { title: form.get('title'), slug: form.get('slug'), description: form.get('description'), published: form.has('published'), access, ...(access === 'password' && password ? { password } : {}), photoIds: order, coverId: form.get('cover') || '' } });
+      const result = await api(`/albums/${id}`, { method: 'PUT', body: { title: form.get('title'), slug: form.get('slug'), description: form.get('description'), published: form.has('published'), access, ...(access === 'password' && password ? { password } : {}), ...(access === 'link' && regenerateLink ? { regenerateLink: true } : {}), photoIds: order, coverId: form.get('cover') || '' } });
       Object.assign(state, result); dirty = false; render(); status('Album saved. Publish changes to apply access and website updates.');
     });
   };
@@ -247,7 +268,7 @@ function editPhoto(id) {
   openDialog(`<div class="photo-editor"><div class="editor-image"><img src="${image(id, 1280)}" alt="${escape(photo.alt)}"></div><form id="photo-form" class="editor-fields"><h2 id="dialog-title">Photo details</h2><p class="muted">${escape(photo.filename)} · ${photo.width} × ${photo.height}</p>
     <label>Alt text<input name="alt" value="${escape(photo.alt)}" maxlength="1000" autofocus><small>Describe what’s in the photo. Required before publishing.</small></label><label>Caption<textarea name="caption" maxlength="4000">${escape(photo.caption)}</textarea></label><label>Tags<input name="tags" value="${escape(photo.tags.join(', '))}" placeholder="Travel, New York, Street"><small>Separate tags with commas.</small></label><label>Capture date<input type="date" name="capturedDate" value="${escape(photo.capturedDate)}"></label>
     <fieldset><legend>Albums · optional</legend>${state.catalog.albums.map(album => `<label class="check"><input type="checkbox" name="album" value="${album.id}" ${album.photoIds.includes(id) ? 'checked' : ''}>${escape(album.title)} · ${accessLabel(album)}</label>`).join('') || '<span class="hint">No albums yet.</span>'}</fieldset>
-    <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Publish publicly, independently of albums</label><p class="hint">Photos in published albums are automatically ready. Public albums or independent publication make a photo public even if it also belongs to protected albums. To make it a draft, remove it from every published album and uncheck this setting. Previously public image URLs and old releases remain accessible.</p>
+    <label class="check"><input type="checkbox" name="published" ${photo.published ? 'checked' : ''}>Publish publicly, independently of albums</label><p class="hint">Photos in published albums are automatically ready. Public albums or independent publication make a photo public even if it also belongs to private share-link or password-protected albums. To make it a draft, remove it from every published album and uncheck this setting. Previously public image URLs and old releases remain accessible.</p>
     <dl class="exif">${Object.entries(photo.exif).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl><p class="hint">Only selected camera EXIF is public. Embedded metadata and GPS are stripped from web images.</p><button type="button" data-archive-photo="${id}" data-action="archive">Archive photo</button><p class="hint">Keep files; remove this photo from all public manifests, including historical releases. Cached copies and direct image URLs may remain accessible.</p><div class="editor-footer"><button type="button" class="danger" data-delete-photo="${id}">Delete photo</button><button class="primary" type="submit">Save photo</button></div></form></div>`);
   $('#photo-form').onsubmit = event => {
     event.preventDefault();
@@ -334,9 +355,9 @@ $('#publish').onclick = () => work(async () => {
   const changes = state.publicationChanges;
   if (publishing() || (!changes.changed && state.publication?.state !== 'failed')) return;
   const projections = [['Public', changes.photos, changes.albums]];
-  if (changes.protectedPhotos && changes.protectedAlbums) projections.push(['Password protected', changes.protectedPhotos, changes.protectedAlbums]);
+  if (changes.protectedPhotos && changes.protectedAlbums) projections.push(['Private · share-link and password protected', changes.protectedPhotos, changes.protectedAlbums]);
   const counts = projections.map(([title, photos, albums]) => `<table class="publication-changes"><caption>${title}</caption><thead><tr><th scope="col">Change</th><th scope="col">Photos</th><th scope="col">Albums</th></tr></thead><tbody>${[['Live now', 'live'], ['Added', 'added'], ['Updated', 'updated'], ['Removed', 'removed'], ['Unchanged', 'unchanged'], ['After publishing', 'next']].map(([label, key]) => `<tr><th scope="row">${label}</th><td>${photos[key]}</td><td>${albums[key]}</td></tr>`).join('')}</tbody></table>`).join('');
-  openDialog(`<div class="simple-dialog"><h2 id="dialog-title">Publish changes?</h2>${counts}${changes.changed && projections.every(([, photos, albums]) => [photos, albums].every(count => count.added + count.updated + count.removed === 0)) ? '<p>Order, access, or password changes will be applied.</p>' : ''}<p class="muted">Draft photos stay private. Previous releases are retained; unpublishing is not permanent deletion.</p><div class="editor-footer"><span class="hint">${state.development ? 'Local preview only. No R2 writes.' : 'Images copy first. The live index updates last.'}</span><button class="primary" id="confirm-publish">Publish now ↗</button></div></div>`, false);
+  openDialog(`<div class="simple-dialog"><h2 id="dialog-title">Publish changes?</h2>${counts}${changes.changed && projections.every(([, photos, albums]) => [photos, albums].every(count => count.added + count.updated + count.removed === 0)) ? '<p>Order, access, link, or password changes will be applied.</p>' : ''}<p class="muted">Saved access, regenerated links, and password changes take effect now; replaced links and old viewing sessions are revoked. Draft photos stay private. Previous releases are retained; unpublishing is not permanent deletion.</p><div class="editor-footer"><span class="hint">${state.development ? 'Local preview only. No R2 writes.' : 'Images copy first. The live index updates last.'}</span><button class="primary" id="confirm-publish">Publish now ↗</button></div></div>`, false);
   $('#confirm-publish').onclick = () => work(async () => {
     Object.assign(state, await api('/publish', { method: 'POST' }));
     editor.close(); renderPublication(); status('Publication started. It will continue if you close this page.');

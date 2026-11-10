@@ -1,6 +1,7 @@
 import { scryptSync, timingSafeEqual } from 'node:crypto';
 
 const ID = /^[0-9a-f]{32}$/;
+const LINK_KEY = /^[0-9a-f]{64}$/;
 const HASH = /^scrypt\$16384\$8\$5\$([0-9a-f]{32})\$([0-9a-f]{64})$/;
 const encoder = new TextEncoder();
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -53,9 +54,11 @@ async function currentAlbum(env, id) {
   const matches = release.albums.filter(album => record(album) && album.id === id);
   if (matches.length > 1) fail(503);
   const album = matches[0];
-  if (!album || album.published !== true || album.access !== 'password') fail(404);
-  if (typeof album.accessVersion !== 'string' || !ID.test(album.accessVersion) || typeof album.passwordHash !== 'string' || !HASH.test(album.passwordHash)
-      || !Array.isArray(album.photoIds) || !album.photoIds.every(photoID => typeof photoID === 'string' && ID.test(photoID))
+  if (!album || album.published !== true || !['password', 'link'].includes(album.access)) fail(404);
+  if (typeof album.accessVersion !== 'string' || !ID.test(album.accessVersion)) fail(503);
+  if (album.access === 'password' && (typeof album.passwordHash !== 'string' || !HASH.test(album.passwordHash))) fail(503);
+  if (album.access === 'link' && (typeof album.linkHash !== 'string' || !LINK_KEY.test(album.linkHash))) fail(503);
+  if (!Array.isArray(album.photoIds) || !album.photoIds.every(photoID => typeof photoID === 'string' && ID.test(photoID))
       || new Set(album.photoIds).size !== album.photoIds.length
       || !['title', 'slug', 'description', 'coverId'].every(key => typeof album[key] === 'string')
       || (album.coverId !== '' && !album.photoIds.includes(album.coverId))) fail(503);
@@ -98,7 +101,7 @@ function sessionCookie(id, token, now, logout = false) {
   return `${cookieName(id)}=${token}; Path=${albumPath(id)}; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}; Expires=${new Date((now + age) * 1000).toUTCString()}`;
 }
 
-async function passwordBody(request) {
+async function loginBody(request, access) {
   if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') fail(415);
   const length = request.headers.get('Content-Length');
   if (length !== null && (!/^\d+$/.test(length) || Number(length) > BODY_LIMIT)) fail(413);
@@ -120,8 +123,10 @@ async function passwordBody(request) {
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
   let body;
   try { body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { fail(400); }
-  if (!record(body) || typeof body.password !== 'string') fail(400);
-  return body.password; // Exact UTF-8: deliberately no trim or Unicode normalization.
+  const field = access === 'link' ? 'key' : 'password';
+  if (!record(body) || typeof body[field] !== 'string') fail(400);
+  if (access === 'link' && !LINK_KEY.test(body.key)) fail(400);
+  return body[field]; // Exact UTF-8: deliberately no trim or Unicode normalization.
 }
 
 // Persistent fixed keys: expiry overwrites the old window instead of creating
@@ -186,7 +191,7 @@ function catalog(album, release) {
     return result;
   });
   return { version: 1, photos, albums: [{ id: album.id, title: album.title, slug: album.slug, description: album.description,
-    published: true, photoIds: [...album.photoIds], coverId: album.coverId }] };
+    published: true, access: album.access, photoIds: [...album.photoIds], coverId: album.coverId }] };
 }
 
 export async function onRequest(context) {
@@ -197,10 +202,14 @@ export async function onRequest(context) {
     const route = /^\/photos\/private\/([0-9a-f]{32})\/(|login|logout|catalog|media\/([0-9a-f]{32})\/(640|1280|2560)\.jpg)$/.exec(url.pathname);
     if (!route) fail(404);
     if (url.protocol !== 'https:') fail(403);
-    const origin = request.headers.get('Origin');
-    if ((origin !== null && origin !== url.origin) || request.headers.get('Sec-Fetch-Site') === 'cross-site') fail(403);
     const [, id, action, photoID, size] = route;
     const read = request.method === 'GET' || request.method === 'HEAD';
+    const origin = request.headers.get('Origin');
+    // Shared links must open from email/other sites. Only a top-level shell
+    // navigation is exempt; embedded pages and all data/auth routes stay closed.
+    const navigation = read && action === '' && request.headers.get('Sec-Fetch-Mode') === 'navigate'
+      && request.headers.get('Sec-Fetch-Dest') === 'document';
+    if ((origin !== null && origin !== url.origin) || (request.headers.get('Sec-Fetch-Site') === 'cross-site' && !navigation)) fail(403);
     if (!(read && (action === '' || action === 'catalog' || photoID))
         && !(request.method === 'POST' && (action === 'login' || action === 'logout'))) fail(405);
     if (!read && origin !== url.origin) fail(403);
@@ -210,23 +219,31 @@ export async function onRequest(context) {
     if (action === 'logout') {
       return json(request, { ok: true }, { 'Set-Cookie': sessionCookie(id, '', now, true) });
     }
-    if (!env.PUBLIC_PHOTOS?.get || !env.PROTECTED_PHOTOS?.get || !env.PROTECTED_PHOTOS?.put
-        || typeof env.ALBUM_SESSION_SECRET !== 'string' || encoder.encode(env.ALBUM_SESSION_SECRET).length < 32) fail(503);
+    if (!env.PUBLIC_PHOTOS?.get || !env.PROTECTED_PHOTOS?.get) fail(503);
     const { album, release } = await currentAlbum(env, id);
+    if (typeof env.ALBUM_SESSION_SECRET !== 'string' || encoder.encode(env.ALBUM_SESSION_SECRET).length < 32
+        || (album.access === 'password' && !env.PROTECTED_PHOTOS?.put)) fail(503);
     if (action === '') {
       if (!env.ASSETS?.fetch) fail(503);
       const shell = await env.ASSETS.fetch(new Request(new URL('/photos/', url), { method: 'GET' }));
       if (shell.status !== 200 || !shell.headers.get('Content-Type')?.includes('text/html')) fail(503);
       let html = await shell.text();
-      if (!/<head\b[^>]*>/i.test(html)) fail(503);
+      if (!/<head\b[^>]*>/i.test(html) || !/<body\b[^>]*>/i.test(html)) fail(503);
       html = html.replace(/<base\b[^>]*>/gi, '').replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, '')
-        .replace(/<head\b[^>]*>/i, '$&<base href="/photos/"><title>Private album · Hugo’s Blog</title>');
+        .replace(/<head\b[^>]*>/i, '$&<base href="/photos/"><title>Private album · Hugo’s Blog</title>')
+        .replace(/<body\b[^>]*>/i, tag => tag.replace(/\sdata-private-access(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/gi, '')
+          .replace(/>$/, ` data-private-access="${album.access}">`));
       return response(request, 200, html, { 'Content-Type': 'text/html; charset=utf-8' });
     }
     if (action === 'login') {
-      const password = await passwordBody(request);
-      await limitLogin(request, env.PROTECTED_PHOTOS, id, now);
-      if (!await correctPassword(password, album.passwordHash)) fail(401);
+      const credential = await loginBody(request, album.access);
+      if (album.access === 'link') {
+        const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(credential)));
+        if (!timingSafeEqual(digest, unhex(album.linkHash))) fail(401);
+      } else {
+        await limitLogin(request, env.PROTECTED_PHOTOS, id, now);
+        if (!await correctPassword(credential, album.passwordHash)) fail(401);
+      }
       return json(request, { ok: true }, { 'Set-Cookie': sessionCookie(id, await session(env.ALBUM_SESSION_SECRET, album, now), now) });
     }
     await authorized(request, env.ALBUM_SESSION_SECRET, album, now);

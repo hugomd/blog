@@ -64,7 +64,9 @@ rounded, edge-to-edge photographs on black, a thumbnail-origin zoom viewer,
 keyboard navigation, reduced-motion support, and optional camera information
 and tags. It has no frontend dependencies or build step.
 
-Password-protected albums use a narrowly routed Pages Function and a separate,
-non-public delivery bucket. They are not hidden public URLs. See the
+Private share-link and password-protected albums use a narrowly routed Pages
+Function and a separate, non-public delivery bucket. Private links contain a
+revocable random key in the URL fragment, not an encoded password;
+password-protected albums require a separately shared password. See the
 [protected album configuration and security contract](photo-access/README.md)
 before deploying or enabling them in Studio.

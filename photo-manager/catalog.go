@@ -43,8 +43,12 @@ type album struct {
 	Access        string   `json:"access,omitempty"`
 	PasswordHash  string   `json:"passwordHash,omitempty"`
 	AccessVersion string   `json:"accessVersion,omitempty"`
+	LinkToken     string   `json:"linkToken,omitempty"`
+	LinkHash      string   `json:"linkHash,omitempty"`
 	PasswordSet   bool     `json:"passwordSet,omitempty"`
 }
+
+func (a album) protected() bool { return a.Access == "password" || a.Access == "link" }
 
 type catalog struct {
 	Version          int     `json:"version"`
@@ -74,10 +78,15 @@ func (a *app) load(ctx context.Context, bucket, key string) (catalog, string, er
 	if err := json.Unmarshal(value.Body, &result); err != nil {
 		return catalog{}, "", fmt.Errorf("invalid catalog: %w", err)
 	}
-	if result.Version != 1 && result.Version != 2 {
+	if result.Version != 1 && result.Version != 2 && result.Version != 3 {
 		return catalog{}, "", errors.New("unsupported catalog version")
 	}
-	if !a.config.PrivateAlbums && ((bucket == "private" && result.Version == 2) || result.ProtectedRelease != "") {
+	for _, item := range result.Albums {
+		if item.Access != "" && item.Access != "public" && item.Access != "password" && item.Access != "link" {
+			return catalog{}, "", errors.New("unsupported album access")
+		}
+	}
+	if !a.config.PrivateAlbums && ((bucket == "private" && result.Version >= 2) || result.ProtectedRelease != "") {
 		return catalog{}, "", &requestError{503, "Restore protected album storage configuration before editing this library."}
 	}
 	return result, value.ETag, nil
@@ -85,9 +94,11 @@ func (a *app) load(ctx context.Context, bucket, key string) (catalog, string, er
 
 func (a *app) save(ctx context.Context, c *catalog, etag string) (string, error) {
 	for _, item := range c.Albums {
-		if item.Access == "password" {
-			// Older binaries must reject, rather than publicly publish, this catalog.
-			c.Version = 2
+		// Older publishers must reject modes they would otherwise treat as public.
+		if item.Access == "link" {
+			c.Version = 3
+		} else if item.Access == "password" {
+			c.Version = max(c.Version, 2)
 		}
 	}
 	c.Revision++
@@ -139,7 +150,7 @@ func (c catalog) release(publicURL string, protected bool) catalog {
 	release := catalog{Version: 1, Revision: c.Revision, Photos: []photo{}, Albums: []album{}}
 	members := map[string]bool{}
 	for _, item := range c.Albums {
-		if item.Published && (item.Access == "password") == protected {
+		if item.Published && item.protected() == protected {
 			for _, id := range item.PhotoIDs {
 				members[id] = true
 			}
@@ -163,13 +174,19 @@ func (c catalog) release(publicURL string, protected bool) catalog {
 	// Include standalone and published-album photos once, newest first.
 	sort.Slice(release.Photos, func(i, j int) bool { return release.Photos[i].UploadedAt > release.Photos[j].UploadedAt })
 	for _, item := range c.Albums {
-		if !item.Published || (item.Access == "password") != protected {
+		if !item.Published || item.protected() != protected {
 			continue
 		}
 		// Explicit projection keeps private credentials out of public snapshots.
 		next := album{ID: item.ID, Title: item.Title, Slug: item.Slug, Description: item.Description, Published: true, PhotoIDs: []string{}, CoverID: item.CoverID}
 		if protected {
-			next.Access, next.PasswordHash, next.AccessVersion = "password", item.PasswordHash, item.AccessVersion
+			next.Access = item.Access
+			next.AccessVersion = item.AccessVersion
+			if item.Access == "password" {
+				next.PasswordHash = item.PasswordHash
+			} else if item.Access == "link" {
+				next.LinkHash = item.LinkHash
+			}
 		}
 		originalIDs := item.PhotoIDs
 		for _, id := range originalIDs {

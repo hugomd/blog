@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { onRequest } from './handler.mjs';
 
 const A = 'a'.repeat(32), B = 'b'.repeat(32), P = 'c'.repeat(32), Q = 'd'.repeat(32), R = 'e'.repeat(32);
@@ -13,6 +14,9 @@ const SALT = '000102030405060708090a0b0c0d0e0f';
 const DERIVED = '36afa0b630c8b697b9341304b38a410d3b43b196456e60e0bc94feff15bff486';
 const UNICODE_DERIVED = 'fa3566e46bd7acc865dca9576355e8ee804badbb44407c21e5cbc40da1d3fb95';
 const PASSWORD_HASH = `scrypt$16384$8$5$${SALT}$${DERIVED}`;
+const LINK_TOKEN = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f';
+// Frozen independently with printf '%s' <token> | sha256sum (UTF-8 hex text, not decoded bytes).
+const LINK_HASH = '6c86c6aac5fb24bcf5d9939cb7d7d5645ce39418f449e03b262dd4fa14b4b92b';
 const base = id => `/photos/private/${id}/`;
 const name = id => `__Secure-photo_album_${id}`;
 
@@ -88,6 +92,18 @@ function fixture() {
   const save = (key = RELEASE) => privateBucket.seed(`releases/${key}.json`, release);
   return { env, publicBucket, privateBucket, release, call, login, save, assetRequests };
 }
+function linkFixture() {
+  const f = fixture();
+  f.release.albums[0].access = 'link';
+  f.release.albums[0].linkHash = LINK_HASH;
+  delete f.release.albums[0].passwordHash;
+  f.save();
+  f.exchange = (key = LINK_TOKEN, init = {}, id = A) => f.call('login', {
+    method: 'POST', body: JSON.stringify({ key }), ...init,
+    headers: { Origin: ORIGIN, 'Content-Type': 'application/json', ...init.headers },
+  }, id);
+  return f;
+}
 function signedCookie(id = A, claims = {}, secret = SECRET) {
   const payload = Buffer.from(JSON.stringify({ album: id, version: VERSION, exp: Math.floor(Date.now() / 1000) + 3600, ...claims })).toString('base64url');
   return `${name(id)}=${payload}.${createHmac('sha256', secret).update(payload).digest('base64url')}`;
@@ -154,6 +170,7 @@ test('unauthenticated shell is generic, uses base href and strips inherited cach
   const html = await result.text();
   assert.match(html, /<head><base href="\/photos\/">/);
   assert.match(html, /<title>Private album · Hugo’s Blog<\/title>/);
+  assert.match(html, /<body data-private-access="password">/);
   assert.doesNotMatch(html, /secret|passwordHash|accessVersion|wrong/);
   assert.equal((html.match(/<base /g) || []).length, 1);
   assert.equal(f.assetRequests[0].url, `${ORIGIN}/photos/`);
@@ -168,7 +185,8 @@ test('catalog is curated, whitelisted and album scoped, including shared public 
   const a = await (await status(await f.call('catalog', { headers: { Cookie: signedCookie() } }), 200)).json();
   assert.deepEqual(a.photos.map(photo => photo.id), [Q, P]);
   assert.equal(a.albums.length, 1);
-  assert.deepEqual(Object.keys(a.albums[0]).sort(), ['coverId', 'description', 'id', 'photoIds', 'published', 'slug', 'title']);
+  assert.deepEqual(Object.keys(a.albums[0]).sort(), ['access', 'coverId', 'description', 'id', 'photoIds', 'published', 'slug', 'title']);
+  assert.equal(a.albums[0].access, 'password');
   assert.deepEqual(Object.keys(a.photos[0]).sort(), ['alt', 'caption', 'capturedDate', 'exif', 'height', 'id', 'src', 'tags', 'thumbnail', 'uploadedAt', 'width']);
   assert.equal(a.photos[1].thumbnail, `${base(A)}media/${P}/640.jpg`);
   const b = await (await status(await f.call('catalog', { headers: { Cookie: signedCookie(B) } }, B), 200)).json();
@@ -182,6 +200,261 @@ test('catalog is curated, whitelisted and album scoped, including shared public 
   const before = f.privateBucket.reads.length;
   await status(await f.call(`media/${R}/640.jpg`, { headers: { Cookie: signedCookie() } }), 404);
   assert.ok(!f.privateBucket.reads.slice(before).some(key => key.startsWith('photos/')));
+});
+
+test('link fixed SHA-256 vector exchanges for a session; shell/catalog never leak credentials', async () => {
+  const f = linkFixture();
+  assert.equal(createHash('sha256').update(LINK_TOKEN).digest('hex'), LINK_HASH);
+  assert.ok(!JSON.stringify(f.release).includes(LINK_TOKEN), 'delivery snapshot has no plaintext key');
+  const shell = await status(await f.call(''), 200);
+  const html = await shell.text();
+  assert.match(html, /<body data-private-access="link">/);
+  assert.doesNotMatch(html, /secret|passwordHash|linkHash|accessVersion/);
+  assert.ok(!html.includes(LINK_TOKEN) && !html.includes(LINK_HASH));
+  const success = await status(await f.exchange(), 200);
+  assert.deepEqual(await success.json(), { ok: true });
+  const set = success.headers.get('Set-Cookie');
+  for (const flag of ['HttpOnly', 'Secure', 'SameSite=Strict', 'Max-Age=43200', `Path=${base(A)}`]) assert.ok(set.includes(flag));
+  const Cookie = set.split(';')[0];
+  assert.ok(!set.includes(LINK_TOKEN) && !set.includes(LINK_HASH));
+  const data = await (await status(await f.call('catalog', { headers: { Cookie } }), 200)).json();
+  assert.deepEqual(data.albums, [{ id: A, title: `secret title ${A}`, slug: 'secret-slug', description: 'secret description',
+    published: true, access: 'link', photoIds: [Q, P], coverId: Q }]);
+  assert.deepEqual(data.photos.map(photo => photo.id), [Q, P]);
+  assert.doesNotMatch(JSON.stringify(data), /passwordHash|linkHash|accessVersion|must-not-return|wrong\.example/);
+  assert.ok(!JSON.stringify(data).includes(LINK_TOKEN) && !JSON.stringify(data).includes(LINK_HASH));
+  assert.ok(!JSON.stringify(data).includes(B));
+  for (const photo of data.photos) {
+    assert.equal(photo.thumbnail, `${base(A)}media/${photo.id}/640.jpg`);
+    assert.equal(photo.src, `${base(A)}media/${photo.id}/2560.jpg`);
+    for (const size of [640, 1280, 2560]) {
+      const image = await status(await f.call(`media/${photo.id}/${size}.jpg`, { headers: { Cookie } }), 200);
+      assert.equal(image.headers.get('Content-Type'), 'image/jpeg');
+      assert.equal(await image.text(), `JPEG:${photo.id}:${size}`);
+    }
+  }
+  assert.equal(f.privateBucket.writes.length, 0);
+});
+
+test('link exchange validates keys and never needs IP, KDF or limiter storage writes', async () => {
+  const f = linkFixture();
+  f.privateBucket.put = undefined;
+  f.privateBucket.putFailure = true;
+  f.privateBucket.getFailure = key => key.startsWith('auth-attempts/');
+  for (const key of ['f'.repeat(64), LINK_HASH]) {
+    const result = await status(await f.exchange(key), 401);
+    assert.equal(result.headers.get('Set-Cookie'), null);
+    assert.equal(await result.text(), 'Authentication required.');
+  }
+  for (const key of [undefined, null, 1, '', 'a'.repeat(63), 'a'.repeat(65), LINK_TOKEN.toUpperCase(), ` ${LINK_TOKEN}`]) {
+    await status(await f.exchange('ignored', { body: JSON.stringify({ key }) }), 400);
+  }
+  for (const [body, expected] of [['{}', 400], ['{"password":"password"}', 400], ['{', 400], ['null', 400], ['x'.repeat(4097), 413]]) {
+    await status(await f.exchange('ignored', { body }), expected);
+  }
+  await status(await f.exchange(LINK_TOKEN, { headers: { 'Content-Type': 'text/plain' } }), 415);
+  await status(await f.exchange(), 200);
+  await status(await f.exchange(), 200);
+  assert.ok(!f.privateBucket.reads.some(key => key.startsWith('auth-attempts/')));
+  assert.equal(f.privateBucket.writes.length, 0);
+});
+
+test('link album IDs are not capabilities; session media stays member-only and album-scoped', async () => {
+  const f = linkFixture();
+  for (const id of [A.toUpperCase(), A.slice(1), `${A}a`, `%61${A.slice(1)}`, 'secret-slug', 'f'.repeat(32)]) {
+    for (const action of ['', 'catalog', `media/${P}/640.jpg`]) await status(await f.call(action, {}, id), 404);
+  }
+  for (const path of [`media/${P}/original.jpg`, `media/${P}/641.jpg`, `media/%63${P.slice(1)}/640.jpg`,
+    `releases/${RELEASE}.json`, 'index.json', 'catalog.json']) await status(await f.call(path), 404);
+  const before = f.privateBucket.reads.length;
+  await status(await f.call(`media/${R}/640.jpg`, { headers: { Cookie: signedCookie() } }), 404);
+  assert.ok(!f.privateBucket.reads.slice(before).some(key => key.startsWith('photos/')));
+  for (const Cookie of ['', signedCookie(B), `${name(A)}=invalid`, `${signedCookie()}; ${signedCookie()}`]) {
+    for (const action of ['catalog', `media/${P}/640.jpg`]) await status(await f.call(action, { headers: { Cookie } }), 401);
+  }
+  f.release.albums[1].access = 'link';
+  f.release.albums[1].linkHash = createHash('sha256').update('f'.repeat(64)).digest('hex');
+  delete f.release.albums[1].passwordHash; f.save();
+  await status(await f.exchange(LINK_TOKEN, {}, B), 401);
+  await status(await f.exchange('f'.repeat(64)), 401);
+  await status(await f.exchange('f'.repeat(64), {}, B), 200);
+  await status(await f.call('catalog', {}, B), 401);
+  await status(await f.call(`media/${P}/640.jpg`, { headers: { Cookie: signedCookie() } }, B), 401);
+});
+
+test('link requests retain cross-site, conditional, range and HEAD controls', async () => {
+  const f = linkFixture();
+  const conditions = { 'If-None-Match': '*', 'If-Modified-Since': 'Wed, 01 Jan 2099 00:00:00 GMT', Range: 'bytes=0-0', 'If-Range': 'anything' };
+  for (const action of ['', 'catalog', `media/${P}/640.jpg`]) {
+    for (const method of ['GET', 'HEAD']) {
+      if (action !== '') await status(await f.call(action, { method, headers: conditions }), 401);
+      const result = await status(await f.call(action, { method, headers: { ...conditions, Cookie: signedCookie() } }), 200);
+      const body = await result.text();
+      if (method === 'HEAD') assert.equal(body, '');
+      else assert.ok(body.length > 1);
+    }
+    for (const headers of [{ Origin: 'https://evil.example' }, { 'Sec-Fetch-Site': 'cross-site' }]) {
+      await status(await f.call(action, { headers }), 403);
+    }
+  }
+});
+
+test('shared links open from other sites, without allowing cross-site embedding or API reads', async () => {
+  for (const create of [fixture, linkFixture]) {
+    const f = create();
+    const navigation = { 'Sec-Fetch-Site': 'cross-site', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Dest': 'document' };
+    const shell = await status(await f.call('', { headers: navigation }), 200);
+    assert.doesNotMatch(await shell.text(), /secret title|secret alt/);
+    for (const action of ['catalog', `media/${P}/640.jpg`]) {
+      await status(await f.call(action, { headers: navigation }), 403);
+    }
+    for (const headers of [
+      { ...navigation, 'Sec-Fetch-Dest': 'iframe' },
+      { ...navigation, 'Sec-Fetch-Mode': 'cors' },
+      { ...navigation, Origin: 'https://evil.example' },
+    ]) await status(await f.call('', { headers }), 403);
+    await status(await f.login('password', { headers: navigation }), 403);
+    assert.equal(f.privateBucket.writes.length, 0);
+  }
+});
+
+test('public/link/password transitions and unpublish follow only the current release pointer', async () => {
+  const f = fixture();
+  const passwordAlbum = structuredClone(f.release.albums[0]);
+  f.release.albums.shift(); f.save(); // Public-only album has no protected projection.
+  f.release.albums.unshift({ ...passwordAlbum, access: 'link', linkHash: LINK_HASH, accessVersion: NEXT });
+  delete f.release.albums[0].passwordHash;
+  f.save(NEXT);
+  for (const action of ['', 'catalog', `media/${P}/640.jpg`]) {
+    await status(await f.call(`${action}?protectedRelease=${NEXT}`), 404);
+  }
+  f.publicBucket.seed('index.json', { protectedRelease: NEXT });
+  await status(await f.call(''), 200);
+  for (const action of ['catalog', `media/${P}/640.jpg`]) await status(await f.call(action), 401);
+  const exchange = await status(await f.login('ignored', { body: JSON.stringify({ key: LINK_TOKEN }) }), 200);
+  const linkCookie = exchange.headers.get('Set-Cookie').split(';')[0];
+  f.release.albums[0] = passwordAlbum;
+  const passwordRelease = '4'.repeat(32);
+  f.save(passwordRelease);
+  for (const action of ['catalog', `media/${P}/640.jpg`]) await status(await f.call(action, { headers: { Cookie: linkCookie } }), 200);
+  f.publicBucket.seed('index.json', { protectedRelease: passwordRelease });
+  for (const action of ['catalog', `media/${P}/640.jpg`]) {
+    await status(await f.call(action), 401);
+    await status(await f.call(action, { headers: { Cookie: linkCookie } }), 401);
+    await status(await f.call(`${action}?protectedRelease=${NEXT}&access=link`), 401);
+  }
+  const login = await status(await f.login(), 200);
+  const Cookie = login.headers.get('Set-Cookie').split(';')[0];
+  for (const action of ['catalog', `media/${P}/640.jpg`]) await status(await f.call(action, { headers: { Cookie } }), 200);
+  f.release.albums[0].published = false;
+  f.save(passwordRelease);
+  for (const action of ['', 'catalog', `media/${P}/640.jpg`]) await status(await f.call(action, { headers: { Cookie } }), 404);
+  f.publicBucket.seed('index.json', {});
+  for (const action of ['', 'catalog', `media/${P}/640.jpg`]) await status(await f.call(`${action}?protectedRelease=${NEXT}`), 404);
+});
+
+test('link requires session secret, valid storage and metadata; unlisted/unknown access fails closed', async () => {
+  const mutations = [
+    f => { delete f.env.PUBLIC_PHOTOS; },
+    f => { delete f.env.PROTECTED_PHOTOS; },
+    f => { delete f.env.ALBUM_SESSION_SECRET; },
+    f => { f.env.ALBUM_SESSION_SECRET = 'short'; },
+    f => { f.publicBucket.getFailure = () => true; },
+    f => { f.privateBucket.objects.delete(`releases/${RELEASE}.json`); },
+    f => { delete f.release.albums[0].linkHash; f.save(); },
+    f => { f.release.albums[0].linkHash = LINK_HASH.toUpperCase(); f.save(); },
+    f => { f.release.albums[0].linkHash = 'a'.repeat(63); f.save(); },
+    f => { delete f.release.albums[0].accessVersion; f.save(); },
+    f => { f.release.albums[0].accessVersion = 'a'.repeat(64); f.save(); },
+    f => { f.release.albums[0].photoIds.push(Q); f.save(); },
+    f => { f.release.albums[0].coverId = R; f.save(); },
+    f => { f.release.photos = []; f.save(); },
+  ];
+  for (const mutate of mutations) {
+    const f = linkFixture(); mutate(f);
+    const result = await status(await f.call('catalog', { headers: { Cookie: signedCookie() } }), 503);
+    assert.equal(await result.text(), 'Request unavailable.');
+  }
+  for (const access of [undefined, null, 'public', 'unknown', 'unlisted', 'UNLISTED']) {
+    const f = linkFixture();
+    f.release.albums[0].access = access; f.save();
+    for (const action of ['', 'catalog', `media/${P}/640.jpg`]) await status(await f.call(action), 404);
+    await status(await f.login(), 404);
+    assert.equal(f.privateBucket.writes.length, 0);
+  }
+});
+
+test('link fragments are not server credentials and query keys never authorize or exchange', async () => {
+  const f = linkFixture();
+  for (const suffix of [`#key=${LINK_TOKEN}`, `?key=${LINK_TOKEN}`, `?key=${LINK_TOKEN}&access=link`]) {
+    const shell = await status(await f.call(suffix), 200);
+    assert.equal(shell.headers.get('Set-Cookie'), null);
+    assert.ok(!(await shell.text()).includes(LINK_TOKEN));
+    for (const action of ['catalog', `media/${P}/640.jpg`]) await status(await f.call(`${action}${suffix}`), 401);
+    await status(await f.call(`login${suffix}`, { method: 'POST', headers: { Origin: ORIGIN, 'Content-Type': 'application/json' }, body: '{}' }), 400);
+  }
+  assert.equal(f.privateBucket.writes.length, 0);
+});
+
+test('real HTTP link navigation never sends the fragment key to the handler', async () => {
+  const f = linkFixture(), received = [];
+  // Bridge HTTP test transport to the HTTPS request Pages supplies in production.
+  const server = createServer(async (request, reply) => {
+    received.push(request.url);
+    const result = await onRequest({ env: f.env, request: new Request(`${ORIGIN}${request.url}`) });
+    reply.writeHead(result.status, Object.fromEntries(result.headers));
+    reply.end(await result.text());
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    for (const [action, expected] of [['', 200], ['catalog', 401], [`media/${P}/640.jpg`, 401]]) {
+      const result = await status(await fetch(`${origin}${base(A)}${action}#key=${LINK_TOKEN}`), expected);
+      assert.ok(!(await result.text()).includes(LINK_TOKEN));
+      assert.equal(received.at(-1), `${base(A)}${action}`);
+    }
+    assert.ok(received.every(path => !path.includes('#') && !path.includes(LINK_TOKEN)));
+    assert.equal(f.privateBucket.writes.length, 0);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
+});
+
+test('link draft pointer isolation, hash/version rotation and unpublish/republish revoke keys and cookies', async () => {
+  const f = linkFixture();
+  const login = await status(await f.exchange(), 200);
+  const Cookie = login.headers.get('Set-Cookie').split(';')[0];
+  const nextKey = 'f'.repeat(64);
+  f.release.albums[0].linkHash = createHash('sha256').update(nextKey).digest('hex');
+  f.release.albums[0].accessVersion = NEXT;
+  f.save(NEXT); // Draft cannot change delivery until the public pointer commits.
+  await status(await f.exchange(nextKey), 401);
+  await status(await f.exchange(), 200);
+  await status(await f.call(`catalog?protectedRelease=${NEXT}`, { headers: { Cookie } }), 200);
+  f.publicBucket.seed('index.json', { protectedRelease: NEXT });
+  await status(await f.exchange(), 401);
+  for (const action of ['catalog', `media/${P}/640.jpg`]) {
+    await status(await f.call(`${action}?protectedRelease=${RELEASE}`, { headers: { Cookie } }), 401);
+  }
+  const rotated = await status(await f.exchange(nextKey), 200);
+  const newCookie = rotated.headers.get('Set-Cookie').split(';')[0];
+  await status(await f.call('catalog', { headers: { Cookie: newCookie } }), 200);
+  f.release.albums[0].published = false; f.save(NEXT);
+  for (const action of ['', 'catalog', `media/${P}/640.jpg`]) await status(await f.call(action, { headers: { Cookie: newCookie } }), 404);
+  await status(await f.exchange(nextKey), 404);
+  f.publicBucket.seed('index.json', {});
+  await status(await f.call(`catalog?protectedRelease=${NEXT}`, { headers: { Cookie: newCookie } }), 404);
+  // Publisher rotates both fields when re-publishing; the handler follows that live version.
+  f.release.albums[0].published = true;
+  f.release.albums[0].accessVersion = '4'.repeat(32);
+  f.release.albums[0].linkHash = LINK_HASH; f.save('4'.repeat(32));
+  f.publicBucket.seed('index.json', { protectedRelease: '4'.repeat(32) });
+  await status(await f.exchange(nextKey), 401);
+  await status(await f.call('catalog', { headers: { Cookie: newCookie } }), 401);
+  await status(await f.call('catalog', { headers: { Cookie } }), 401);
+  await status(await f.exchange(), 200);
+  assert.equal(f.privateBucket.writes.length, 0);
 });
 
 test('missing/forged/expired/overlong/duplicate/cross-album cookies fail closed', async () => {
