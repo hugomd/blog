@@ -17,7 +17,6 @@ function clearPrivate() {
   state.catalog = null; state.photos = []; state.busy = false; state.info = false;
   stream.innerHTML = ''; $('#albums').innerHTML = '';
   $('#album-intro').hidden = true; $('#title').textContent = ''; $('#description').textContent = '';
-  $('#lock-album').hidden = true;
   $('#skeleton').hidden = true;
   $('#status').classList.remove('loading');
   stream.setAttribute('aria-busy', 'false'); $('#albums').setAttribute('aria-busy', 'false');
@@ -83,7 +82,6 @@ async function load() {
     if (request.signal.aborted) return;
     if (catalog.version !== 1 || !Array.isArray(catalog.photos) || !Array.isArray(catalog.albums)) throw new Error('Unsupported manifest');
     state.catalog = catalog;
-    $('#lock-album').hidden = !privatePath;
     render();
   } catch {
     if (request.signal.aborted) return;
@@ -264,17 +262,6 @@ $('#album-login').onsubmit = async event => {
   } catch {
     showUnlock('The album couldn’t be unlocked. Please try again.');
   } finally { form.reset(); button.disabled = false; }
-};
-$('#lock-album').onclick = async () => {
-  if (!privatePath) return;
-  showUnlock();
-  const button = $('#album-login button');
-  button.disabled = true;
-  try {
-    const response = await fetch(`${privatePath}logout`, { method: 'POST', credentials: 'same-origin', cache: 'no-store' });
-    if (!response.ok) throw new Error('Logout failed');
-  } catch { $('#unlock-error').textContent = 'Couldn’t end the session. Retry locking before leaving a shared device.'; $('#lock-album').hidden = false; }
-  finally { button.disabled = false; }
 };
 $('.skip').onclick = event => { event.preventDefault(); $('#main').focus(); };
 viewer.addEventListener('cancel', event => { event.preventDefault(); close(); });

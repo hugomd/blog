@@ -95,9 +95,8 @@ trimming or normalization. Share the password separately from the album URL.
 
 Sessions are signed, album/version-scoped, HttpOnly, Secure, SameSite=Strict
 cookies lasting 12 hours. Link regeneration, password replacements, unpublication/republishing and
-access changes invalidate prior sessions **when published**. Lock clears the
-browser cookie and visible photos; it does not individually revoke a copied
-bearer token before expiry. Protected responses are `private, no-store`, noindex,
+access changes invalidate prior sessions **when published**. There is no manual
+lock control in the gallery. Protected responses are `private, no-store`, noindex,
 no-referrer, without cache validators, ranges or CORS. Downloaded screenshots
 and external copies cannot be revoked.
 Links can open the generic album page from other sites through a top-level
