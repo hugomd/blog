@@ -3,6 +3,7 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 const state = { catalog: null, photos: [], index: 0, info: false, busy: false };
 const stream = $('#stream'), viewer = $('#viewer'), info = $('#info');
 let zoom = $('#zoom');
+let swipeStart;
 const duration = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
 // The public manifest is the sole source of gallery content. Never fall back to
 // repository photos: doing so could reintroduce archived/unpublished images.
@@ -12,6 +13,7 @@ async function load() {
   $('#status').textContent = 'Loading photographs…';
   $('#status').classList.add('loading');
   $('#skeleton').hidden = false;
+  layoutPhotos();
   stream.setAttribute('aria-busy', 'true');
   $('#albums').setAttribute('aria-busy', 'true');
   try {
@@ -42,6 +44,7 @@ function render() {
   const isAlbums = route === 'albums', isAlbum = route.startsWith('album/');
   stream.classList.toggle('list', !isAlbums && !isAlbum);
   $('#skeleton').classList.toggle('list', !isAlbums && !isAlbum);
+  layoutPhotos();
   if (!state.catalog) return;
   const photos = state.catalog.photos.filter(p => !p.archived && !p.deleting);
   const byID = new Map(photos.map(p => [p.id, p]));
@@ -73,9 +76,32 @@ function render() {
   state.photos = isAlbum ? (album?.photoIds || []).map(id => byID.get(id)).filter(Boolean) : photos;
   stream.setAttribute('aria-label', isAlbum ? `${album?.title || 'Album'} photographs` : 'Photostream');
   stream.innerHTML = state.photos.map((p, i) => `<button class="photo" style="--ratio:${p.width / p.height}" aria-label="Open ${escape(p.alt)}" data-photo="${i}"><img src="${escape(p.thumbnail)}" ${isAlbum ? '' : `srcset="${escape(p.thumbnail)} 640w, ${escape(p.src)} 2560w" sizes="(max-width:700px) 100vw, (max-width:900px) 50vw, 33vw"`} width="${p.width}" height="${p.height}" alt="${escape(p.alt)}" loading="${i < (isAlbum ? 4 : 3) ? 'eager' : 'lazy'}"></button>`).join('');
+  layoutPhotos();
   if (!state.photos.length) message(isAlbum ? album ? 'No photographs in this album yet.' : 'This album isn’t currently published.' : 'No photographs published yet. Check back soon.');
 }
+
+function layoutPhotos() {
+  for (const grid of [stream, $('#skeleton')]) {
+    if (grid.hidden) continue;
+    const width = grid.firstElementChild?.getBoundingClientRect().width;
+    const gap = parseFloat(getComputedStyle(grid).columnGap);
+    for (const photo of grid.children) {
+      const ratio = Number(getComputedStyle(photo).getPropertyValue('--ratio')) || 4 / 3;
+      // Tiny row spans pack each column independently without reordering the DOM.
+      photo.style.gridRowEnd = `span ${Math.ceil(width / ratio + gap)}`;
+      const image = photo.querySelector('img[srcset]');
+      if (image) image.sizes = `${Math.ceil(width)}px`;
+    }
+  }
+}
 function message(text) { $('#status').textContent = text; $('#status').hidden = false; }
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00Z`), day = date.getUTCDate();
+  const suffix = day % 100 >= 11 && day % 100 <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th';
+  return `${date.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })} ${day}${suffix}, ${date.getUTCFullYear()}`;
+}
 
 function target() {
   const p = state.photos[state.index], narrow = innerWidth <= 540;
@@ -106,11 +132,12 @@ function renderViewer(changePhoto = false) {
     full.decode().then(() => { if (zoom === display && viewer.open) display.src = full.src; }).catch(() => {});
   }
   $('#count').textContent = `${state.index + 1} / ${state.photos.length}`;
-  $('#caption').textContent = [p.caption, p.capturedDate].filter(Boolean).join(' · ');
+  const date = formatDate(p.capturedDate);
+  $('#caption').innerHTML = [escape(p.caption), date ? `<em><time datetime="${escape(p.capturedDate)}">${date}</time></em>` : ''].filter(Boolean).join(' · ');
   $('#details').setAttribute('aria-pressed', state.info);
   info.hidden = !state.info;
-  const fields = { ...p.exif, ...(p.capturedDate ? { 'Capture date': p.capturedDate } : {}), Dimensions: `${p.width} × ${p.height}` };
-  info.innerHTML = `<dl>${Object.entries(fields).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl>${p.tags?.length ? `<div class="tags" aria-label="Tags">${p.tags.map(tag => `<span class="tag">${escape(tag)}</span>`).join('')}</div>` : ''}`;
+  const fields = { ...p.exif, ...(date ? { 'Capture date': date } : {}), Dimensions: `${p.width} × ${p.height}` };
+  info.innerHTML = `<dl>${Object.entries(fields).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${key === 'Capture date' ? `<em>${escape(value)}</em>` : escape(value)}</dd></div>`).join('')}</dl>${p.tags?.length ? `<div class="tags" aria-label="Tags">${p.tags.map(tag => `<span class="tag">${escape(tag)}</span>`).join('')}</div>` : ''}`;
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
   place();
 }
@@ -118,10 +145,11 @@ async function open(index) {
   if (state.busy) return;
   state.busy = true; state.index = index;
   const thumb = stream.children[index].querySelector('img'), from = thumb.getBoundingClientRect();
-  viewer.showModal(); document.body.style.overflow = 'hidden'; renderViewer(true);
+  viewer.showModal(); viewer.focus({ preventScroll: true });
+  document.body.style.overflow = 'hidden'; renderViewer(true);
   thumb.style.visibility = 'hidden';
   try { await animatePhoto(from, place()); }
-  finally { state.busy = false; $('#close').focus(); }
+  finally { state.busy = false; }
 }
 async function close() {
   if (state.busy || !viewer.open) return;
@@ -157,8 +185,21 @@ viewer.addEventListener('cancel', event => { event.preventDefault(); close(); })
 viewer.addEventListener('keydown', event => {
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); step(event.key === 'ArrowLeft' ? -1 : 1); }
 });
+viewer.addEventListener('touchstart', event => {
+  swipeStart = innerWidth <= 700 && event.touches.length === 1 && (event.target === viewer || event.target === zoom) ? event.touches[0] : null;
+}, { passive: true });
+viewer.addEventListener('touchend', event => {
+  if (!swipeStart) return;
+  const dx = event.changedTouches[0].clientX - swipeStart.clientX, dy = event.changedTouches[0].clientY - swipeStart.clientY;
+  swipeStart = null;
+  if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+  // Suppress the synthesized tap so swiping never also closes the viewer.
+  event.preventDefault();
+  step(dx < 0 ? 1 : -1);
+}, { passive: false });
+viewer.addEventListener('touchcancel', () => { swipeStart = null; });
 viewer.addEventListener('click', event => { if (event.target === viewer || event.target === zoom) close(); });
-addEventListener('resize', () => { if (viewer.open) place(); });
+addEventListener('resize', () => { layoutPhotos(); if (viewer.open) place(); });
 addEventListener('hashchange', async () => {
   // Browser Back may arrive during the zoom. Keep its thumbnail in the DOM
   // until the transition and close have finished, then change collections.
