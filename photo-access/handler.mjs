@@ -252,7 +252,10 @@ export async function onRequest(context) {
     const object = await env.PROTECTED_PHOTOS.get(`photos/${photoID}/${size}.jpg`);
     if (!object) fail(503); // A committed release with missing bytes is unavailable.
     if (request.method === 'HEAD') await object.body?.cancel();
-    return response(request, 200, object.body, { 'Content-Type': 'image/jpeg' });
+    // R2 streams carry a known length that Cloudflare can turn into an automatic
+    // 206 response. Stream without that length so the edge cannot apply ranges.
+    const body = request.method === 'HEAD' ? null : object.body.pipeThrough(new TransformStream());
+    return response(request, 200, body, { 'Content-Type': 'image/jpeg' });
   } catch (error) {
     const status = error instanceof Failure ? error.status : 503;
     return response(request, status, status === 401 ? 'Authentication required.' : status === 404 ? 'Not found.' : 'Request unavailable.', {
