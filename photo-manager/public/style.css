@@ -10,6 +10,7 @@
 .ordered-list .media-image{width:65px;height:65px;border-radius:8px;flex-shrink:0}
 .ordered-list .media-image img{width:100%;height:100%}
 .choice .media-image{aspect-ratio:1;border-radius:8px;margin:0}
+.choice .media-image img{height:100%}
 .editor-image .media-image,.archived-preview .media-image{aspect-ratio:var(--aspect);margin:auto;background-size:100% 100%}
 .editor-image .media-image{width:min(100%,calc(700px * var(--aspect)))}
 .archived-preview .media-image{width:min(100%,calc(48vh * var(--aspect)))}
@@ -53,8 +54,7 @@
 .album-photo-preview{padding:0;border:0;background:none;flex-shrink:0}
 .album-edit-details{display:block;margin-top:4px;padding:0;border:0;border-radius:0;background:none;color:#d6cdb3;font-size:11px;min-height:24px;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:700px){.album-edit-details{min-height:44px}}
-.photostream-chooser .choice img{height:100%}
-.photostream-chooser .choice:has(input:checked) .media-image{outline:2px solid #d6cdb3;outline-offset:2px}
+.choice:has(input:checked) .media-image{outline:2px solid #d6cdb3;outline-offset:2px}
 @media(max-width:700px){.page-heading:has(.library-actions){flex-wrap:wrap}.page-heading:has(.library-actions)>div:first-child{flex-basis:100%}.library-actions{justify-content:flex-start}}
 .publication-changes{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px;font-variant-numeric:tabular-nums}
 .publication-changes th,.publication-changes td{padding:10px 8px;border-bottom:1px solid #292929;text-align:right}
