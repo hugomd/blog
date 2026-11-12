@@ -242,12 +242,15 @@ function renderInfo(animate = false) {
   cancelAnimationFrame(infoFrame);
   const surface = $('.photo-info'), button = $('#details');
   const video = isVideo(state.photos[state.index]);
-  button.hidden = video; $('#video-summary').hidden = !video;
-  if (video) { state.info = false; state.infoProgress = 0; }
+  const empty = !info.querySelector('.camera-info > :not([hidden]), #info-fields > *, #info-tags > *');
+  if ((video || empty) && surface.contains(document.activeElement)) viewer.focus({ preventScroll: true });
+  surface.hidden = !video && empty;
+  button.hidden = video || surface.hidden; $('#video-summary').hidden = !video;
+  if (video || surface.hidden) { state.info = false; state.infoProgress = 0; }
   button.setAttribute('aria-expanded', state.info);
   info.inert = !state.info;
   info.setAttribute('aria-hidden', !state.info);
-  if (video) {
+  if (video || surface.hidden) {
     info.hidden = true;
     Object.assign(surface.style, { height: '44px', transform: 'translateX(-50%)', borderRadius: '22px' });
     return;
