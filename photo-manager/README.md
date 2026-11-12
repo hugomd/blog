@@ -42,6 +42,13 @@ processing needs temporary disk space.
   focal length, plus an editable capture date. GPS, camera serial numbers,
   owner names, XMP and embedded previews are not published. Original files,
   including any original GPS data, remain private.
+- **Camera metadata** in photo details lets you replace or add make, camera,
+  lens, ISO, shutter, aperture and focal length (up to 300 UTF-8 bytes per value).
+  Leave a field blank to remove it. Saving changes the draft catalog only;
+  **Publish changes** applies it to public and protected galleries. These edits
+  never rewrite the original file or image dimensions. Older API clients that
+  omit `exif` preserve its saved values; an explicit `exif` object replaces them,
+  with an empty object clearing all camera metadata.
 - Optionally add alt text, a caption and comma-separated tags. Photos can be
   published without alt text. Photos in any published album are automatically ready;
   the per-photo **Publish independently of albums** setting is for standalone

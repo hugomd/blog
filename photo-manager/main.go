@@ -426,13 +426,14 @@ func (a *app) previewVideo(w http.ResponseWriter, r *http.Request) error {
 
 func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
-		Alt          string   `json:"alt"`
-		Caption      string   `json:"caption"`
-		Location     *string  `json:"location"`
-		Tags         []string `json:"tags"`
-		CapturedDate string   `json:"capturedDate"`
-		Published    bool     `json:"published"`
-		AlbumIDs     []string `json:"albumIds"`
+		Alt          string            `json:"alt"`
+		Caption      string            `json:"caption"`
+		Location     *string           `json:"location"`
+		Tags         []string          `json:"tags"`
+		CapturedDate string            `json:"capturedDate"`
+		Published    bool              `json:"published"`
+		AlbumIDs     []string          `json:"albumIds"`
+		Exif         map[string]string `json:"exif"`
 	}
 	if err := decodeRequest(w, r, &input); err != nil {
 		return err
@@ -451,6 +452,22 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 		if input.CapturedDate != "" {
 			if _, err := time.Parse("2006-01-02", input.CapturedDate); err != nil {
 				return badRequest("Enter a valid capture date.")
+			}
+		}
+		for key, value := range input.Exif {
+			switch key {
+			case "Make", "Camera", "Lens", "ISO", "Shutter", "Aperture", "Focal length":
+			default:
+				return badRequest("Unsupported camera metadata field.")
+			}
+			value = strings.TrimSpace(value)
+			if len(value) > 300 {
+				return badRequest("Camera metadata values must be at most 300 bytes.")
+			}
+			if value == "" {
+				delete(input.Exif, key)
+			} else {
+				input.Exif[key] = value
 			}
 		}
 		tags := []string{}
@@ -485,6 +502,9 @@ func (a *app) editPhoto(w http.ResponseWriter, r *http.Request) error {
 			p.Alt, p.Caption, p.Tags, p.Published, p.CapturedDate = input.Alt, input.Caption, tags, input.Published, input.CapturedDate
 			if input.Location != nil {
 				p.Location = *input.Location
+			}
+			if input.Exif != nil {
+				p.Exif = input.Exif
 			}
 			c.Photos[i] = p
 			for i := range c.Albums {

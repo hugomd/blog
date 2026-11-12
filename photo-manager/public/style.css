@@ -3,6 +3,7 @@
 .archived-preview{display:block;width:100%;max-height:48vh;object-fit:contain;border-radius:10px;background:#000}
 .archived-preview img,.archived-preview video{display:block;width:100%;max-height:48vh;object-fit:contain}
 .editor-image video{display:block;width:100%;max-height:700px;object-fit:contain}
+.exif label{margin:0;font:inherit;color:inherit}
 .media-image{display:block;background:#181818 center/cover no-repeat;overflow:hidden}
 .media-image img{opacity:0}
 .media-image img.loaded{opacity:1}

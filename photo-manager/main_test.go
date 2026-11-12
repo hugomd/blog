@@ -378,6 +378,73 @@ func TestUploadStripsLocationAndPreservesCameraInformation(t *testing.T) {
 	}
 }
 
+func TestPhotoCameraMetadataCanBeReplacedAndCleared(t *testing.T) {
+	store := &localStorage{root: t.TempDir()}
+	b := newBrowser(t, store)
+	original := smallPNG(t)
+	b.raw("POST", "/api/photos", original, 200)
+	p := b.state.Catalog.Photos[0]
+	p.Published = true
+	b.request("POST", "/api/albums", map[string]string{"title": "Private collection"}, 200)
+	albumID := b.state.Catalog.Albums[0].ID
+	b.request("PUT", "/api/albums/"+albumID, map[string]any{"title": "Private collection", "slug": "private", "published": true, "access": "link", "photoIds": []string{p.ID}}, 200)
+	form := edit(p, albumID)
+	form["exif"] = map[string]string{"Make": "FUJIFILM", "Camera": "X-E4", "Lens": "35mm"}
+	b.request("PATCH", "/api/photos/"+p.ID, form, 200)
+	b.publish("succeeded")
+	before := b.request("GET", "/media/index.json", nil, 200)
+
+	form["exif"] = map[string]string{"Make": " RICOH ", "Camera": "GR III", "Lens": "  ", "ISO": "400", "Aperture": "ƒ/5.6", "Shutter": "1/125 s", "Focal length": "18 mm"}
+	b.request("PATCH", "/api/photos/"+p.ID, form, 200)
+	want := map[string]string{"Make": "RICOH", "Camera": "GR III", "ISO": "400", "Aperture": "ƒ/5.6", "Shutter": "1/125 s", "Focal length": "18 mm"}
+	if !reflect.DeepEqual(b.state.Catalog.Photos[0].Exif, want) {
+		t.Fatalf("Camera metadata was not replaced and trimmed: %+v", b.state.Catalog.Photos[0].Exif)
+	}
+	if !bytes.Equal(before, b.request("GET", "/media/index.json", nil, 200)) {
+		t.Fatal("Saving metadata changed the live publication")
+	}
+	// Older clients omit EXIF entirely and must preserve manual camera metadata.
+	b.request("PATCH", "/api/photos/"+p.ID, edit(p, albumID), 200)
+	if !reflect.DeepEqual(b.state.Catalog.Photos[0].Exif, want) {
+		t.Fatal("An older client cleared camera metadata")
+	}
+	for _, invalid := range []map[string]string{{"GPS": "12,34"}, {"Owner": "Private owner"}, {"Dimensions": "640 × 480"}, {"Camera": strings.Repeat("é", 151)}} {
+		form["exif"] = invalid
+		b.request("PATCH", "/api/photos/"+p.ID, form, 400)
+	}
+	b.request("GET", "/api/catalog", nil, 200)
+	if !reflect.DeepEqual(b.state.Catalog.Photos[0].Exif, want) {
+		t.Fatal("Invalid metadata changed the draft")
+	}
+	b.publish("succeeded")
+	var live catalog
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if !reflect.DeepEqual(live.Photos[0].Exif, want) {
+		t.Fatal("Public publication did not use overridden metadata")
+	}
+	protected, err := store.Read(t.Context(), "protected", "releases/"+live.ProtectedRelease+".json")
+	if err != nil || protected == nil {
+		t.Fatalf("Missing protected release: %v", err)
+	}
+	var private catalog
+	json.Unmarshal(protected.Body, &private)
+	if !reflect.DeepEqual(private.Photos[0].Exif, want) {
+		t.Fatal("Protected publication did not use overridden metadata")
+	}
+	form["exif"] = map[string]string{}
+	b.request("PATCH", "/api/photos/"+p.ID, form, 200)
+	b.publish("succeeded")
+	live = catalog{}
+	json.Unmarshal(b.request("GET", "/media/index.json", nil, 200), &live)
+	if len(live.Photos[0].Exif) != 0 {
+		t.Fatal("Clearing metadata did not remove it from the gallery")
+	}
+	saved, err := store.Read(t.Context(), "private", "originals/"+p.ID)
+	if err != nil || saved == nil || !bytes.Equal(saved.Body, original) {
+		t.Fatal("Metadata edits changed the original file")
+	}
+}
+
 func TestOptionalPhotoLocationPublishesOnlyAfterConfirmation(t *testing.T) {
 	b := newBrowser(t, &localStorage{root: t.TempDir()})
 	b.raw("POST", "/api/photos", smallPNG(t), 200)
