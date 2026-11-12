@@ -86,7 +86,7 @@ function clearPrivate() {
   releaseMedia();
   viewer.close(); zoom.getAnimations().forEach(animation => animation.cancel());
   zoom.removeAttribute('src'); zoom.alt = ''; $('#caption').textContent = ''; $('#count').textContent = '';
-  for (const id of ['camera-value', 'lens-value', 'info-fields', 'info-tags']) $(`#${id}`).textContent = '';
+  for (const id of ['camera-value', 'lens-value', 'info-fields', 'info-tags', 'video-summary']) $(`#${id}`).textContent = '';
   info.hidden = true; $('#photo-date').textContent = 'Photo info';
   $('#details').setAttribute('aria-expanded', 'false'); $('#details').removeAttribute('title');
   $('#details').setAttribute('aria-label', 'Photo information');
@@ -241,9 +241,17 @@ function message(text) { $('#status').textContent = text; $('#status').hidden = 
 function renderInfo(animate = false) {
   cancelAnimationFrame(infoFrame);
   const surface = $('.photo-info'), button = $('#details');
+  const video = isVideo(state.photos[state.index]);
+  button.hidden = video; $('#video-summary').hidden = !video;
+  if (video) { state.info = false; state.infoProgress = 0; }
   button.setAttribute('aria-expanded', state.info);
   info.inert = !state.info;
   info.setAttribute('aria-hidden', !state.info);
+  if (video) {
+    info.hidden = true;
+    Object.assign(surface.style, { height: '44px', transform: 'translateX(-50%)', borderRadius: '22px' });
+    return;
+  }
   info.hidden = false;
   const width = surface.offsetWidth, height = 44 + info.offsetHeight;
   surface.style.height = `${height}px`;
@@ -381,13 +389,14 @@ function renderViewer(changePhoto = false) {
   $('#photo-date').innerHTML = date ? `<time datetime="${escape(p.capturedDate)}">${escape(formatDate(p.capturedDate, true))}</time>` : 'Photo info';
   $('#details').setAttribute('aria-label', date ? `Photo information for ${date}` : 'Photo information');
   $('#details').title = date || 'Photo information';
+  $('#video-summary').innerHTML = isVideo(p) ? `${date ? $('#photo-date').innerHTML : 'Video'} · ${videoDuration(p.duration)}` : '';
   $('#zoom-toggle').hidden = isVideo(p);
   viewer.classList.toggle('playing-video', isVideo(p));
   for (const [key, id] of [['Camera', 'camera'], ['Lens', 'lens']]) {
     $(`#info-${id}`).hidden = !p.exif?.[key];
     $(`#${id}-value`).textContent = p.exif?.[key] || '';
   }
-  const fields = { ...p.exif, ...(p.location ? { Location: p.location } : {}), ...(isVideo(p) ? { Duration: videoDuration(p.duration) } : {}) };
+  const fields = { ...p.exif, ...(p.location ? { Location: p.location } : {}) };
   $('#info-fields').innerHTML = Object.entries(fields).filter(([key, value]) => value && !['Camera', 'Lens', 'Dimensions'].includes(key)).map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('');
   $('#info-tags').innerHTML = (p.tags || []).map(tag => `<span class="tag">${escape(tag)}</span>`).join('');
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
@@ -519,8 +528,10 @@ async function settleSwipe(commit) {
 viewer.addEventListener('touchstart', event => {
   if (event.touches.length !== 1) { cancelSwipe(); return; }
   if (state.busy || state.zoomed || !viewer.open || innerWidth > 700 || state.photos.length < 2 || (visualViewport?.scale || 1) > 1
-      || !(event.target === viewer || (event.target === zoom && !(zoom instanceof HTMLVideoElement)))) return;
+      || !(event.target === viewer || event.target === zoom)) return;
   const touch = event.touches[0];
+  // Leave the native playback controls free to handle seeking and other gestures.
+  if (event.target === zoom && zoom instanceof HTMLVideoElement && touch.clientY >= zoom.getBoundingClientRect().bottom - 64) return;
   swipe = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dx: 0, lastX: touch.clientX, time: event.timeStamp, velocity: 0 };
 }, { passive: true });
 viewer.addEventListener('touchmove', event => {
