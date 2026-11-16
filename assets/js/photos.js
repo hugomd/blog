@@ -446,7 +446,7 @@ function renderViewer(changePhoto = false) {
       full.decode().then(() => { if (zoom === display && viewer.open) display.src = full.src; }).catch(() => {});
     }
     preloadAdjacentPhotos();
-    loadLike(p.id);
+    cancelHold(); renderLike(); loadLikes();
   }
   $('#count').textContent = `${state.index + 1} / ${state.photos.length}`;
   const date = formatDate(p.capturedDate);
@@ -469,8 +469,9 @@ function renderViewer(changePhoto = false) {
   place();
 }
 // Public items only: anonymous, like-only counts. This browser remembers what it
-// liked; the button stays hidden until the count loads (and without a backend).
-const likes = new Map();
+// liked; the button stays hidden until the counts load (and without a backend).
+// All counts arrive in one request, so paging through photos fetches nothing.
+let likes = null, likesRequest = null;
 // Reserve the toolbar space up front so the photo info never moves after a fetch.
 viewer.classList.toggle('liking', !privatePath);
 function likedPhotos() {
@@ -482,8 +483,8 @@ function rememberLike(id, liked) {
   try { localStorage.setItem('liked-photos', JSON.stringify([...photos])); } catch { /* Private browsing. */ }
 }
 function renderLike() {
-  const id = state.photos[state.index]?.id, count = likes.get(id), button = $('#like');
-  const visible = !privatePath && viewer.open && count !== undefined;
+  const id = state.photos[state.index]?.id, count = likes?.get(id) ?? 0, button = $('#like');
+  const visible = !privatePath && viewer.open && likes !== null;
   button.hidden = !visible;
   if (!visible) return;
   const liked = likedPhotos().has(id);
@@ -493,22 +494,25 @@ function renderLike() {
   button.querySelector('.like-icon').hidden = liked; button.querySelector('.liked-icon').hidden = !liked;
   $('#like-count').textContent = count ? count.toLocaleString() : '';
 }
-async function loadLike(id) {
-  cancelHold(); renderLike();
-  if (privatePath) return;
-  try {
-    const response = await fetch(`${publicPath}likes/${id}`, { cache: 'no-store' });
-    const { count } = response.ok ? await response.json() : {};
-    if (Number.isInteger(count)) likes.set(id, count);
-  } catch { /* Keep a cached count, or leave the button hidden. */ }
-  renderLike();
+function loadLikes() {
+  if (privatePath || likes || likesRequest) return;
+  likesRequest = (async () => {
+    try {
+      const response = await fetch(`${publicPath}likes`, { cache: 'no-store' });
+      const { counts } = response.ok ? await response.json() : {};
+      if (counts && typeof counts === 'object') likes = new Map(Object.entries(counts));
+    } catch { /* Leave the button hidden; opening another photo retries. */ }
+    likesRequest = null;
+    renderLike();
+  })();
 }
+loadLikes();
 // Press and hold to like: the heart grows while held, the like lands, the heart
 // springs back and a ring of tiny hearts bursts out. Letting go early shrinks
 // it back unliked.
 const heart = $('#like .like-heart');
 let hold, pressed = false;
-const canLike = id => likes.has(id) && !likedPhotos().has(id);
+const canLike = id => likes !== null && Boolean(id) && !likedPhotos().has(id);
 function burstHearts() {
   if (!duration(1)) return;
   const { left, top, width, height } = heart.getBoundingClientRect();
@@ -572,14 +576,14 @@ $('#like').addEventListener('click', () => {
 });
 async function like(id) {
   if (!canLike(id)) return;
-  rememberLike(id, true); likes.set(id, likes.get(id) + 1); renderLike();
+  rememberLike(id, true); likes.set(id, (likes.get(id) ?? 0) + 1); renderLike();
   try {
     const response = await fetch(`${publicPath}likes/${id}`, { method: 'POST', cache: 'no-store' });
     const { count } = response.ok ? await response.json() : {};
     if (!Number.isInteger(count)) throw new Error('Like failed');
     likes.set(id, count);
   } catch {
-    rememberLike(id, false); likes.set(id, likes.get(id) - 1);
+    rememberLike(id, false); likes.set(id, (likes.get(id) ?? 1) - 1);
   }
   renderLike();
 }

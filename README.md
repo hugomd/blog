@@ -134,10 +134,12 @@ and tags. It has no frontend dependencies or build step.
 
 The viewer shows a heart and like count for public photostream items (not
 private albums). Likes are anonymous and like-only: the browser remembers its own
-likes in `localStorage`, and `functions/photos/likes/` (`GET`/`POST
-/photos/likes/<id>`) stores one counter per item in D1. Only same-origin POSTs
-for IDs in the current public `index.json` are counted. The button stays hidden
-when the count can't be loaded, including under plain `hugo server`.
+likes in `localStorage`, and `functions/photos/likes/` stores one counter per
+item in D1. The gallery reads every count once per page load (`GET
+/photos/likes`), so paging through photos makes no requests; a like is `POST
+/photos/likes/<id>`. Only same-origin POSTs for IDs in the current public
+`index.json` are counted. The button stays hidden when the counts can't be
+loaded, including under plain `hugo server`.
 
 Cloudflare configuration (already set up):
 
@@ -146,9 +148,9 @@ Cloudflare configuration (already set up):
 2. Bound as `REACTIONS` on the `blog` Pages project for production and preview.
 3. A WAF rate-limiting rule on the `hugo.md` zone, using the free plan's single
    rule: `starts_with(http.request.uri.path, "/photos/likes/")`, 20 requests per
-   10 seconds per IP, blocking for 10 seconds. The free plan can't match on
-   method, so count reads also count towards the limit. There is no rate limiting
-   in code. Requests to `blog-cti.pages.dev` bypass zone WAF rules.
+   10 seconds per IP, blocking for 10 seconds. It matches likes only: the bulk
+   read at `/photos/likes` has no trailing slash. There is no rate limiting in
+   code. Requests to `blog-cti.pages.dev` bypass zone WAF rules.
 
 Private share-link and password-protected albums use a narrowly routed Pages
 Function and a separate, non-public delivery bucket. Private links contain a
