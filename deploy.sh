@@ -1,7 +1,13 @@
 #!/bin/sh
-go install git.sr.ht/~sircmpwn/openring@latest
+set -eu
 
-$GOPATH/bin/openring \
+openring_bin="$(go env GOBIN)"
+if [ -z "$openring_bin" ]; then
+  openring_bin="$(go env GOPATH)/bin"
+fi
+go install git.sr.ht/~sircmpwn/openring@v0.0.0-20260213085203-e4f5a02691c4
+
+"$openring_bin/openring" \
   -n 5 \
   -p 1 \
   -l 0 \
@@ -21,4 +27,5 @@ $GOPATH/bin/openring \
   < openring_in.html \
   > ./layouts/partials/openring_out.html
 
-hugo --minify --baseURL=$BASE_URL && rm public/admin/.gitignore
+hugo --minify --baseURL="$BASE_URL"
+rm public/admin/.gitignore

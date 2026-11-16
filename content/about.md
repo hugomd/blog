@@ -39,4 +39,9 @@ I like to give back to projects I love, and the people working on them.
 
 Here is a list of people and projects I'm sponsoring on GitHub:
 
-{{< sponsoring >}}
+- [wiz](https://github.com/wiz)
+- [Andreas Nedbal](https://github.com/pixeldesu)
+- [David Peter](https://github.com/sharkdp)
+- [Neovim](https://github.com/neovim)
+- [Zen](https://github.com/zen-browser)
+- [Wesley Moore](https://github.com/wezm)

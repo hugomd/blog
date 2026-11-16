@@ -16,7 +16,6 @@ security:
     getenv:
     - '^HUGO_'
     - '^CI$'
-    - 'GITHUB_TOKEN'
 caches:
   getjson:
     dir: ':resourceDir/json'

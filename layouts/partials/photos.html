@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ .Title }} :: {{ .Site.Title }}</title>
+  {{ $description := .Description | default "Photographs, videos and albums by Hugo, from travels and everyday life." }}
+  <meta name="description" content="{{ $description }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ .Site.Title }}">
+  <meta property="og:title" content="{{ .Title }} :: {{ .Site.Title }}">
+  <meta property="og:description" content="{{ $description }}">
+  <meta property="og:url" content="{{ .Permalink }}">
+  <meta property="og:image" content="{{ "images/avatar.jpg" | absURL }}">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ .Title }} :: {{ .Site.Title }}">
+  <meta name="twitter:description" content="{{ $description }}">
+  <meta name="twitter:image" content="{{ "images/avatar.jpg" | absURL }}">
+  <meta name="theme-color" content="#000000">
+  <link rel="canonical" href="{{ .Permalink }}">
+  <link rel="alternate" type="application/rss+xml" title="Photostream :: {{ .Site.Title }}" href="https://photos.hugo.md/index.xml">
+  <link rel="icon" href="{{ "img/favicon.png" | relURL }}">
+  {{ $font := resources.Get "fonts/newsreader-variable-v2.woff2" }}
+  <style>@font-face{font-family:Newsreader;src:url('{{ $font.RelPermalink }}') format('woff2');font-weight:200 800;font-display:swap}</style>
+  {{ $style := resources.Get "css/photos.css" | fingerprint }}
+  {{ $script := resources.Get "js/photos.js" | fingerprint }}
+  <link rel="preconnect" href="https://photos.hugo.md">
+  <link rel="preload" href="https://photos.hugo.md/index.json" as="fetch" crossorigin>
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}">
+  <script type="module" src="{{ $script.RelPermalink }}"></script>
+</head>
+<body data-manifest="https://photos.hugo.md/index.json" data-album="{{ .Params.photoAlbum }}">
+  <a class="skip" href="#main">Skip to photographs</a>
+  <main id="main" tabindex="-1" aria-label="Photostream">
+    <section id="album-unlock" class="album-unlock" aria-labelledby="unlock-title" hidden>
+      <form id="album-login">
+        <h1 id="unlock-title">Private album</h1>
+        <label for="album-password">Password</label>
+        <input id="album-password" name="password" type="password" autocomplete="current-password" required aria-describedby="unlock-error">
+        <button class="control" type="submit">Unlock album</button>
+        <p id="unlock-error" role="alert"></p>
+      </form>
+    </section>
+    <section class="intro sr-only" id="album-intro">
+      <h1 id="title">{{ .Title }}</h1><p id="description" hidden></p>
+    </section>
+    <p id="status" class="status loading" role="status">Loading photographs…</p>
+    <button id="retry" class="control retry" hidden>Try again</button>
+    <div class="stream list skeleton" id="skeleton" aria-hidden="true"><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span><span class="photo"></span></div>
+    <div class="stream list" id="stream" aria-label="Photostream" aria-busy="true"></div>
+    <div class="albums" id="albums" aria-label="Albums" aria-busy="true" hidden></div>
+    <noscript><style>#skeleton{display:none}</style><p class="status">Enable JavaScript to load the published photographs and albums.</p></noscript>
+  </main>
+  <nav class="floating-nav" aria-label="Gallery navigation">
+    <a class="control" href="{{ "/" | relURL }}">← Back to blog</a>
+    <a class="control" id="nav-stream" href="{{ "photos/" | relURL }}#stream" aria-current="page">Photostream</a>
+    <a class="control" id="nav-albums" href="{{ "photos/" | relURL }}#albums">Albums</a>
+  </nav>
+  <dialog id="viewer" aria-label="Media viewer">
+    <div class="toolbar">
+      <button class="control icon-control" id="close" aria-label="Close viewer" title="Close viewer"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/times.svg").Content | safeHTML }}</span></button>
+      <div class="tools">
+        <span id="count" class="meta" aria-live="polite"></span>
+        <button class="control icon-control" id="zoom-toggle" aria-label="Zoom in 20%" title="Zoom in 20%" aria-pressed="false" aria-controls="zoom"><span class="zoom-in-icon" aria-hidden="true">{{ (resources.Get "icons/fontawesome/search-plus.svg").Content | safeHTML }}</span><span class="zoom-out-icon" aria-hidden="true" hidden>{{ (resources.Get "icons/fontawesome/search-minus.svg").Content | safeHTML }}</span></button>
+        <button class="control icon-control" id="previous" aria-label="Previous item" title="Previous item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-left.svg").Content | safeHTML }}</span></button>
+        <button class="control icon-control" id="next" aria-label="Next item" title="Next item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-right.svg").Content | safeHTML }}</span></button>
+      </div>
+    </div>
+    <div class="photo-info">
+      <button class="date-toggle" id="details" aria-label="Photo information" aria-expanded="false" aria-controls="info"><span id="photo-date">Photo info</span><span class="date-chevron" aria-hidden="true">{{ (resources.Get "icons/fontawesome/chevron-down.svg").Content | safeHTML }}</span></button>
+      <span class="video-summary" id="video-summary" hidden></span>
+      <aside id="info" class="info" aria-label="Media information" hidden>
+        <dl class="camera-info">
+          <div id="info-camera"><dt aria-label="Camera">{{ (resources.Get "icons/fontawesome/camera.svg").Content | safeHTML }}</dt><dd id="camera-value"></dd></div>
+          <div id="info-lens"><dt aria-label="Lens">{{ (resources.Get "icons/fontawesome/dot-circle.svg").Content | safeHTML }}</dt><dd id="lens-value"></dd></div>
+        </dl>
+        <dl id="info-fields" class="info-fields"></dl>
+        <div id="info-tags" class="tags" aria-label="Tags"></div>
+      </aside>
+    </div>
+    <img id="zoom" class="zoom" alt="">
+    <p id="media-error" class="media-error" role="alert" hidden>This video couldn’t be played. Try reopening it or check your connection.</p>
+    <p id="caption" class="caption"></p>
+  </dialog>
+</body>
+</html>
