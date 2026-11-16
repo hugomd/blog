@@ -504,26 +504,29 @@ async function loadLike(id) {
   renderLike();
 }
 // Press and hold to like: the heart grows while held, the like lands, the heart
-// springs back and small hearts drift down into the photo. Letting go early
-// shrinks it back unliked.
+// springs back and a ring of tiny hearts bursts out. Letting go early shrinks
+// it back unliked.
 const heart = $('#like .like-heart');
 let hold, pressed = false;
 const canLike = id => likes.has(id) && !likedPhotos().has(id);
-function floatHearts() {
+function burstHearts() {
   if (!duration(1)) return;
   const { left, top, width, height } = heart.getBoundingClientRect();
-  for (let i = 0; i < 6; i++) {
+  const colors = ['#ff5a76', '#fff', '#ff8fa3', '#ffd166'], count = 10;
+  for (let i = 0; i < count; i++) {
     const mini = $('#like .liked-icon svg').cloneNode(true);
-    mini.classList.add('floating-heart');
+    mini.classList.add('burst-heart'); mini.style.fill = colors[i % colors.length];
     mini.style.left = `${left + width / 2}px`; mini.style.top = `${top + height / 2}px`;
     viewer.append(mini);
-    // The toolbar hugs the top edge, so the hearts drift down into the photo.
-    const x = -20 - Math.random() * 70, y = 80 + Math.random() * 70, scale = .7 + Math.random() * .8;
+    const angle = (i + (Math.random() - .5) * .4) * Math.PI * 2 / count, reach = 38 + Math.random() * 22, scale = .6 + Math.random() * .6;
+    const at = (k, s) => `translate(${Math.cos(angle) * reach * k}px,${Math.sin(angle) * reach * k}px) scale(${s})`;
+    // Easing per segment keeps each heart solid for most of its flight.
     mini.animate([
-      { transform: 'translate(0,0) scale(.3)', opacity: 0 },
-      { transform: `translate(${x * .2}px,${y * .25}px) scale(${scale})`, opacity: 1, offset: .2 },
-      { transform: `translate(${x}px,${y}px) scale(${scale})`, opacity: 0 },
-    ], { duration: 900 + Math.random() * 400, delay: i * 70, easing: 'ease-out', fill: 'backwards' }).finished.then(() => mini.remove(), () => mini.remove());
+      { transform: 'translate(0,0) scale(.3)', opacity: 0, easing: 'ease-out' },
+      { transform: at(.35, scale), opacity: 1, offset: .15, easing: 'ease-out' },
+      { transform: at(.85, scale), opacity: 1, offset: .65, easing: 'ease-in' },
+      { transform: at(1, scale * .6), opacity: 0 },
+    ], { duration: 800 + Math.random() * 250 }).finished.then(() => mini.remove(), () => mini.remove());
   }
 }
 function settleHeart(grow, liked) {
@@ -531,7 +534,7 @@ function settleHeart(grow, liked) {
   heart.animate(liked ? [{ transform: from }, { transform: 'scale(.8)', offset: .6 }, { transform: 'none' }] : [{ transform: from }, { transform: 'none' }],
     { duration: duration(liked ? 380 : 180), easing: 'ease-out' });
   grow?.cancel();
-  if (liked) floatHearts();
+  if (liked) burstHearts();
 }
 function cancelHold() {
   if (!hold) return;
@@ -565,7 +568,7 @@ $('#like').addEventListener('click', () => {
   if (held || !canLike(id)) return;
   like(id);
   heart.animate([{ transform: 'none' }, { transform: 'scale(1.8)' }, { transform: 'none' }], { duration: duration(400), easing: 'ease-out' });
-  floatHearts();
+  burstHearts();
 });
 async function like(id) {
   if (!canLike(id)) return;
