@@ -546,6 +546,8 @@ function cancelHold() {
   settleHeart(grow, false);
 }
 $('#like').addEventListener('pointerdown', event => {
+  // Touch screens like on a plain tap, through the click handler below.
+  if (event.pointerType === 'touch') { pressed = false; return; }
   const id = state.photos[state.index]?.id;
   pressed = true;
   if (event.button !== 0 || hold || !canLike(id)) return;
@@ -565,8 +567,8 @@ $('#like').addEventListener('keydown', () => { pressed = false; });
 // Long presses would otherwise open a context menu on touch screens.
 $('#like').addEventListener('contextmenu', event => event.preventDefault());
 $('#like').addEventListener('click', () => {
-  // Keyboards and screen readers click without a press, and cannot hold
-  // reliably, so those clicks like at once.
+  // Taps, keyboards and screen readers click without a mouse or pen press,
+  // so those clicks like at once.
   const id = state.photos[state.index]?.id, held = pressed;
   pressed = false;
   if (held || !canLike(id)) return;
