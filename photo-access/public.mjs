@@ -10,6 +10,9 @@ function previewImage(photo) {
   return image.href;
 }
 
+export const isPublished = photo => photo.published !== false && !photo.archived && !photo.archiving && !photo.deleting
+  && [undefined, 'image', 'video'].includes(photo.kind);
+
 function failure(request, status) {
   return new Response(request.method === 'HEAD' ? null : status === 404 ? 'This photograph isn’t available.' : 'The photographs couldn’t be loaded. Please try again.', {
     status, headers: { ...headers, 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex' },
@@ -42,8 +45,7 @@ export async function onRequest(context) {
     if (!object) return failure(request, 503);
     const catalog = JSON.parse(await object.text());
     if (catalog.version !== 1 || !Array.isArray(catalog.photos) || !Array.isArray(catalog.albums)) return failure(request, 503);
-    const photos = catalog.photos.filter(photo => photo.published !== false && !photo.archived && !photo.archiving && !photo.deleting
-      && [undefined, 'image', 'video'].includes(photo.kind));
+    const photos = catalog.photos.filter(isPublished);
     if (collection) {
       const previews = photos.slice(0, 4).map(photo => ({ image: previewImage(photo), alt: photo.alt || '' }));
       const shell = await env.ASSETS.fetch(new Request(new URL('/photos/', url)));

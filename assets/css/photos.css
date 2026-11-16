@@ -26,10 +26,14 @@ dialog{max-width:none;max-height:none;width:100%;height:100dvh;inset:0;border:0;
 #viewer{width:100vw}#viewer.zoomed .zoom{cursor:grab;touch-action:none;user-select:none}#viewer.panning .zoom{cursor:grabbing}
 .control.icon-control{display:grid;place-items:center;width:44px;height:44px;padding:0;flex-shrink:0}.icon-control span{display:block;width:16px;height:16px}.icon-control svg{display:block;width:100%;height:100%;fill:currentColor}
 .toolbar .icon-control:not(:disabled){opacity:.55;transition:opacity .15s ease}.toolbar .icon-control:focus-visible,.toolbar .icon-control[aria-pressed=true]{opacity:1}
+.like-control{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 6px;border:0;border-radius:22px;background:none;font:500 15px system-ui,sans-serif;text-shadow:0 1px 4px #000c;opacity:.85;transition:opacity .15s ease;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.like-control[aria-pressed=true],.like-control:focus-visible{opacity:1}
+.like-heart{position:relative;z-index:1}.like-heart,.like-heart>span{display:block;width:20px;height:20px}.like-control svg{display:block;width:100%;height:100%;fill:currentColor;filter:drop-shadow(0 1px 3px #000a)}.liked-icon{color:#ff5a76}#like-count:empty{display:none}
+.floating-heart{position:absolute;z-index:5;width:14px;height:14px;margin:-7px 0 0 -7px;fill:#ff5a76;pointer-events:none}
+@media(min-width:701px) and (max-width:940px){#viewer.liking .photo-info{top:calc(max(12px,env(safe-area-inset-top)) + 60px)}#viewer.liking .info{max-height:calc(100dvh - 188px)}}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.control,.photo-info{background:#151515ed}}
 @media(hover:hover) and (pointer:fine){
   .control:hover{background:#ffffff28;border-color:#fff}
-  .toolbar .icon-control:not(:disabled):hover{opacity:1}
+  .toolbar .icon-control:not(:disabled):hover,.like-control:hover{opacity:1}
   .photo-info:has(.date-toggle:hover){background:#2a3b468a}
 }
 @media(max-width:780px){.photo-info{top:calc(max(12px,env(safe-area-inset-top)) + 60px)}.info{max-height:calc(100dvh - 188px)}}

@@ -179,7 +179,8 @@ versions compatible.
 Run `node --test photo-access/*.test.mjs` and
 `./bin/go -C photo-manager test -race ./...` from the repository root.
 Build Hugo normally, then run Wrangler Pages locally with `--r2 PUBLIC_PHOTOS=test-public`,
-`--r2 PROTECTED_PHOTOS=test-protected`, a test-only `ALBUM_SESSION_SECRET`, `--local-protocol https`,
+`--r2 PROTECTED_PHOTOS=test-protected`, `--d1 REACTIONS=test-reactions` (with
+`likes.sql` applied), a test-only `ALBUM_SESSION_SECRET`, `--local-protocol https`,
 `--compatibility-date 2026-11-10` and `--compatibility-flags nodejs_compat`.
 Use an isolated `--persist-to` directory, seeded with local Studio publication
 output. Do not use remote bindings, production buckets or real passwords.

@@ -446,6 +446,7 @@ function renderViewer(changePhoto = false) {
       full.decode().then(() => { if (zoom === display && viewer.open) display.src = full.src; }).catch(() => {});
     }
     preloadAdjacentPhotos();
+    loadLike(p.id);
   }
   $('#count').textContent = `${state.index + 1} / ${state.photos.length}`;
   const date = formatDate(p.capturedDate);
@@ -466,6 +467,118 @@ function renderViewer(changePhoto = false) {
   $('#previous').disabled = $('#next').disabled = state.photos.length < 2;
   renderInfo(!changePhoto);
   place();
+}
+// Public items only: anonymous, like-only counts. This browser remembers what it
+// liked; the button stays hidden until the count loads (and without a backend).
+const likes = new Map();
+// Reserve the toolbar space up front so the photo info never moves after a fetch.
+viewer.classList.toggle('liking', !privatePath);
+function likedPhotos() {
+  try { return new Set(JSON.parse(localStorage.getItem('liked-photos')) || []); } catch { return new Set(); }
+}
+function rememberLike(id, liked) {
+  const photos = likedPhotos();
+  if (liked) photos.add(id); else photos.delete(id);
+  try { localStorage.setItem('liked-photos', JSON.stringify([...photos])); } catch { /* Private browsing. */ }
+}
+function renderLike() {
+  const id = state.photos[state.index]?.id, count = likes.get(id), button = $('#like');
+  const visible = !privatePath && viewer.open && count !== undefined;
+  button.hidden = !visible;
+  if (!visible) return;
+  const liked = likedPhotos().has(id);
+  const label = `${liked ? 'Liked' : 'Like'}${count ? ` (${count.toLocaleString()} ${count === 1 ? 'like' : 'likes'})` : ''}`;
+  button.setAttribute('aria-pressed', liked); button.setAttribute('aria-label', label);
+  button.title = liked ? label : `${label}: press and hold`;
+  button.querySelector('.like-icon').hidden = liked; button.querySelector('.liked-icon').hidden = !liked;
+  $('#like-count').textContent = count ? count.toLocaleString() : '';
+}
+async function loadLike(id) {
+  cancelHold(); renderLike();
+  if (privatePath) return;
+  try {
+    const response = await fetch(`${publicPath}likes/${id}`, { cache: 'no-store' });
+    const { count } = response.ok ? await response.json() : {};
+    if (Number.isInteger(count)) likes.set(id, count);
+  } catch { /* Keep a cached count, or leave the button hidden. */ }
+  renderLike();
+}
+// Press and hold to like: the heart grows while held, the like lands, the heart
+// springs back and small hearts drift down into the photo. Letting go early
+// shrinks it back unliked.
+const heart = $('#like .like-heart');
+let hold, pressed = false;
+const canLike = id => likes.has(id) && !likedPhotos().has(id);
+function floatHearts() {
+  if (!duration(1)) return;
+  const { left, top, width, height } = heart.getBoundingClientRect();
+  for (let i = 0; i < 6; i++) {
+    const mini = $('#like .liked-icon svg').cloneNode(true);
+    mini.classList.add('floating-heart');
+    mini.style.left = `${left + width / 2}px`; mini.style.top = `${top + height / 2}px`;
+    viewer.append(mini);
+    // The toolbar hugs the top edge, so the hearts drift down into the photo.
+    const x = -20 - Math.random() * 70, y = 80 + Math.random() * 70, scale = .7 + Math.random() * .8;
+    mini.animate([
+      { transform: 'translate(0,0) scale(.3)', opacity: 0 },
+      { transform: `translate(${x * .2}px,${y * .25}px) scale(${scale})`, opacity: 1, offset: .2 },
+      { transform: `translate(${x}px,${y}px) scale(${scale})`, opacity: 0 },
+    ], { duration: 900 + Math.random() * 400, delay: i * 70, easing: 'ease-out', fill: 'backwards' }).finished.then(() => mini.remove(), () => mini.remove());
+  }
+}
+function settleHeart(grow, liked) {
+  const from = getComputedStyle(heart).transform;
+  heart.animate(liked ? [{ transform: from }, { transform: 'scale(.8)', offset: .6 }, { transform: 'none' }] : [{ transform: from }, { transform: 'none' }],
+    { duration: duration(liked ? 380 : 180), easing: 'ease-out' });
+  grow?.cancel();
+  if (liked) floatHearts();
+}
+function cancelHold() {
+  if (!hold) return;
+  const { grow } = hold; hold = null;
+  settleHeart(grow, false);
+}
+$('#like').addEventListener('pointerdown', event => {
+  const id = state.photos[state.index]?.id;
+  pressed = true;
+  if (event.button !== 0 || hold || !canLike(id)) return;
+  $('#like').setPointerCapture(event.pointerId);
+  // The hold always takes 600ms; reduced motion only drops the growth.
+  const grow = heart.animate([{ transform: 'none' }, { transform: `scale(${duration(1) ? 1.8 : 1})` }],
+    { duration: 600, easing: 'cubic-bezier(.4,0,.8,.6)', fill: 'forwards' });
+  hold = { id, grow };
+  grow.finished.then(() => {
+    if (hold?.grow !== grow) return;
+    hold = null; like(id); settleHeart(grow, true);
+  }, () => {});
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('#like').addEventListener(type, cancelHold);
+// A press released off the button never clicks; keys start afresh.
+$('#like').addEventListener('keydown', () => { pressed = false; });
+// Long presses would otherwise open a context menu on touch screens.
+$('#like').addEventListener('contextmenu', event => event.preventDefault());
+$('#like').addEventListener('click', () => {
+  // Keyboards and screen readers click without a press, and cannot hold
+  // reliably, so those clicks like at once.
+  const id = state.photos[state.index]?.id, held = pressed;
+  pressed = false;
+  if (held || !canLike(id)) return;
+  like(id);
+  heart.animate([{ transform: 'none' }, { transform: 'scale(1.8)' }, { transform: 'none' }], { duration: duration(400), easing: 'ease-out' });
+  floatHearts();
+});
+async function like(id) {
+  if (!canLike(id)) return;
+  rememberLike(id, true); likes.set(id, likes.get(id) + 1); renderLike();
+  try {
+    const response = await fetch(`${publicPath}likes/${id}`, { method: 'POST', cache: 'no-store' });
+    const { count } = response.ok ? await response.json() : {};
+    if (!Number.isInteger(count)) throw new Error('Like failed');
+    likes.set(id, count);
+  } catch {
+    rememberLike(id, false); likes.set(id, likes.get(id) - 1);
+  }
+  renderLike();
 }
 async function open(index, updateURL = true) {
   if (state.busy) return;

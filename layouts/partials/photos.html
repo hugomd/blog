@@ -60,6 +60,7 @@
     <div class="toolbar">
       <button class="control icon-control" id="close" aria-label="Close viewer" title="Close viewer"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/times.svg").Content | safeHTML }}</span></button>
       <div class="tools">
+        <button class="like-control" id="like" aria-pressed="false" hidden><span class="like-heart" aria-hidden="true"><span class="like-icon">{{ (resources.Get "icons/fontawesome/heart-regular.svg").Content | safeHTML }}</span><span class="liked-icon" hidden>{{ (resources.Get "icons/fontawesome/heart.svg").Content | safeHTML }}</span></span><span id="like-count"></span></button>
         <span id="count" class="meta" aria-live="polite"></span>
         <button class="control icon-control" id="zoom-toggle" aria-label="Zoom in 20%" title="Zoom in 20%" aria-pressed="false" aria-controls="zoom"><span class="zoom-in-icon" aria-hidden="true">{{ (resources.Get "icons/fontawesome/search-plus.svg").Content | safeHTML }}</span><span class="zoom-out-icon" aria-hidden="true" hidden>{{ (resources.Get "icons/fontawesome/search-minus.svg").Content | safeHTML }}</span></button>
         <button class="control icon-control" id="previous" aria-label="Previous item" title="Previous item"><span aria-hidden="true">{{ (resources.Get "icons/fontawesome/arrow-left.svg").Content | safeHTML }}</span></button>

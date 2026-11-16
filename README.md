@@ -130,6 +130,26 @@ rounded, edge-to-edge photographs on black, a thumbnail-origin zoom viewer,
 keyboard navigation, reduced-motion support, and optional camera information
 and tags. It has no frontend dependencies or build step.
 
+#### Likes
+
+The viewer shows a heart and like count for public photostream items (not
+private albums). Likes are anonymous and like-only: the browser remembers its own
+likes in `localStorage`, and `functions/photos/likes/` (`GET`/`POST
+/photos/likes/<id>`) stores one counter per item in D1. Only same-origin POSTs
+for IDs in the current public `index.json` are counted. The button stays hidden
+when the count can't be loaded, including under plain `hugo server`.
+
+Cloudflare configuration (already set up):
+
+1. D1 database `blog-reactions` (Oceania), created with
+   `photo-access/likes.sql`.
+2. Bound as `REACTIONS` on the `blog` Pages project for production and preview.
+3. A WAF rate-limiting rule on the `hugo.md` zone, using the free plan's single
+   rule: `starts_with(http.request.uri.path, "/photos/likes/")`, 20 requests per
+   10 seconds per IP, blocking for 10 seconds. The free plan can't match on
+   method, so count reads also count towards the limit. There is no rate limiting
+   in code. Requests to `blog-cti.pages.dev` bypass zone WAF rules.
+
 Private share-link and password-protected albums use a narrowly routed Pages
 Function and a separate, non-public delivery bucket. Private links contain a
 revocable random key in the URL fragment, not an encoded password;
