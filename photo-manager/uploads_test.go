@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -173,7 +174,7 @@ func TestMultipartCompletionResumesCleanupAfterRestart(t *testing.T) {
 }
 
 type uploadPlan struct {
-	Upload   struct{ ID string }
+	Upload   struct{ ID, RequestID string }
 	PartSize int64
 	Parts    []struct {
 		Number int
@@ -200,6 +201,207 @@ func (b *browser) transfer(plan uploadPlan, body []byte) {
 	for i := len(plan.Parts) - 1; i >= 0; i-- {
 		start := int64(i) * plan.PartSize
 		b.raw("PUT", plan.Parts[i].URL, body[start:min(start+plan.PartSize, int64(len(body)))], 200)
+	}
+}
+
+func TestQueuedUploadsAcceptDuringArchiveAndIsolateConversionFailure(t *testing.T) {
+	local := &localStorage{root: t.TempDir()}
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
+	store := &queueFaultStorage{localStorage: local}
+	store.fault = func(ctx context.Context, bucket, key string, body []byte, committed bool) error {
+		if bucket == "private" && key == "catalog.json" && !committed && bytes.Contains(body, []byte(":applying")) {
+			select {
+			case started <- struct{}{}:
+			default:
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-release:
+			}
+		}
+		return nil
+	}
+	b := newBrowser(t, store)
+	b.raw("POST", "/api/photos", smallPNG(t), 200)
+	archive := b.queueCommand("archive", b.state.Catalog.Photos[0].ID)
+	b.request("POST", "/api/queue", archive, 202)
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("archive did not start")
+	}
+	b.client.Timeout = 2 * time.Second
+	var plans []uploadPlan
+	for _, body := range [][]byte{[]byte("invalid media"), smallPNG(t), smallPNG(t)} {
+		plan := b.planUpload("queued.png", len(body))
+		b.transfer(plan, body)
+		plans = append(plans, plan)
+		b.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+		b.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+		// Expiry belongs to the transfer, not its accepted processing job.
+		value, _ := local.Read(t.Context(), "private", "uploads/"+plan.Upload.ID+".json")
+		var expired upload
+		json.Unmarshal(value.Body, &expired)
+		expired.Expires = 1
+		value.Body, _ = encode(expired)
+		if err := local.Write(t.Context(), "private", "uploads/"+expired.ID+".json", value.Body, "application/json", "no-store", nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b.request("POST", "/api/queue/"+plans[2].Upload.RequestID+"/cancel", nil, 202)
+	b.request("DELETE", "/api/uploads/"+plans[1].Upload.ID, nil, 423)
+	close(release)
+	b.waitQueue(plans[0].Upload.RequestID, "rejected")
+	b.waitQueue(plans[1].Upload.RequestID, "succeeded")
+	b.waitQueue(plans[2].Upload.RequestID, "cancelled")
+	b.request("GET", "/api/catalog", nil, 200)
+	if len(b.state.Catalog.Photos) != 2 || !b.state.Catalog.Photos[0].Archived || b.state.Catalog.Photos[1].ID != plans[1].Upload.ID || b.state.Catalog.Photos[1].Published {
+		t.Fatalf("wrong queued effects: %+v", b.state.Catalog.Photos)
+	}
+	for _, plan := range plans {
+		original, err := local.Read(t.Context(), "private", "originals/"+plan.Upload.ID)
+		if err != nil || original == nil {
+			t.Fatal("accepted/cancelled original was discarded")
+		}
+		b.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+	}
+	b.request("DELETE", "/api/uploads/"+plans[1].Upload.ID, nil, 409)
+	b.request("POST", "/api/queue/"+plans[0].Upload.RequestID+"/retry", nil, 202)
+	b.waitQueue(plans[0].Upload.RequestID, "rejected")
+	if objects, err := local.List(t.Context(), "public", "photos/"); err != nil || len(objects) != 0 {
+		t.Fatal("processing published media")
+	}
+}
+
+func TestQueuedUploadRestartsAtDurableBoundaries(t *testing.T) {
+	for _, point := range []string{"prepared", "derivative-before", "derivative-after", "catalog-before", "catalog-after"} {
+		t.Run(point, func(t *testing.T) {
+			local := &localStorage{root: t.TempDir()}
+			started := make(chan struct{}, 1)
+			var lateBody []byte
+			var lateKey string
+			store := &queueFaultStorage{localStorage: local}
+			store.fault = func(ctx context.Context, bucket, key string, body []byte, committed bool) error {
+				match := point == "prepared" && bucket == "sqlite" && committed && bytes.Contains(body, []byte(`"digests"`))
+				match = match || (strings.HasPrefix(point, "derivative-") && strings.HasSuffix(key, "/640.jpg") && committed == (point == "derivative-after"))
+				match = match || (strings.HasPrefix(point, "catalog-") && key == "catalog.json" && committed == (point == "catalog-after"))
+				if match {
+					if point == "derivative-before" {
+						lateBody, lateKey = bytes.Clone(body), key
+					}
+					select {
+					case started <- struct{}{}:
+					default:
+					}
+					<-ctx.Done()
+					return ctx.Err()
+				}
+				return nil
+			}
+			b := newBrowser(t, store)
+			body := smallPNG(t)
+			plan := b.planUpload("restart.png", len(body))
+			b.transfer(plan, body)
+			b.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+			select {
+			case <-started:
+			case <-time.After(5 * time.Second):
+				t.Fatal("processing did not reach interruption")
+			}
+			b.stop()
+			restarted := newBrowser(t, local)
+			restarted.waitQueue(plan.Upload.RequestID, "succeeded")
+			restarted.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+			restarted.request("GET", "/api/catalog", nil, 200)
+			if len(restarted.state.Catalog.Photos) != 1 || restarted.state.Catalog.Revision != 1 || restarted.state.Catalog.Photos[0].ID != plan.Upload.ID || restarted.state.Catalog.Photos[0].Width != 53 || restarted.state.Catalog.Photos[0].Height != 29 {
+				t.Fatalf("restart duplicated or corrupted the photo: %+v", restarted.state.Catalog)
+			}
+			if lateBody != nil {
+				expected := ""
+				if err := local.Write(t.Context(), "private", lateKey, lateBody, "image/jpeg", "no-store", &expected); !errors.Is(err, errConflict) {
+					t.Fatalf("late derivative could overwrite completed output: %v", err)
+				}
+			}
+			for _, key := range restarted.state.Catalog.Photos[0].files() {
+				value, err := local.Read(t.Context(), "private", key)
+				if err != nil || value == nil {
+					t.Fatalf("missing %s", key)
+				}
+			}
+		})
+	}
+}
+
+func TestQueuedUploadRecoversCompletedOriginalBeforeAcceptance(t *testing.T) {
+	local := &localStorage{root: t.TempDir()}
+	store := &queueFaultStorage{localStorage: local}
+	store.fault = func(ctx context.Context, bucket, key string, body []byte, committed bool) error {
+		if strings.HasPrefix(key, "uploads/") && !committed && bytes.Contains(body, []byte(`"completed": true`)) {
+			return errors.New("lost completion response")
+		}
+		return nil
+	}
+	b := newBrowser(t, store)
+	body := smallPNG(t)
+	plan := b.planUpload("gap.png", len(body))
+	b.transfer(plan, body)
+	b.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 500)
+	q, err := b.queue.Load(t.Context())
+	if err != nil || len(q.Jobs) != 0 {
+		t.Fatal("accepted before verifying original")
+	}
+	value, _ := local.Read(t.Context(), "private", "uploads/"+plan.Upload.ID+".json")
+	var expired upload
+	json.Unmarshal(value.Body, &expired)
+	expired.Expires = 1
+	value.Body, _ = encode(expired)
+	if err := local.Write(t.Context(), "private", "uploads/"+expired.ID+".json", value.Body, "application/json", "no-store", nil); err != nil {
+		t.Fatal(err)
+	}
+	b.stop()
+	restarted := newBrowser(t, local)
+	restarted.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+	restarted.waitQueue(plan.Upload.RequestID, "succeeded")
+	restarted.request("GET", "/api/catalog", nil, 200)
+	if len(restarted.state.Catalog.Photos) != 1 {
+		t.Fatal("completed original was not recovered")
+	}
+}
+
+func TestQueuedVideoProducesPrivatePlaybackAndPosters(t *testing.T) {
+	path := videoFixture(t, "-f", "lavfi", "-i", "testsrc2=size=96x64:rate=12", "-t", "1", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-f", "mp4")
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	local := &localStorage{root: t.TempDir()}
+	b := newBrowser(t, local)
+	plan := b.planUpload("queued.mov", len(body))
+	b.transfer(plan, body)
+	b.request("POST", "/api/queue/uploads/"+plan.Upload.ID, nil, 202)
+	finished := b.waitQueue(plan.Upload.RequestID, "succeeded")
+	b.request("GET", "/api/catalog", nil, 200)
+	if len(b.state.Catalog.Photos) != 1 {
+		t.Fatal("missing processed video")
+	}
+	p := b.state.Catalog.Photos[0]
+	if p.ID != plan.Upload.ID || p.Kind != "video" || p.Width != 96 || p.Height != 64 || p.Duration < .9 || p.Published || p.BlurHash == "" {
+		t.Fatalf("incorrect private video: %+v", p)
+	}
+	for _, key := range p.files() {
+		value, err := local.Read(t.Context(), "private", key)
+		if err != nil || value == nil {
+			t.Fatalf("missing video output %s", key)
+		}
+		digest := fmt.Sprintf("%x", sha256.Sum256(value.Body))
+		if digest != finished.Upload.Digests[key] {
+			t.Fatalf("unverified output %s", key)
+		}
+		if public, err := local.Read(t.Context(), "public", key); err != nil || public != nil {
+			t.Fatal("video was published automatically")
+		}
 	}
 }
 

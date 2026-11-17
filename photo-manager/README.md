@@ -1,9 +1,10 @@
 # Photo studio
 
 A small Go service for managing the blog’s photostream and optional albums.
-The frontend is embedded in the binary: no Node build, database or persistent
-data volume. Media **and all manifests** live in R2 in production; video
-processing needs temporary disk space.
+The frontend is embedded in the binary: no Node build or database server.
+Media and catalog/gallery manifests live in R2. SQLite on a persistent volume
+stores the action queue, cleanup checkpoints and pending publication writes;
+video processing separately needs temporary disk space.
 
 ## Editing and publishing
 
@@ -11,18 +12,22 @@ processing needs temporary disk space.
   Each starts as a private draft. HEIC/RAW files must first be exported as JPEGs.
   Studio sends 8 MiB chunks directly to private R2 using one-hour signed URLs,
   with three simultaneous transfers, byte progress, bounded retries and Cancel.
-  Original bytes no longer pass through the Studio container. The entire
-  selection transfers before Studio submits one background processing batch;
-  image conversion never holds up the next file's transfer. Keep the page open
-  until the batch is accepted, then processing continues server-side even if
-  you leave. Progress shows how many files have finished. Cancelling transfers
-  or a transfer failure stops the remaining transfers; fully transferred files
-  still enter background processing. A failed conversion is reported by filename
-  without preventing later files from becoming private drafts. Failed,
-  uncommitted uploads are cleaned up best effort; committed items are kept.
-  Reloading does not resume browser chunks. A server restart requires inspection
-  and explicit retry, not automatic replay. Background batches retain the
-  existing 30-minute operation timeout and one-hour upload expiry.
+  Original bytes no longer pass through the Studio container. Each completed
+  file is finalized in R2, verified, and accepted into the SQLite processing
+  queue before the next transfer starts. Encoding runs asynchronously and does
+  not hold up transfers or archive/restore submissions. Keep the page open until
+  all files report durable acceptance; processing then survives closing Studio
+  or restarting Go. Cancelling transfers stops the remaining files, not jobs
+  already accepted. Reloading does not resume browser chunks.
+  A lost acceptance response retains the upload ID in session storage;
+  **Check submission** retries finalization/acceptance without retransferring.
+  A crash between R2 completion and SQLite acceptance can leave an unqueued
+  original; retry by upload ID while its processing request remains valid.
+  Accepted jobs ignore the signed transfer's one-hour expiry. Conversion failures
+  before derivative writes are shown by filename without pausing later jobs;
+  Retry processes the retained original again. Storage/uncertain-write failures
+  still pause the queue until resolved. Failed or cancelled processing retains
+  private originals for scoped operator cleanup, not automatic deletion.
 - The Go service corrects EXIF orientation and creates JPEG variants with a
   maximum long edge of 640, 1280 and 2560 pixels, without upscaling. PNG
   transparency is flattened onto white. Input is limited to 30 MiB, 40 MP and
@@ -123,7 +128,7 @@ processing needs temporary disk space.
   reload or close the page; edits, uploads, archive and delete are locked until
   it finishes. A pod replacement resumes the saved job. Failures expose a retry
   action; reload first if another writer changed the catalog or public index.
-- Photo/album saves, album/photo deletions and archive/restore run as server-side
+- Photo/album saves and album/photo deletions run as server-side
   background changes. Studio gets a `202` acknowledgement after the job status is
   stored, then polls `/api/operation`; you can browse, reload or leave the page.
   Conflicting writes and publication are blocked until completion. Success is
@@ -131,13 +136,14 @@ processing needs temporary disk space.
   failed rather than replaying a possibly committed edit; reload to inspect the
   actual state before retrying. Archive/deletion intent markers remain available
   for cleanup retries. Request bodies/passwords are not persisted in job status.
-  Upload completion uses the same background worker; creating upload plans and
+  Legacy upload completion endpoints still use this background worker; Studio
+  uses the durable processing queue instead. Creating upload plans and
   draft albums remains synchronous. API clients without
   `Prefer: respond-async` retain the synchronous mutation response contract.
 - **Archive photo** keeps originals, derivatives, metadata and private album
   memberships/order, but removes the photo from the current public index and
   every stored historical release, including album references and covers.
-  This takes effect immediately, without publishing other drafts. Find archived
+  This takes effect when its queued action runs, without publishing other drafts. Find archived
   photos using **Archived** in the sidebar; **Restore photo** returns one to
   the active library without changing the live index. Restored photos in a
   published album become ready for the next publication; otherwise they are
@@ -146,10 +152,15 @@ processing needs temporary disk space.
   Archiving is not privacy erasure: public image URLs and cached copies remain.
   Use **Archive…** in the library or photostream to select several photos or
   videos at once.
-  They are archived together in one background change (`POST /api/photos/archive`
-  with `photoIds`), which redacts each manifest once for the whole selection.
-  An unknown or deleting item rejects the selection before anything changes; a
-  failure partway leaves every selected item retryable as **Archive incomplete**.
+  They are archived together in one durable queued action, which redacts each
+  manifest once for the whole selection. **Restore…** in Archived also supports
+  multiple files. Submit more batches while an earlier batch runs; overlapping
+  files cannot have two pending actions. Upload transfers and processing
+  submissions remain available. Other saves, deletion and
+  publication wait until the queue drains. The action panel shows waiting,
+  running, completed, cancelled and failed actions. Cancel waiting work; retry
+  failed work to resume the queue. Cleanup that has started cannot be cancelled.
+  The legacy `/api/photos/archive` endpoint remains available for older clients.
 - **Delete photo** is separate from removing album membership. Use Delete in
   an album row or the photo editor, then confirm the named photo. It removes
   the private original and all resized images from both buckets, removes the
@@ -183,6 +194,111 @@ Private bucket (never enable public access):
 - `catalog.json`: versioned-schema working catalog, including drafts and albums.
 - `publication.json`: latest job identity, catalog ETag/revision and outcome.
   Intermediate progress is in memory; a restarted job recounts its copies.
+
+SQLite (`QUEUE_DATABASE`) stores bounded FIFO commands, per-photo reservations,
+request identities, outcomes and cleanup cursors. It also temporarily stores the
+exact generated public/protected manifest for an unresolved publication write.
+Protect the database and its backups as private data: protected manifests contain
+password hashes and access metadata, although plaintext passwords and upload
+payloads are not persisted there.
+
+### Durable action queue
+
+`POST /api/queue` accepts `{id, action, targets: [{id, token}]}`. `action` is
+`archive` or `restore`; tokens come from the authenticated catalog response's
+`queueTokens` map. Request IDs are Unix milliseconds, a hyphen, and 32 lowercase
+random hexadecimal characters. Reuse the exact ID and payload if acknowledgement
+is lost: acceptance is persisted before **202**, and duplicates return the same
+job without executing it again. Browser submissions stay in session storage
+until acknowledged; **Check submission** retries that same command.
+
+Each command selects 1–1000 files. At most 100 pending jobs and 1000 total records
+are retained. Completed/cancelled/rejected records are pruned on submission only after
+their request timestamp is over 24 hours old; unknown request IDs older than
+24 hours are rejected. A full queue rejects new work rather than evicting
+accepted jobs. Client clocks may be at most five minutes ahead.
+
+`POST /api/queue/uploads/{uploadID}` finalizes and verifies the original in R2,
+then durably queues one processing job. Its request ID comes from the original
+upload plan, so repeated calls return the same job even after metadata cleanup.
+SQLite does not track transfers or store file bytes. Pending processing jobs
+retain their source metadata independently of the R2 plan, and legacy upload
+completion/cancellation cannot bypass queue ownership. Processing uses the same
+FIFO worker as archive/restore; a long video can delay later jobs, but does not
+block new transfers or submissions. An encoding failure before remote writes
+has terminal state `rejected`, which does not pause the queue and supports Retry.
+
+Before derivative PUTs, SQLite records the prepared photo and SHA-256 hashes.
+Derivatives use conditional create-only writes; recovery verifies existing bytes
+and never replaces them with a different encoding. If a partial retry produces
+different bytes/metadata after an encoder upgrade, restore that encoder to finish
+the job. A catalog receipt and the new photo commit together before success is
+recorded. Temporary conversion files are disposable; R2 originals remain the
+source for restart recovery. Cancelling a waiting job retains its original;
+it does not perform remote deletion. Completed queue acceptance, not completed
+browser transfer alone, is the point at which Studio says it is safe to leave.
+
+One worker executes FIFO under the existing catalog writer lock. It revalidates
+all selected photo tokens before effects; unrelated earlier batches do not make
+them stale. A catalog receipt is committed with archive intent/final effects,
+so startup can resume cleanup or recognize a completed action after a crash.
+Cleanup lists 25 historical keys at a time and checkpoints each completed page
+in SQLite. A restart repeats at most the unfinished page, not the entire history.
+Individual manifest reads, writes and listing requests have one-minute deadlines;
+there is no whole-archive deadline. There are up to three storage attempts with
+1s/2s backoff. A failure pauses subsequent work. `POST /api/queue/{id}/retry` resumes
+it; `/cancel` only cancels waiting work or validation failures before effects.
+
+Authenticated `GET /api/queue` serves in-memory state, not an R2 read per poll.
+Studio polls every 1.5 seconds and defers catalog refresh while a form is open
+or dirty, preserving edits and selections. It shows pending jobs and the ten
+latest terminal jobs; the API exposes all retained jobs. Catalog responses sample
+queue status before reading photos, so a stale catalog cannot claim a later
+archive has completed. SQLite commits job changes, reservations and the queue
+generation in one transaction. An uncertain storage result blocks
+further changes until **Recover queue** (`POST /api/queue/recover`) reloads and
+fences older in-flight writes. Never manually remove a failed job after effects
+have started. Inspect the manifests and fix the storage failure, then retry.
+
+This uses embedded SQLite and the Studio process, not Cloudflare Queues, Durable
+Objects or D1; queue bookkeeping makes no Cloudflare requests. R2 redaction still
+uses normal R2 listing/read/write operations. Keep one replica with Recreate
+deployment and one queue database per library. A lifetime file lock refuses a
+second process using the same database; it cannot protect two different database
+files pointed at the same R2 buckets. Queue actions cannot be submitted during
+legacy background edits/uploads or publication. Startup requires queue storage
+to be available. No gateway, queue service, timer or new Cloudflare secrets are needed.
+
+### SQLite persistence and recovery
+
+Set `QUEUE_DATABASE=/data/queue.sqlite` and mount a **persistent block-backed
+volume** at `/data`, writable by UID/GID 65532. Keep that volume through pod
+replacement. Use a single-writer attachment (prefer ReadWriteOncePod if supported),
+one replica and Recreate; do not use NFS/SMB/RWX filesystem storage for SQLite WAL.
+`/tmp`, `emptyDir` and the container writable layer are not durable queue storage.
+The app uses a pure-Go SQLite driver (the image stays `CGO_ENABLED=0`), WAL,
+`synchronous=FULL`, foreign keys and a five-second database busy timeout. The
+filesystem must honor locking and fsync; SQLite cannot compensate for volume loss.
+
+Back up using SQLite's online backup API/CLI `.backup`, or stop Studio cleanly
+before taking a volume snapshot. Never copy just the live `.sqlite` file while
+ignoring its `-wal`/`-shm` companions. Backups of an older queue are not safe to
+start automatically against a newer R2 catalog: completed-job receipts may have
+advanced, and deduplication history may be missing. Stop the writer, retain both
+stores and reconcile pending jobs/publication intents against R2 before recovery.
+Do not replace a lost database with an empty one and assume accepted work survived.
+
+The schema is created automatically on the configured local volume; unsupported
+database versions fail startup. An experimental R2 `queue.json` also blocks startup
+rather than silently dropping accepted jobs. To switch an existing experimental
+queue, drain it under its original binary, verify no pending/failed work remains,
+stop submissions and retain all request IDs through their 24-hour expiry. Then
+back up and retire that object deliberately before starting with SQLite. Do not
+run old and new publishers simultaneously or upgrade while an old publication
+has unresolved writes. Provisioning the volume and its backup policy belongs in
+`hugomd/jegigrat-k3s/config/photo-manager/`; this app does not create cluster resources.
+
+### Published objects
 
 Public bucket:
 
@@ -270,7 +386,13 @@ polls once per second and keeps browsing available. Jobs have a 30-minute limit;
 process shutdown leaves the durable running marker for startup recovery. Recovery
 requires the same catalog ETag/revision; it never publishes a changed catalog.
 A lost final-index response can make the outcome uncertain: reload and inspect
-the live revision before retrying. Do not roll back to a synchronous publisher
+the live revision before retrying. Before each public/protected manifest write,
+SQLite records its exact body, key and ETag precondition. Subsequent publication,
+queued archive/restore and legacy mutations reconcile that request first. New
+historical releases use conditional creation too, so a late historical or index
+PUT cannot reintroduce a photo after archive completion. This recovery can finish
+a previously requested publication write before applying the newer action.
+Do not roll back to a synchronous publisher
 while a background job is pending.
 
 Catalog updates use ETag compare-and-swap, preventing stale tabs from silently
@@ -295,8 +417,9 @@ when privacy erasure is needed. Maintain an independent private-bucket backup.
 
 Archive requires object listing permission on the public bucket. It persists
 `archived` and `archiving` before redacting manifests with conditional ETag
-writes. If any listing/read/write fails, reload and use **Retry archive** in
-Archived. Pending photos cannot be edited or restored; publishing excludes them.
+writes. If any listing/read/write fails, use **Retry** in the action queue.
+For interrupted legacy archives without a queue record, reload and use **Retry
+archive** in Archived. Pending photos cannot be edited or restored; publishing excludes them.
 Files are never deleted by archive, and the private working catalog deliberately
 retains their metadata. Historical redaction is not an atomic multi-object
 transaction; a failure can leave some older manifests unchanged until retry.
@@ -330,7 +453,9 @@ APP_ENV=development PHOTO_STORAGE=local \
 ```
 
 Read the generated password privately to sign in; never commit it. Local mode
-uses ignored `.local-data/{private,public}`, and refuses to start in production.
+uses ignored `.local-data/{private,public,protected}` plus `.local-data/queue.sqlite`,
+and refuses to start in production. Local development uses the same SQLite
+transactions and recovery as production, with filesystem stand-ins for R2.
 The UI labels the sandbox clearly. It uses the same upload/catalog/publishing
 code as R2 but is **not** an R2 acceptance test. Password sessions expire after
 12 hours and are cleared by a restart; production should use Pocket ID instead.
@@ -352,6 +477,7 @@ authentication. Mutations additionally require an exact matching `Origin`.
 | `R2_PRIVATE_BUCKET` | Private original/catalog bucket |
 | `R2_PUBLIC_BUCKET` | Separate public web-image/manifest bucket |
 | `R2_PROTECTED_BUCKET` | Optional third, non-public derivative/snapshot bucket; enables protected album controls |
+| `QUEUE_DATABASE` | Required absolute SQLite path on a persistent volume in production, e.g. `/data/queue.sqlite`; local mode defaults inside `LOCAL_DATA_DIR` |
 | `PUBLIC_GALLERY_URL` | Share-link base, default `https://hugo.md/photos/` |
 | `PUBLIC_MEDIA_URL` | HTTPS public bucket custom domain, optionally with a URL prefix |
 | `ADMIN_PASSWORD` / `ADMIN_PASSWORD_FILE` | At least 16 characters; only needed in password mode |
@@ -397,6 +523,11 @@ or through a public album remains public.
 The first saved video permanently upgrades the working catalog to version 4;
 do not roll back to an image without video/schema-4 support. Public and protected
 release versions remain 1 for compatible image-only consumers.
+The first queued archive/restore execution upgrades the private catalog to
+version 5, preserving its recovery receipt. Do not roll back to a binary without
+queue/schema-5 support, including while accepted jobs are still waiting. Drain
+and inspect the queue before any coordinated rollback; never simply delete
+the SQLite database or lower the catalog version.
 The proposed editor hostname is `photos.internal.ii.md`; confirm it and prepare
 DNS, R2 buckets/domain, sealed credentials, an immutable image digest and the
 shared certificate before deploying. No resources are provisioned by this app.
@@ -411,6 +542,8 @@ Run that command from the repository root. The multi-stage build runs the Go
 tests, embeds the frontend and produces a static, nonroot binary in Debian
 bookworm slim with FFmpeg/FFprobe. A read-only root filesystem requires a
 writable `/tmp` volume owned/writable by UID 65532 (mode 1777 also works).
+The SQLite directory also needs its separate persistent read/write volume;
+do not mount only the database file, since WAL and lock files live alongside it.
 Allow space for a 512 MiB original plus playback, posters and transcode scratch;
 use a size-limited disk-backed `emptyDir`, not a RAM-backed volume under a small
 memory limit. Processing is serialized, but cluster CPU/memory/ephemeral-storage

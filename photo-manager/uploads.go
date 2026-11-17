@@ -27,6 +27,7 @@ type upload struct {
 	MultipartID string `json:"multipartId"`
 	Completed   bool   `json:"completed"`
 	Expires     int64  `json:"expires"`
+	RequestID   string `json:"requestId,omitempty"`
 }
 
 // Encoding stays serial; only the already-encoded derivatives are transferred
@@ -104,11 +105,8 @@ func (a *app) createUpload(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		return &requestError{503, "Direct uploads are unavailable."}
 	}
-	if err := a.lockCatalog(); err != nil {
-		return err
-	}
-	defer a.mu.Unlock()
-	job := upload{ID: identifier(), Filename: filepath.Base(input.Filename), Size: input.Size, Kind: kind, Expires: time.Now().Add(time.Hour).Unix()}
+	// Transfer creates new private objects, independent of catalog processing.
+	job := upload{ID: identifier(), Filename: filepath.Base(input.Filename), Size: input.Size, Kind: kind, Expires: time.Now().Add(time.Hour).Unix(), RequestID: fmt.Sprintf("%d-%s", time.Now().UnixMilli(), identifier())}
 	key := "originals/" + job.ID
 	id, err := store.BeginUpload(r.Context(), key)
 	if err != nil {
@@ -139,11 +137,13 @@ func (a *app) createUpload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	accepted = true
-	respond(w, 200, map[string]any{"upload": map[string]any{"id": job.ID, "filename": job.Filename, "size": job.Size}, "partSize": uploadPartSize, "parts": parts})
+	respond(w, 200, map[string]any{"upload": map[string]any{"id": job.ID, "requestId": job.RequestID, "filename": job.Filename, "size": job.Size}, "partSize": uploadPartSize, "parts": parts})
 	return nil
 }
 
 func (a *app) localUploadPart(w http.ResponseWriter, r *http.Request) error {
+	a.uploadMu.Lock()
+	defer a.uploadMu.Unlock()
 	job, err := a.loadUpload(r.Context(), r.PathValue("id"))
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (a *app) localUploadPart(w http.ResponseWriter, r *http.Request) error {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
-	if err := a.store.WriteFile(r.Context(), "private", fmt.Sprintf("multipart/%s/%d", job.MultipartID, number), file, "application/octet-stream", "no-store"); err != nil {
+	if err := a.store.WriteFile(r.Context(), "private", fmt.Sprintf("multipart/%s/%d", job.MultipartID, number), file, "application/octet-stream", "no-store", nil); err != nil {
 		return err
 	}
 	respond(w, 200, map[string]bool{"ok": true})
@@ -250,7 +250,12 @@ func (a *app) completeUpload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer a.mu.Unlock()
+	a.uploadMu.Lock()
+	defer a.uploadMu.Unlock()
 	ctx, id := r.Context(), r.PathValue("id")
+	if err := a.checkUploadUnowned(id); err != nil {
+		return err
+	}
 	c, etag, err := a.load(ctx, "private", "catalog.json")
 	if err != nil {
 		return err
@@ -263,115 +268,38 @@ func (a *app) completeUpload(w http.ResponseWriter, r *http.Request) error {
 			return a.respondCatalog(w, r, c, etag) // A lost completion response must not duplicate the item.
 		}
 	}
-	job, err := a.loadUpload(ctx, id)
+	job, err := a.finalizeUpload(ctx, id)
 	if err != nil {
 		return err
-	}
-	if time.Now().Unix() > job.Expires {
-		return &requestError{410, "Upload expired. Cancel it and start again."}
-	}
-	store := a.store.(multipartStorage)
-	key := "originals/" + id
-	if !job.Completed {
-		// HEAD also recovers a committed multipart completion whose response was lost.
-		size, err := a.store.Size(ctx, "private", key)
-		var responseError *smithyhttp.ResponseError
-		missing := errors.Is(err, os.ErrNotExist) || (errors.As(err, &responseError) && responseError.HTTPStatusCode() == 404)
-		if err != nil && !missing {
-			return err
-		}
-		if missing {
-			parts, err := store.ListUploadParts(ctx, key, job.MultipartID)
-			if err != nil {
-				return err
-			}
-			if int64(len(parts)) != (job.Size+uploadPartSize-1)/uploadPartSize {
-				return badRequest("Some upload parts are missing. Retry the upload.")
-			}
-			for i, part := range parts {
-				if part.Number != int32(i+1) || part.ETag == "" || part.Size != min(uploadPartSize, job.Size-int64(i)*uploadPartSize) {
-					return badRequest("Upload parts have the wrong size or order.")
-				}
-			}
-			if err := store.FinishUpload(ctx, key, job.MultipartID, parts); err != nil {
-				return err
-			}
-			size, err = a.store.Size(ctx, "private", key)
-			if err != nil {
-				return err
-			}
-		}
-		if size != job.Size {
-			return badRequest("Completed upload has the wrong size.")
-		}
-		job.Completed = true
-		body, err := encode(job)
-		if err != nil {
-			return err
-		}
-		if err := a.store.Write(ctx, "private", "uploads/"+id+".json", body, "application/json", "no-store", nil); err != nil {
-			return err
-		}
 	}
 	tmp, err := os.MkdirTemp("", "studio-process-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	source, err := a.store.Open(ctx, "private", key, 0, 0)
+	p, files, err := a.prepareUpload(ctx, job, tmp)
 	if err != nil {
 		return err
 	}
-	defer source.Close()
-	p := photo{ID: id, Filename: job.Filename, Kind: job.Kind, Tags: []string{}, Exif: map[string]string{}, UploadedAt: now()}
-	var variants []derivative
 	if job.Kind == "video" {
-		path := filepath.Join(tmp, "original")
-		file, err := os.Create(path)
+		key := "photos/" + id + "/video.mp4"
+		file, err := os.Open(files[key])
 		if err != nil {
 			return err
 		}
-		n, copyErr := io.Copy(file, io.LimitReader(source, job.Size+1))
-		closeErr := file.Close()
-		if copyErr != nil {
-			return copyErr
-		}
-		if closeErr != nil {
-			return closeErr
-		}
-		if n != job.Size {
-			return badRequest("Stored upload size changed.")
-		}
-		result, err := processVideo(ctx, path, tmp)
-		if err != nil {
-			return err
-		}
-		p.Width, p.Height, p.Duration, variants = result.Width, result.Height, result.Duration, result.Variants
-		encoded, err := os.Open(result.Path)
-		if err != nil {
-			return err
-		}
-		defer encoded.Close()
-		if err := a.store.WriteFile(ctx, "private", "photos/"+id+"/video.mp4", encoded, "video/mp4", "private, no-store"); err != nil {
-			return err
-		}
-	} else {
-		body, err := io.ReadAll(io.LimitReader(source, (30<<20)+1))
-		if err != nil {
-			return err
-		}
-		if int64(len(body)) != job.Size {
-			return badRequest("Stored upload size changed.")
-		}
-		p.Width, p.Height, p.Exif, p.CapturedDate, variants, err = processImage(body)
+		err = a.store.WriteFile(ctx, "private", key, file, mediaContentType(key), "private, no-store", nil)
+		file.Close()
 		if err != nil {
 			return err
 		}
 	}
-	for _, variant := range variants {
-		if variant.Size == 640 {
-			p.BlurHash = previewBlurHash(variant.Body)
+	var variants []derivative
+	for _, size := range []int{640, 1280, 2560} {
+		body, err := os.ReadFile(files[fmt.Sprintf("photos/%s/%d.jpg", id, size)])
+		if err != nil {
+			return err
 		}
+		variants = append(variants, derivative{Size: size, Body: body})
 	}
 	if err := a.writeDerivatives(ctx, id, variants, "private, no-store"); err != nil {
 		return err
@@ -386,6 +314,124 @@ func (a *app) completeUpload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.respondCatalog(w, r, c, next)
+}
+
+// The caller holds uploadMu against cancellation. SQLite does not own transfers.
+func (a *app) finalizeUpload(ctx context.Context, id string) (upload, error) {
+	job, err := a.loadUpload(ctx, id)
+	if err != nil {
+		return job, err
+	}
+	key := "originals/" + id
+	size, err := a.store.Size(ctx, "private", key)
+	var responseError *smithyhttp.ResponseError
+	missing := errors.Is(err, os.ErrNotExist) || (errors.As(err, &responseError) && responseError.HTTPStatusCode() == 404)
+	if err != nil && !missing {
+		return job, err
+	}
+	// HEAD recovers an uncertain multipart completion, even after expiry.
+	if missing {
+		if job.Completed || time.Now().Unix() > job.Expires {
+			return job, &requestError{410, "Upload expired or its original is missing. Start again."}
+		}
+		store := a.store.(multipartStorage)
+		parts, err := store.ListUploadParts(ctx, key, job.MultipartID)
+		if err != nil {
+			return job, err
+		}
+		if int64(len(parts)) != (job.Size+uploadPartSize-1)/uploadPartSize {
+			return job, badRequest("Some upload parts are missing. Retry the upload.")
+		}
+		for i, part := range parts {
+			if part.Number != int32(i+1) || part.ETag == "" || part.Size != min(uploadPartSize, job.Size-int64(i)*uploadPartSize) {
+				return job, badRequest("Upload parts have the wrong size or order.")
+			}
+		}
+		if err := store.FinishUpload(ctx, key, job.MultipartID, parts); err != nil {
+			return job, err
+		}
+		size, err = a.store.Size(ctx, "private", key)
+		if err != nil {
+			return job, err
+		}
+	}
+	if size != job.Size {
+		return job, badRequest("Completed upload has the wrong size.")
+	}
+	if !job.Completed {
+		job.Completed = true
+		body, err := encode(job)
+		if err != nil {
+			return job, err
+		}
+		if err := a.store.Write(ctx, "private", "uploads/"+id+".json", body, "application/json", "no-store", nil); err != nil {
+			return job, err
+		}
+	}
+	return job, nil
+}
+
+type uploadConversionError struct{ error }
+
+func (e *uploadConversionError) Unwrap() error { return e.error }
+
+// Conversion produces only local files; remote writes happen after preparation.
+func (a *app) prepareUpload(ctx context.Context, job upload, tmp string) (photo, map[string]string, error) {
+	p := photo{ID: job.ID, Filename: job.Filename, Kind: job.Kind, Tags: []string{}, Exif: map[string]string{}, UploadedAt: now()}
+	files := map[string]string{}
+	source, err := a.store.Open(ctx, "private", "originals/"+job.ID, 0, 0)
+	if err != nil {
+		return p, nil, err
+	}
+	defer source.Close()
+	var variants []derivative
+	if job.Kind == "video" {
+		path := filepath.Join(tmp, "original")
+		file, err := os.Create(path)
+		if err != nil {
+			return p, nil, err
+		}
+		n, copyErr := io.Copy(file, io.LimitReader(source, job.Size+1))
+		closeErr := file.Close()
+		if copyErr != nil {
+			return p, nil, copyErr
+		}
+		if closeErr != nil {
+			return p, nil, closeErr
+		}
+		if n != job.Size {
+			return p, nil, badRequest("Stored upload size changed.")
+		}
+		result, err := processVideo(ctx, path, tmp)
+		if err != nil {
+			return p, nil, &uploadConversionError{err}
+		}
+		p.Width, p.Height, p.Duration, variants = result.Width, result.Height, result.Duration, result.Variants
+		files["photos/"+job.ID+"/video.mp4"] = result.Path
+	} else {
+		body, err := io.ReadAll(io.LimitReader(source, (30<<20)+1))
+		if err != nil {
+			return p, nil, err
+		}
+		if int64(len(body)) != job.Size {
+			return p, nil, badRequest("Stored upload size changed.")
+		}
+		p.Width, p.Height, p.Exif, p.CapturedDate, variants, err = processImage(body)
+		if err != nil {
+			return p, nil, &uploadConversionError{err}
+		}
+	}
+	for _, variant := range variants {
+		if variant.Size == 640 {
+			p.BlurHash = previewBlurHash(variant.Body)
+		}
+		path := filepath.Join(tmp, fmt.Sprintf("%d.jpg", variant.Size))
+		if err := os.WriteFile(path, variant.Body, 0600); err != nil {
+			return p, nil, err
+		}
+		files[fmt.Sprintf("photos/%s/%d.jpg", job.ID, variant.Size)] = path
+	}
+	return p, files, nil
 }
 
 // Retrying completion also finishes cleanup after an item was committed. Never
@@ -410,7 +456,12 @@ func (a *app) cancelUpload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer a.mu.Unlock()
+	a.uploadMu.Lock()
+	defer a.uploadMu.Unlock()
 	ctx, id := r.Context(), r.PathValue("id")
+	if err := a.checkUploadUnowned(id); err != nil {
+		return err
+	}
 	c, _, err := a.load(ctx, "private", "catalog.json")
 	if err != nil {
 		return err

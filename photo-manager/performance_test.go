@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -34,8 +35,14 @@ func fixtureCatalog(t *testing.T, s storage, bucket, key string, c catalog) stri
 	return value.ETag
 }
 
-func performanceHandler(s storage, localRoot string) http.Handler {
-	a := &app{store: s, background: context.Background(), config: configuration{
+func performanceHandler(t *testing.T, s storage, localRoot string) http.Handler {
+	t.Helper()
+	queue, err := openQueueStorage(filepath.Join(t.TempDir(), "queue.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { queue.Close() })
+	a := &app{store: s, queueStore: queue, background: t.Context(), config: configuration{
 		AuthMode: "proxy", AllowedEmail: "admin@example.test", Origin: "https://studio.example.test", PrivateAlbums: true,
 		LocalRoot: localRoot,
 	}}
@@ -124,7 +131,7 @@ func (s *membershipStorage) PreviewURL(ctx context.Context, key, method string) 
 func TestPreviewMembershipCoalescesAndInvalidatesSuccessfulWrites(t *testing.T) {
 	s := &membershipStorage{localStorage: &localStorage{root: t.TempDir()}}
 	etag := fixtureCatalog(t, s.localStorage, "private", "catalog.json", catalog{Version: 4, Photos: []photo{{ID: performancePhotoID, Kind: "video"}}})
-	h := performanceHandler(s, "")
+	h := performanceHandler(t, s, "")
 	var requests sync.WaitGroup
 	for range 24 {
 		requests.Go(func() {
@@ -169,7 +176,7 @@ func TestPreviewMembershipInvalidatedOnFailedAndUncertainIntentWrites(t *testing
 		t.Run(string(rune('0'+mode)), func(t *testing.T) {
 			s := &membershipStorage{localStorage: &localStorage{root: t.TempDir()}}
 			etag := fixtureCatalog(t, s.localStorage, "private", "catalog.json", catalog{Version: 4, Photos: []photo{{ID: performancePhotoID, Kind: "video"}}})
-			h := performanceHandler(s, "")
+			h := performanceHandler(t, s, "")
 			requirePerformanceStatus(t, performanceRequest(h, "GET", "/api/photos/"+performancePhotoID+"/image", "", nil), 307)
 			s.writeMode.Store(mode)
 			status := 500
@@ -195,7 +202,7 @@ func TestPreviewMembershipInvalidatedOnFailedAndUncertainIntentWrites(t *testing
 func TestPreviewReadCannotPopulateAcrossCatalogWrite(t *testing.T) {
 	s := &membershipStorage{localStorage: &localStorage{root: t.TempDir()}, readStarted: make(chan struct{}), readRelease: make(chan struct{})}
 	etag := fixtureCatalog(t, s.localStorage, "private", "catalog.json", catalog{Version: 1, Photos: []photo{{ID: performancePhotoID}}})
-	h := performanceHandler(s, "")
+	h := performanceHandler(t, s, "")
 	s.pauseRead.Store(true)
 	preview := make(chan *httptest.ResponseRecorder, 1)
 	go func() { preview <- performanceRequest(h, "GET", "/api/photos/"+performancePhotoID+"/image", "", nil) }()
@@ -219,7 +226,7 @@ func TestPreviewReadCannotPopulateAcrossCatalogWrite(t *testing.T) {
 func TestPreviewWaitsForInFlightCatalogWrite(t *testing.T) {
 	s := &membershipStorage{localStorage: &localStorage{root: t.TempDir()}, writeStarted: make(chan struct{}), writeRelease: make(chan struct{})}
 	etag := fixtureCatalog(t, s.localStorage, "private", "catalog.json", catalog{Version: 1, Photos: []photo{{ID: performancePhotoID}}})
-	h := performanceHandler(s, "")
+	h := performanceHandler(t, s, "")
 	requirePerformanceStatus(t, performanceRequest(h, "GET", "/api/photos/"+performancePhotoID+"/image", "", nil), 307)
 	s.writeMode.Store(2) // Commit deletion intent, then lose its response.
 	deleted := make(chan *httptest.ResponseRecorder, 1)
@@ -242,7 +249,7 @@ func TestPreviewSnapshotNeverUsedForMutations(t *testing.T) {
 	s := &membershipStorage{localStorage: &localStorage{root: t.TempDir()}}
 	c := catalog{Version: 1, Photos: []photo{{ID: performancePhotoID}}}
 	etag := fixtureCatalog(t, s.localStorage, "private", "catalog.json", c)
-	h := performanceHandler(s, "")
+	h := performanceHandler(t, s, "")
 	requirePerformanceStatus(t, performanceRequest(h, "GET", "/api/photos/"+performancePhotoID+"/image", "", nil), 307)
 	s.failRead.Store(true)
 	requirePerformanceStatus(t, performanceRequest(h, "DELETE", "/api/photos/"+performancePhotoID, etag, nil), 500)
@@ -337,7 +344,7 @@ func TestArchiveSkipsUnchangedHistoryButRedactsAllReferenceForms(t *testing.T) {
 			before[bucket+"/"+key], _ = s.localStorage.Read(t.Context(), bucket, key)
 		}
 	}
-	h := performanceHandler(s, "")
+	h := performanceHandler(t, s, "")
 	w := performanceRequest(h, "POST", "/api/photos/"+performancePhotoID+"/archive", etag, nil)
 	requirePerformanceStatus(t, w, 200)
 	for path, original := range before {
@@ -417,7 +424,7 @@ func TestDerivativeWritesAreConcurrentAndFailureNeverCommitsCatalog(t *testing.T
 	for _, multipart := range []bool{false, true} {
 		t.Run(map[bool]string{false: "legacy", true: "multipart"}[multipart], func(t *testing.T) {
 			s := &derivativeStorage{localStorage: &localStorage{root: t.TempDir()}, started: make(chan string, 3), failRelease: make(chan struct{}), cancelled: make(chan struct{}, 2), release: make(chan struct{})}
-			h := performanceHandler(s, s.root)
+			h := performanceHandler(t, s, s.root)
 			body := smallPNG(t)
 			path := "/api/photos"
 			id := ""

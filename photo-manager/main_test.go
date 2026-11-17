@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -31,9 +32,11 @@ type browser struct {
 	server *httptest.Server
 	client *http.Client
 	stop   func()
+	queue  queueStorage
 	state  struct {
-		Catalog catalog `json:"catalog"`
-		ETag    string  `json:"etag"`
+		Catalog     catalog           `json:"catalog"`
+		ETag        string            `json:"etag"`
+		QueueTokens map[string]string `json:"queueTokens"`
 	}
 }
 
@@ -41,18 +44,36 @@ func newBrowser(t *testing.T, store storage) *browser {
 	t.Helper()
 	background, cancel := context.WithCancel(t.Context())
 	a := &app{store: store, config: configuration{Development: true, Password: "test-password-not-real", AuthMode: "password", PublicURL: "/media", LocalRoot: storeRoot(store), PrivateAlbums: storeRoot(store) != "", GalleryURL: "https://example.test/photos/"}, sessions: map[string]time.Time{}, background: background}
+	root := storeRoot(store)
+	if root == "" {
+		root = t.TempDir()
+	}
+	queue, err := openQueueStorage(filepath.Join(root, "queue.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.queueStore = queue
+	if fault, ok := store.(*queueFaultStorage); ok {
+		a.queueStore = &faultQueueStorage{queueStorage: queue, storage: fault}
+	}
+	if err := a.loadQueueLocked(background); err != nil {
+		t.Fatal(err)
+	}
 	if err := a.resumeOperation(); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.resumePublication(); err != nil {
 		t.Fatal(err)
 	}
+	a.queueMu.Lock()
+	a.startQueueLocked()
+	a.queueMu.Unlock()
 	server := httptest.NewServer(a.routes())
 	a.config.Origin = server.URL
 	jar, _ := cookiejar.New(nil)
-	stop := func() { cancel(); server.Close(); a.workers.Wait() }
+	stop := func() { cancel(); server.Close(); a.workers.Wait(); queue.Close() }
 	t.Cleanup(stop)
-	b := &browser{t: t, server: server, client: &http.Client{Jar: jar}, stop: stop}
+	b := &browser{t: t, server: server, client: &http.Client{Jar: jar}, stop: stop, queue: a.queueStore}
 	b.request("POST", "/api/login", map[string]string{"password": "test-password-not-real"}, 200)
 	b.request("GET", "/api/catalog", nil, 200)
 	return b
@@ -61,6 +82,12 @@ func newBrowser(t *testing.T, store storage) *browser {
 func storeRoot(store storage) string {
 	if local, ok := store.(*localStorage); ok {
 		return local.root
+	}
+	if queued, ok := store.(*queueFaultStorage); ok {
+		return queued.root
+	}
+	if late, ok := store.(*latePublicationStorage); ok {
+		return late.root
 	}
 	if failing, ok := store.(*failingStorage); ok {
 		return storeRoot(failing.storage)
@@ -774,6 +801,7 @@ func TestArchiveRetainsFilesRedactsEveryManifestAndRestoresAlbumReadiness(t *tes
 			t.Fatal("Publish resurrected archived photo")
 		}
 	}
+	b.stop()
 	b = newBrowser(t, store)
 	beforeRestore := b.request("GET", "/media/index.json", nil, 200)
 	b.request("POST", "/api/photos/"+archived.ID+"/restore", nil, 200)
@@ -913,6 +941,7 @@ func TestArchiveRetriesHistoricalCleanupAfterRestart(t *testing.T) {
 				return bucket == "public" && strings.HasPrefix(key, failedKey)
 			}
 			b.request("POST", "/api/photos/"+p.ID+"/archive", nil, 500)
+			b.stop()
 			b = newBrowser(t, store)
 			if !b.state.Catalog.Photos[0].Archiving {
 				t.Fatal("Lost pending archive across restart")
@@ -1049,7 +1078,7 @@ func TestDeletePhotoResumesAfterStorageFailureAndRestart(t *testing.T) {
 				return false
 			}
 			b.request("DELETE", "/api/photos/"+p.ID, nil, 500)
-			b.server.Close()
+			b.stop()
 			b = newBrowser(t, store)
 			if len(b.state.Catalog.Photos) != 1 || b.state.Catalog.Photos[0].Deleting != (stage != "intent") {
 				t.Fatalf("Lost deletion recovery state: %+v", b.state.Catalog.Photos)
@@ -1134,6 +1163,18 @@ func TestAuthenticationAndInputBoundaries(t *testing.T) {
 	if response.StatusCode != 403 {
 		t.Fatal("Cross-origin mutation allowed")
 	}
+	for _, path := range []string{"/api/queue", "/api/queue/recover", "/api/queue/unknown/cancel", "/api/queue/unknown/retry"} {
+		request, _ := http.NewRequest("POST", b.server.URL+path, strings.NewReader(`{}`))
+		request.Header.Set("Origin", "https://attacker.invalid")
+		response, err := b.client.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response.Body.Close()
+		if response.StatusCode != 403 {
+			t.Fatalf("Cross-origin queue mutation allowed: %s", path)
+		}
+	}
 	b.raw("POST", "/api/photos", []byte("not an image"), 400)
 	b.raw("POST", "/api/photos", smallPNG(t), 200)
 	p := b.state.Catalog.Photos[0]
@@ -1154,6 +1195,8 @@ func TestAuthenticationAndInputBoundaries(t *testing.T) {
 	b.request("GET", "/api/catalog", nil, 401)
 	b.request("GET", "/api/publication", nil, 401)
 	b.request("GET", "/api/operation", nil, 401)
+	b.request("GET", "/api/queue", nil, 401)
+	b.request("POST", "/api/queue", nil, 401)
 }
 
 func TestProxyAuthenticationRequiresAllowedIdentity(t *testing.T) {

@@ -41,6 +41,8 @@ type rssItem struct {
 // protected release. Retrying an archive/delete must repair the feed even if
 // the preceding attempt already committed the redacted JSON index.
 func (a *app) writeRSS(ctx context.Context, live catalog) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
 	var feed rssFeed
 	feed.Version, feed.Atom = "2.0", "http://www.w3.org/2005/Atom"
 	channel := &feed.Channel
@@ -92,5 +94,5 @@ func (a *app) writeRSS(ctx context.Context, live catalog) error {
 		}
 		etag = previous.ETag
 	}
-	return a.store.Write(ctx, "public", "index.xml", body, "application/rss+xml; charset=utf-8", "public, max-age=30, must-revalidate", &etag)
+	return a.writePublicationManifest(ctx, "public", "index.xml", body, etag)
 }

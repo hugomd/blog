@@ -4,6 +4,8 @@ const state = { catalog: { photos: [], albums: [] }, etag: 'new' };
 let busy = false, dirty = false, conflicted = false, filter = 'all', search = '';
 let publicationTimer;
 let operationTimer;
+let queueTimer, queueRefreshNeeded = false, queueWatching = false;
+let pendingSubmission = JSON.parse(sessionStorage.getItem('studio-queue-submission') || 'null');
 let transfer = null;
 // Pending photostream order while reordering; null otherwise.
 let streamOrder = null, streamCustom = false;
@@ -13,7 +15,10 @@ const deletion = $('#delete-confirmation');
 const image = (id, size = 640) => `/api/photos/${encodeURIComponent(id)}/image?size=${size}`;
 const publishing = () => state.publication?.state === 'running';
 const operating = () => state.operation?.state === 'running';
-const changing = () => operating() || !!transfer;
+const pendingJob = job => !['succeeded', 'cancelled', 'rejected'].includes(job.state);
+const queueBusy = () => !!state.queue?.error || !!pendingSubmission || state.queue?.jobs.some(pendingJob);
+const queuedPhoto = id => state.queue?.jobs.some(job => pendingJob(job) && job.targets.some(target => target.id === id));
+const changing = () => operating() || !!transfer || queueBusy();
 const duration = seconds => Number.isFinite(seconds) ? `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}` : '';
 const videoBadge = photo => photo.kind === 'video' ? `<span class="video-badge">Video ${duration(photo.duration)}</span>` : '';
 const thumbnail = (photo, size = 640) => `<span class="media-image"><img data-preview="${photo.id}" src="${image(photo.id, size)}" width="${photo.width}" height="${photo.height}" alt="${escape(photo.alt)}" ${size === 640 ? 'loading="lazy"' : ''}></span>`;
@@ -165,14 +170,16 @@ async function api(path, { method = 'GET', body, headers = {} } = {}) {
   });
   const result = await response.json();
   if (!response.ok) {
-    if (response.status === 409) conflicted = true;
+    if (response.status === 409 && !path.startsWith('/queue')) conflicted = true;
     if (response.status === 401 && path !== '/login') {
-      clearTimeout(publicationTimer); clearTimeout(operationTimer); state.publication = null; state.operation = null;
+      clearTimeout(publicationTimer); clearTimeout(operationTimer); clearTimeout(queueTimer); state.publication = null; state.operation = null;
       deletion.close(); editor.close(); $('#studio').hidden = true; $('#login').hidden = false;
       $('#publication-progress').hidden = true; refreshButtons();
       $('#operation-progress').hidden = true;
     }
-    throw new Error(result.error || 'The request failed. Reload before retrying.');
+    const error = new Error(result.error || 'The request failed. Reload before retrying.');
+    error.status = response.status;
+    throw error;
   }
   if (response.status === 202 && result.operation) {
     state.operation = result.operation;
@@ -200,13 +207,113 @@ function showError(error) {
 }
 function status(message) { $('#status').textContent = message; }
 function refreshButtons() {
-  document.querySelectorAll('button').forEach(button => { button.disabled = busy || ((publishing() || changing()) && !button.matches('.photo-card,[data-browse],#close-editor,#reload,#cancel-delete,#logout,#cancel-upload')) || button.hasAttribute('data-boundary') || (conflicted && !button.matches('#reload,#close-editor,#cancel-delete,#cancel-upload,[data-reload]')); });
-  document.querySelectorAll('#album-form input,#album-form textarea,#album-form select,#editor-body input,#editor-body textarea,#editor-body select').forEach(input => { input.disabled = publishing() || changing(); });
+  document.querySelectorAll('button').forEach(button => {
+    const browsing = button.matches('.photo-card,[data-browse],#close-editor,#reload,#cancel-delete,#logout,#cancel-upload');
+    const queueControl = button.matches('[data-queue-control]');
+    const queueAction = button.matches('[data-queue-action],[data-archive-photo]');
+    const uploadAction = button.matches('[data-upload]');
+    button.disabled = busy || ((publishing() || operating()) && !browsing) || (transfer && !browsing && !queueControl && !queueAction) || (queueBusy() && !browsing && !queueControl && !queueAction && !uploadAction) ||
+      (uploadAction && (!!state.queue?.error || !!pendingSubmission)) ||
+      (queueAction && (!!state.queue?.error || !!pendingSubmission || (button.dataset.archivePhoto && queuedPhoto(button.dataset.archivePhoto)))) ||
+      button.hasAttribute('data-boundary') || (conflicted && !button.matches('#reload,#close-editor,#cancel-delete,#cancel-upload,[data-reload],[data-queue-control]'));
+  });
+  document.querySelectorAll('#album-form input,#album-form textarea,#album-form select,#editor-body input,#editor-body textarea,#editor-body select').forEach(input => {
+    const pendingChoice = input.name === 'photo' && input.closest('[data-queue-chooser]') && queuedPhoto(input.value);
+    input.disabled = publishing() || operating() || (!!transfer && !input.closest('[data-queue-chooser]')) || !!pendingChoice;
+    if (pendingChoice) input.checked = false;
+  });
   $('#publish').disabled = busy || publishing() || changing() || conflicted || (!state.publicationChanges?.changed && state.publication?.state !== 'failed');
   $('#republish').disabled = busy || publishing() || changing() || conflicted || state.publicationChanges?.changed || state.publishedRevision == null;
   $('#republish').title = state.publicationChanges?.changed ? 'Publish or undo saved publication changes before republishing.' : 'Rebuild published manifests and fill missing BlurHashes without re-uploading media.';
   $('#cancel-upload').disabled = busy || !transfer || transfer.processing || transfer.controller.signal.aborted;
 }
+
+function renderQueue() {
+  const jobs = state.queue?.jobs || [];
+  const pending = jobs.filter(pendingJob);
+  $('#queue-panel').hidden = !jobs.length && !pendingSubmission && !state.queue?.error;
+  $('#queue-summary').textContent = `Action queue · ${pending.length} pending${pending.some(job => job.state === 'failed') || state.queue?.error ? ' · Paused' : ''}`;
+  const notice = $('#queue-notice');
+  notice.textContent = state.queue?.error || (pendingSubmission ? 'Submission outcome unknown. Check it using the same request ID before submitting another action.' : 'Accepted actions survive closing Studio. Other edits and publication wait until the queue finishes.');
+  $('#queue-recover').hidden = !state.queue?.error;
+  $('#queue-check').hidden = !pendingSubmission;
+  const visible = [...pending, ...jobs.filter(job => !pendingJob(job)).slice(-10).reverse()];
+  const signature = JSON.stringify(visible);
+  if ($('#queue-jobs').dataset.signature !== signature) {
+    $('#queue-jobs').dataset.signature = signature;
+    $('#queue-jobs').innerHTML = visible.map(job => {
+      const names = job.targets.map(target => photoById(target.id)?.filename || job.upload?.source.filename || target.id);
+      const label = { queued: 'Waiting', running: 'Running', succeeded: 'Completed', failed: 'Failed · queue paused', rejected: 'Processing failed · queue continues', cancelled: 'Cancelled' }[job.state];
+      return `<li><div><strong>${{ archive: 'Archive', restore: 'Restore', upload: 'Process upload' }[job.action]} ${job.targets.length} file${job.targets.length === 1 ? '' : 's'}</strong><span class="queue-state">${label}</span><small title="${escape(names.join(', '))}">${escape(names.slice(0, 3).join(', '))}${names.length > 3 ? ', …' : ''}</small>${job.error ? `<p class="queue-error">${escape(job.error)}</p>` : ''}</div><div class="queue-controls">${['failed', 'rejected'].includes(job.state) ? `<button data-queue-control data-job="${job.id}" data-command="retry">Retry</button>` : ''}${job.canCancel && ['queued', 'failed'].includes(job.state) ? `<button data-queue-control data-job="${job.id}" data-command="cancel">Cancel</button>` : ''}</div></li>`;
+    }).join('');
+  }
+}
+
+async function watchQueue() {
+  if (queueWatching) return;
+  queueWatching = true;
+  clearTimeout(queueTimer);
+  try {
+    const previous = JSON.stringify(state.queue);
+    const result = await api('/queue');
+    state.queue = result.queue;
+    if (pendingSubmission && state.queue.jobs.some(job => job.id === pendingSubmission.id)) {
+      pendingSubmission = null; sessionStorage.removeItem('studio-queue-submission');
+    }
+    if (previous !== JSON.stringify(state.queue)) queueRefreshNeeded = true;
+    // Do not replace a form, its selections, or its ETag while someone edits it.
+    if (queueRefreshNeeded && !dirty && !editor.open && !deletion.open && !busy) {
+      const latest = await api('/catalog');
+      if (!dirty && !editor.open && !deletion.open && !busy) {
+        Object.assign(state, latest); queueRefreshNeeded = false; render();
+      }
+    }
+    renderQueue(); refreshButtons();
+    $('#choose-form')?.dispatchEvent(new Event('change'));
+  } catch (error) { showError(error); }
+  finally { queueWatching = false; }
+  if (!$('#studio').hidden) queueTimer = setTimeout(watchQueue, 1500);
+}
+
+async function submitQueued(action, photoIds) {
+  if (pendingSubmission) throw new Error('Check the previous submission in the action queue first.');
+  pendingSubmission = { id: `${Date.now()}-${crypto.randomUUID().replaceAll('-', '')}`, action, targets: photoIds.map(id => ({ id, token: state.queueTokens[id] })) };
+  sessionStorage.setItem('studio-queue-submission', JSON.stringify(pendingSubmission));
+  return sendQueuedSubmission();
+}
+
+async function sendQueuedSubmission() {
+  const submission = pendingSubmission;
+  try {
+    const path = submission.action === 'upload' ? `/queue/uploads/${encodeURIComponent(submission.uploadID)}` : '/queue';
+    await api(path, { method: 'POST', body: submission });
+    pendingSubmission = null; sessionStorage.removeItem('studio-queue-submission');
+    await watchQueue();
+    return 'Action accepted into the durable queue. You can browse or leave Studio.';
+  } catch (error) {
+    if (error.status && error.status < 500 && !(pendingSubmission?.action === 'upload' && [423, 429].includes(error.status))) { pendingSubmission = null; sessionStorage.removeItem('studio-queue-submission'); }
+    await watchQueue();
+    // Polling may already have resolved a lost acknowledgement. Do not report
+    // zero accepted files or stop the remaining transfers after confirmed acceptance.
+    if ((!error.status || error.status >= 500) && state.queue?.jobs.some(job => job.id === submission.id)) {
+      pendingSubmission = null; sessionStorage.removeItem('studio-queue-submission');
+      return 'Action accepted into the durable queue. You can browse or leave Studio.';
+    }
+    throw error;
+  }
+}
+
+$('#queue-jobs').onclick = event => {
+  const button = event.target.closest('[data-job]');
+  if (!button) return;
+  work(async () => {
+    try { await api(`/queue/${button.dataset.job}/${button.dataset.command}`, { method: 'POST' }); }
+    finally { await watchQueue(); }
+  });
+};
+$('#queue-recover').onclick = () => work(async () => { try { await api('/queue/recover', { method: 'POST' }); } finally { await watchQueue(); } });
+$('#queue-check').onclick = () => work(async () => { status(await sendQueuedSubmission()); });
+
 function renderOperation() {
   $('#operation-progress').hidden = !operating();
   if (!operating()) return;
@@ -272,6 +379,7 @@ function render() {
   $('#logout').hidden = state.authMode === 'proxy';
   renderPublication();
   renderOperation();
+  renderQueue();
   const route = location.hash.slice(1) || 'photos';
   $('#nav-photos').toggleAttribute('aria-current', route === 'photos');
   $('#nav-photostream').toggleAttribute('aria-current', route === 'photostream');
@@ -287,7 +395,7 @@ function render() {
 
 function renderPhotos() {
   const archivable = [...state.catalog.photos].reverse().filter(photo => !photo.archived && !photo.archiving && !photo.deleting);
-  $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos & videos</h1></div><div class="library-actions"><button id="choose-archive" ${archivable.length ? '' : 'disabled data-boundary'}>Archive…</button><button class="primary" data-upload>＋ Upload files</button></div></div>
+  $('#main').innerHTML = `<div class="page-heading"><div><h1>All photos & videos</h1></div><div class="library-actions"><button id="choose-archive" data-queue-action ${archivable.length ? '' : 'disabled data-boundary'}>Archive…</button><button class="primary" data-upload>＋ Upload files</button></div></div>
     <div class="toolbar"><label class="search"><span class="hint">Search your library</span><input id="search" type="search" placeholder="Names, captions, tags…" value="${escape(search)}"></label><label><span class="hint">Show</span><select id="filter"><option value="all">All photos & videos</option><option value="draft">Drafts</option><option value="ready">Ready to publish</option><option value="standalone">Not in an album</option></select></label></div>
     <div id="photo-results"></div>`;
   function renderResults() {
@@ -316,13 +424,10 @@ function renderPhotos() {
 function archiveFiles(candidates, note) {
   chooseFiles({
     title: 'Archive photos & videos',
-    intro: '<p>Files, metadata and album memberships are kept, and you can restore them from Archived.</p><p class="hint access-warning">Archiving takes effect immediately: selected files leave the live public index and every historical release, without publishing other changes. Cached copies and direct media URLs may remain accessible.</p>',
-    candidates, note,
-    verb: 'Archive', hint: 'This applies immediately.', danger: true,
-    submit: async photoIds => {
-      Object.assign(state, await api('/photos/archive', { method: 'POST', body: { photoIds } }));
-      return 'Archived. Files kept; public manifests updated.';
-    },
+    intro: '<p>Files, metadata and album memberships are kept, and you can restore them from Archived. Files with pending actions are omitted.</p><p class="hint access-warning">When this queued action runs, selected files leave the live public index and every historical release without a separate publication. Cached copies and direct media URLs may remain accessible.</p>',
+    candidates: candidates.filter(photo => !queuedPhoto(photo.id)), note,
+    verb: 'Queue archive of', hint: 'Runs in order. You can leave Studio.', danger: true, queued: true,
+    submit: photoIds => submitQueued('archive', photoIds),
   });
 }
 
@@ -346,7 +451,7 @@ function renderPhotostream() {
     ? `<div class="page-heading"><div><h1>Photostream</h1><p>Drag photos into website order; on touch screens, press and hold to pick one up. With a keyboard, press Space on a photo, move it with the arrow keys, then press Space again. Save, then publish.</p></div></div>
       <div class="grid reorder-grid" id="stream-grid">${photos.map(card).join('')}</div>
       <div class="reorder-bar" role="group" aria-label="Reorder photostream"><span id="reorder-state">${dirty ? 'Unsaved order' : 'Drag to reorder'}</span><select id="stream-sort" aria-label="Sort photostream"><option value="">Sort…</option><option value="upload">Newest upload first</option><option value="-1">Newest captured first</option><option value="1">Oldest captured first</option></select><button type="button" id="discard-order">Discard</button><button type="button" class="primary" id="save-order">Save order</button></div>`
-    : `<div class="page-heading"><div><h1>Photostream</h1><p>Public photos and videos in website order. Includes files published independently or through public albums; new additions appear first. Publish changes to update the website.</p></div><div class="library-actions"><button id="reorder-photostream" ${photos.length > 1 ? '' : 'disabled data-boundary'}>Reorder</button><button id="choose-stream-archive" ${photos.length ? '' : 'disabled data-boundary'}>Archive…</button><button id="choose-photostream" class="primary" ${candidates.length ? '' : 'disabled data-boundary'}>＋ Add to photostream</button></div></div>
+    : `<div class="page-heading"><div><h1>Photostream</h1><p>Public photos and videos in website order. Includes files published independently or through public albums; new additions appear first. Publish changes to update the website.</p></div><div class="library-actions"><button id="reorder-photostream" ${photos.length > 1 ? '' : 'disabled data-boundary'}>Reorder</button><button id="choose-stream-archive" data-queue-action ${photos.length ? '' : 'disabled data-boundary'}>Archive…</button><button id="choose-photostream" class="primary" ${candidates.length ? '' : 'disabled data-boundary'}>＋ Add to photostream</button></div></div>
       ${photos.length ? `<div class="grid">${photos.map(card).join('')}</div>` : '<div class="empty"><h2>The photostream is empty.</h2><p>Add photos or videos from your library, or publish a public album.</p></div>'}`;
   revealPreviews($('#main'));
   if (streamOrder) return reorderPhotostream();
@@ -512,9 +617,11 @@ function reorderPhotostream() {
 }
 
 // Multi-select dialog for library actions that apply to several files at once.
-function chooseFiles({ title, intro, candidates, note = () => '', verb, hint, danger = false, submit }) {
+function chooseFiles({ title, intro, candidates, note = () => '', verb, hint, danger = false, queued = false, submit }) {
   openDialog(`<form id="choose-form" class="simple-dialog"><h2 id="dialog-title">${title}</h2>${intro}<div class="grid">${candidates.map(photo => `<label class="choice">${thumbnail(photo)}<input type="checkbox" name="photo" value="${photo.id}"><span>${escape(photo.caption || photo.filename)}${photo.kind === 'video' ? ` · Video ${duration(photo.duration)}` : ''}</span>${note(photo)}</label>`).join('')}</div><div class="editor-footer"><span class="hint" id="choose-count" role="status"></span><button class="${danger ? 'danger' : 'primary'}" id="choose-submit">${verb} selected files</button></div></form>`);
   const form = $('#choose-form');
+  form.toggleAttribute('data-queue-chooser', queued);
+  $('#choose-submit').toggleAttribute('data-queue-action', queued);
   const updateSelection = () => {
     const count = new FormData(form).getAll('photo').length;
     $('#choose-count').textContent = `${count} file${count === 1 ? '' : 's'} selected. ${hint}`;
@@ -537,9 +644,15 @@ function chooseFiles({ title, intro, candidates, note = () => '', verb, hint, da
 
 function renderArchived() {
   const photos = [...state.catalog.photos].reverse().filter(photo => photo.archived);
-  $('#main').innerHTML = `<div class="page-heading"><div><h1>Archived</h1><p>Files and album memberships are kept. Restored photos follow their albums’ publication status.</p></div></div>
+  const restorable = photos.filter(photo => !photo.archiving && !photo.deleting && !queuedPhoto(photo.id));
+  $('#main').innerHTML = `<div class="page-heading"><div><h1>Archived</h1><p>Files and album memberships are kept. Restored photos follow their albums’ publication status.</p></div><div class="library-actions"><button id="choose-restore" data-queue-action ${restorable.length ? '' : 'disabled data-boundary'}>Restore…</button></div></div>
     ${photos.length ? '<div id="archived-results"></div>' : '<div class="empty"><h2>No archived photos or videos.</h2><p>Archive a photo or video from its details to remove it from public manifests without deleting its files.</p></div>'}`;
   if (photos.length) renderPages($('#archived-results'), photos, photo => `<button class="photo-card" data-photo="${photo.id}" aria-label="View archived ${escape(photo.alt || photo.filename)}"><div class="photo-frame">${photo.deleting ? '<div class="placeholder">×</div>' : thumbnail(photo)}${videoBadge(photo)}</div><div class="card-line"><strong>${escape(photo.caption || photo.filename)}</strong><span class="badge draft">${photo.deleting ? 'Deletion incomplete' : photo.archiving ? 'Archive incomplete' : 'Archived'}</span></div></button>`);
+  $('#choose-restore').onclick = () => chooseFiles({
+    title: 'Restore photos & videos', intro: '<p>Return selected files to the library, keeping their album memberships. Publish separately to update the website.</p>',
+    candidates: restorable.filter(photo => !queuedPhoto(photo.id)), verb: 'Queue restore of', hint: 'Runs in order. Publish separately.', queued: true,
+    submit: photoIds => submitQueued('restore', photoIds),
+  });
 }
 
 function renderAlbums() {
@@ -827,48 +940,45 @@ async function discardUpload(id) {
   try { await fetch(`/api/uploads/${encodeURIComponent(id)}`, { method: 'DELETE', signal: AbortSignal.timeout(5000) }); } catch { /* Abandoned uploads require lifecycle/operator cleanup. */ }
 }
 async function upload(files) {
-  if (!files.length || busy || publishing() || changing() || conflicted || editor.open || deletion.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
+  if (!files.length || busy || publishing() || operating() || transfer || pendingSubmission || state.queue?.error || conflicted || editor.open || deletion.open || (dirty && !confirm('Discard unsaved edits before uploading?'))) return;
   if (dirty) streamOrder = null;
   dirty = false;
   const batch = transfer = { controller: new AbortController(), id: null, processing: false };
   const { signal } = batch.controller;
-  const ids = [];
+  let accepted = 0;
   $('#error').hidden = true; $('#upload-progress').hidden = false; refreshButtons();
   try {
-    try {
-      for (const [i, file] of [...files].entries()) {
-        signal.throwIfAborted();
-        const video = /\.(mp4|mov)$/i.test(file.name) || ['video/mp4', 'video/quicktime'].includes(file.type);
-        const limit = video ? 512 : 30;
-        if (!file.size || file.size > limit * 1048576) throw new Error(`${file.name} must be nonempty and at most ${limit} MiB. Remaining files were not uploaded.`);
-        const label = `${i + 1} of ${files.length} · ${file.name}`;
-        $('#upload-progress span').textContent = `Preparing ${label}…`;
-        $('#upload-progress progress').removeAttribute('value');
-        const session = await api('/uploads', { method: 'POST', body: { filename: file.name, size: file.size, contentType: file.type || (video ? /\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4' : 'application/octet-stream') } });
-        batch.id = session.upload.id;
-        signal.throwIfAborted();
-        await sendParts(file, session, batch.controller, label);
-        signal.throwIfAborted();
-        ids.push(batch.id); batch.id = null;
-      }
-    } catch (error) {
-      const cancelled = signal.aborted && error.name === 'AbortError';
-      batch.controller.abort();
-      await discardUpload(batch.id); batch.id = null;
-      status(cancelled ? 'Remaining transfers cancelled.' : 'Upload stopped. Remaining files were not uploaded.');
-      if (!cancelled) showError(error);
+    for (const [i, file] of [...files].entries()) {
+      signal.throwIfAborted();
+      const video = /\.(mp4|mov)$/i.test(file.name) || ['video/mp4', 'video/quicktime'].includes(file.type);
+      const limit = video ? 512 : 30;
+      if (!file.size || file.size > limit * 1048576) throw new Error(`${file.name} must be nonempty and at most ${limit} MiB. Remaining files were not uploaded.`);
+      const label = `${i + 1} of ${files.length} · ${file.name}`;
+      $('#upload-progress span').textContent = `Preparing ${label}… Keep this page open during transfer.`;
+      $('#upload-progress progress').removeAttribute('value');
+      const session = await api('/uploads', { method: 'POST', body: { filename: file.name, size: file.size, contentType: file.type || (video ? /\.mov$/i.test(file.name) ? 'video/quicktime' : 'video/mp4' : 'application/octet-stream') } });
+      batch.id = session.upload.id;
+      signal.throwIfAborted();
+      await sendParts(file, session, batch.controller, label);
+      // Preserve the completed transfer even if finalization or its response
+      // fails. Reload/Check retries by upload ID without retransferring bytes.
+      batch.processing = true;
+      pendingSubmission = { id: session.upload.requestId, action: 'upload', uploadID: batch.id };
+      sessionStorage.setItem('studio-queue-submission', JSON.stringify(pendingSubmission));
+      batch.id = null; refreshButtons();
+      $('#upload-progress span').textContent = `Finalizing and queuing ${label}…`;
+      $('#upload-progress progress').removeAttribute('value');
+      await sendQueuedSubmission();
+      accepted++;
+      batch.processing = false; refreshButtons();
     }
-    if (!ids.length) return;
-    batch.processing = true; refreshButtons();
-    $('#upload-progress span').textContent = `${ids.length} file${ids.length === 1 ? '' : 's'} transferred. Starting background processing…`;
-    $('#upload-progress progress').removeAttribute('value');
-    try { await api('/uploads/process', { method: 'POST', body: { ids } }); }
-    catch (error) { if (error !== operationStarted) throw error; }
-    status(`${ids.length} file${ids.length === 1 ? '' : 's'} transferred. Processing continues if you leave this page. Publish separately when ready.`);
+    status(`${accepted} file${accepted === 1 ? '' : 's'} durably queued. Safe to leave; processing continues. Publish separately when ready.`);
   } catch (error) {
-    // An acknowledgement can be lost after acceptance. Do not delete transferred
-    // originals: the worker may already own them. Reload to check its outcome.
-    status('Could not confirm background processing. Reload to check what was accepted before retrying.'); showError(error);
+    const cancelled = signal.aborted && error.name === 'AbortError';
+    batch.controller.abort();
+    await discardUpload(batch.id);
+    status(pendingSubmission ? 'Transfer retained. Use Check submission in the queue to confirm or retry processing.' : `${accepted} file${accepted === 1 ? '' : 's'} queued. Remaining transfers ${cancelled ? 'cancelled' : 'stopped'}.`);
+    if (!cancelled) showError(error);
   } finally {
     transfer = null; $('#upload-progress').hidden = true; $('#files').value = ''; refreshButtons();
   }
@@ -878,7 +988,7 @@ $('#cancel-upload').onclick = () => {
   if (!transfer || transfer.processing) return;
   transfer.controller.abort();
   refreshButtons();
-  $('#upload-progress span').textContent = 'Stopping transfers… Fully transferred files will still be processed.';
+  $('#upload-progress span').textContent = 'Stopping transfers… Already queued files will still be processed.';
 };
 $('#files').onchange = event => upload(event.target.files);
 document.addEventListener('click', event => {
@@ -887,12 +997,11 @@ document.addEventListener('click', event => {
   if (target.hasAttribute('data-upload')) $('#files').click();
   else if (target.hasAttribute('data-archive-photo')) {
     const action = target.dataset.action;
-    if (dirty && !confirm('Discard unsaved edits and archive this photo?')) return;
+    if (dirty && !confirm(`Discard unsaved edits and queue ${action} for this photo?`)) return;
     work(async () => {
-      try { Object.assign(state, await api(`/photos/${target.dataset.archivePhoto}/${action}`, { method: 'POST' })); }
-      catch (error) { if (error !== operationStarted) conflicted = true; throw error; }
+      const message = await submitQueued(action, [target.dataset.archivePhoto]);
       dirty = false; editor.close(); render();
-      status(action === 'restore' ? 'Photo restored. Published-album photos are ready; publish separately to update the website.' : 'Photo archived. Files kept; public manifests updated.');
+      status(message);
     });
   }
   else if (target.hasAttribute('data-delete-photo')) confirmDeletePhoto(target.dataset.deletePhoto);
@@ -950,7 +1059,8 @@ async function boot() {
     Object.assign(state, await api('/catalog'));
     $('#login').hidden = true; $('#studio').hidden = false; render();
     if (publishing() || state.publication?.state === 'failed') await watchPublication();
-    if (changing() || state.operation?.state === 'failed') await watchOperation();
+    if (operating() || state.operation?.state === 'failed') await watchOperation();
+    await watchQueue();
   } catch (error) {
     $('#login').hidden = false;
     $('#login-error').textContent = error.message;

@@ -24,6 +24,14 @@
 @media(max-width:700px){.editor-image video{max-height:190px}.page-heading h1{font-size:30px}.upload-progress{bottom:12px}}
 @media(max-width:700px){.topbar .actions{flex-wrap:wrap;gap:10px}#publish-status{flex-basis:100%}}
 .publication-progress{position:sticky;top:0;z-index:4;padding:14px 25px;background:#282821;border-bottom:1px solid #545448;font-size:12px}.publication-progress progress{max-width:460px}
+.queue-panel{padding:16px 36px;border-bottom:1px solid #333;background:#111;font-size:12px}
+.queue-panel summary{cursor:pointer;color:#dfd7bb;padding:6px 0}.queue-panel summary:focus-visible{outline:2px solid #dfd7bb;outline-offset:3px}
+.queue-panel>p{color:#969693;font-size:11px;margin:8px 0}.queue-panel ol{list-style:none;padding:0;margin:0;max-height:260px;overflow:auto}
+.queue-panel li{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-top:1px solid #292929}
+.queue-panel li>div:first-child{min-width:0}.queue-panel strong{font-weight:500}.queue-state{margin-left:12px;color:#b5ad93;font-size:11px}
+.queue-panel small{display:block;color:#858580;margin-top:5px;overflow-wrap:anywhere}.queue-controls{display:flex;gap:8px;flex-shrink:0}.queue-controls button{min-height:40px}
+.queue-panel .queue-error{color:#ecaaa1;margin:8px 0 0;font-size:12px}
+@media(max-width:700px){.queue-panel{padding:14px 20px}.queue-panel li{align-items:flex-start;flex-wrap:wrap}.queue-state{display:block;margin:5px 0 0}.queue-controls button{min-height:44px}}
 @media(max-width:700px){
   body:has(dialog[open]){overflow:hidden}
   #editor,#delete-confirmation{

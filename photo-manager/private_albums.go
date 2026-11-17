@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"golang.org/x/crypto/scrypt"
@@ -61,40 +62,49 @@ func (a *app) redactPhoto(ctx context.Context, bucket string, history bool, ids 
 		if !strings.HasSuffix(key, ".json") {
 			continue
 		}
-		live, etag, err := a.load(ctx, bucket, key)
+		if err := a.redactManifest(ctx, bucket, key, ids); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *app) redactManifest(ctx context.Context, bucket, key string, ids []string) error {
+	readCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	live, etag, err := a.load(readCtx, bucket, key)
+	cancel()
+	if err != nil || etag == "" {
+		return err
+	}
+	if bucket == "public" && live.ProtectedRelease != "" && !a.config.PrivateAlbums {
+		return &requestError{503, "Protected album storage is not configured."}
+	}
+	changed := false
+	for _, id := range ids {
+		if live.removePhoto(id) {
+			changed = true
+		}
+	}
+	if changed {
+		body, err := encode(live)
 		if err != nil {
 			return err
 		}
-		if etag == "" {
-			continue
+		cache := "public, max-age=30, must-revalidate"
+		if bucket == "protected" {
+			cache = "private, no-store"
 		}
-		if bucket == "public" && live.ProtectedRelease != "" && !a.config.PrivateAlbums {
-			return &requestError{503, "Protected album storage is not configured."}
+		writeCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		err = a.store.Write(writeCtx, bucket, key, body, "application/json", cache, &etag)
+		cancel()
+		if err != nil {
+			return err
 		}
-		changed := false
-		for _, id := range ids {
-			if live.removePhoto(id) {
-				changed = true
-			}
-		}
-		if changed {
-			body, err := encode(live)
-			if err != nil {
-				return err
-			}
-			cache := "public, max-age=30, must-revalidate"
-			if bucket == "protected" {
-				cache = "private, no-store"
-			}
-			if err := a.store.Write(ctx, bucket, key, body, "application/json", cache, &etag); err != nil {
-				return err
-			}
-		}
-		if bucket == "public" && key == "index.json" {
-			if err := a.writeRSS(ctx, live); err != nil {
-				return err
-			}
-		}
+	}
+	// Repair RSS even if a prior attempt already redacted the JSON index.
+	// The queue checkpoints this index only after both representations are safe.
+	if bucket == "public" && key == "index.json" {
+		return a.writeRSS(ctx, live)
 	}
 	return nil
 }

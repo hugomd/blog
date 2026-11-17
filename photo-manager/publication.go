@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -113,8 +114,19 @@ func (a *app) savePublication(ctx context.Context, job publication) error {
 
 // Fail promptly rather than leaving mutation requests queued behind a long copy.
 func (a *app) lockCatalog() error {
+	a.queueMu.Lock()
+	if a.queueBlockedLocked() {
+		a.queueMu.Unlock()
+		return &requestError{423, "Finish or resolve queued actions before making this change."}
+	}
 	if a.publicationStatus().State == "running" || !a.mu.TryLock() {
+		a.queueMu.Unlock()
 		return &requestError{423, "Another change is in progress. Wait and retry."}
+	}
+	a.queueMu.Unlock()
+	if err := a.finishPublicationWrite(a.background); err != nil {
+		a.mu.Unlock()
+		return err
 	}
 	return nil
 }
@@ -201,6 +213,12 @@ func (a *app) launchPublication() {
 		if err == nil && (etag != job.CatalogETag || c.Revision != job.Revision) {
 			err = errConflict
 		}
+		a.queueMu.Lock()
+		blocked := a.queueBlockedLocked()
+		a.queueMu.Unlock()
+		if blocked {
+			err = errConflict
+		}
 		if err == nil {
 			err = a.publish(ctx, c, func(completed, total int) {
 				a.publicationMu.Lock()
@@ -228,4 +246,83 @@ func (a *app) launchPublication() {
 		}
 		a.setPublication(job)
 	})
+}
+
+// Persist the exact conditional request before sending it to R2. A lost response
+// leaves this record intact. Replaying it establishes the object (and invalidates
+// the old precondition) before an archive can scan history or report completion.
+// These are generated manifests, not incoming HTTP requests or user passwords.
+type publicationWrite struct {
+	Bucket   string `json:"bucket"`
+	Key      string `json:"key"`
+	Body     []byte `json:"body"`
+	Expected string `json:"expected"`
+}
+
+func (a *app) writePublicationManifest(ctx context.Context, bucket, key string, body []byte, expected string) error {
+	a.queueMu.Lock()
+	next := a.queue
+	if next.PublicationWrite != nil || a.queueError != "" {
+		a.queueMu.Unlock()
+		return errors.New("resolve the previous publication write before continuing")
+	}
+	next.PublicationWrite = &publicationWrite{Bucket: bucket, Key: key, Body: bytes.Clone(body), Expected: expected}
+	err := a.saveQueueLocked(ctx, next)
+	a.queueMu.Unlock()
+	if err != nil {
+		return err
+	}
+	return a.finishPublicationWrite(ctx)
+}
+
+// Call only while holding the catalog writer lock (or before serving requests).
+func (a *app) finishPublicationWrite(ctx context.Context) error {
+	a.queueMu.Lock()
+	intent, uncertain := a.queue.PublicationWrite, a.queueError != ""
+	a.queueMu.Unlock()
+	if uncertain {
+		return errors.New("recover queue storage before reconciling publication")
+	}
+	if intent == nil {
+		return nil
+	}
+	cache := "public, max-age=30, must-revalidate"
+	if intent.Bucket == "protected" {
+		cache = "private, no-store"
+	}
+	contentType := "application/json"
+	if intent.Key == "index.xml" {
+		contentType = "application/rss+xml; charset=utf-8"
+	}
+	writeCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	err := a.store.Write(writeCtx, intent.Bucket, intent.Key, intent.Body, contentType, cache, &intent.Expected)
+	cancel()
+	var conflict error
+	if err != nil {
+		readCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		current, readErr := a.store.Read(readCtx, intent.Bucket, intent.Key)
+		cancel()
+		if readErr != nil {
+			return readErr
+		}
+		if current == nil {
+			return err
+		}
+		if !bytes.Equal(current.Body, intent.Body) {
+			if current.ETag == intent.Expected {
+				return err
+			}
+			// A newer object fences our request. Never overwrite it; discard
+			// only this obsolete intent and report conflict to the publisher.
+			conflict = errConflict
+		}
+	}
+	a.queueMu.Lock()
+	defer a.queueMu.Unlock()
+	next := a.queue
+	next.PublicationWrite = nil
+	if err := a.saveQueueLocked(ctx, next); err != nil {
+		return err
+	}
+	return conflict
 }

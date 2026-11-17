@@ -39,6 +39,7 @@ type app struct {
 	store          storage
 	config         configuration
 	mu             sync.Mutex
+	uploadMu       sync.Mutex // Serializes multipart finalization/admission with cancellation.
 	previewMu      sync.Mutex
 	previewMembers map[string]bool // ID -> video; guarded by previewMu.
 	authMu         sync.Mutex
@@ -50,6 +51,11 @@ type app struct {
 	publication    publication
 	operationMu    sync.RWMutex
 	operation      operation
+	queueMu        sync.Mutex
+	queue          durableQueue
+	queueStore     queueStorage
+	queueError     string
+	queueWorker    bool
 }
 
 type requestError struct {
@@ -82,6 +88,16 @@ func decodeRequest(w http.ResponseWriter, r *http.Request, value any) error {
 
 func (a *app) handler(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		transfer := r.Pattern == "POST /api/uploads" || r.Pattern == "PUT /api/uploads/{id}/parts/{part}"
+		if r.Method != "GET" && r.Method != "HEAD" && r.URL.Path != "/api/login" && r.URL.Path != "/api/logout" && !strings.HasPrefix(r.URL.Path, "/api/queue") && !transfer && r.Context().Value(operationContext{}) != true {
+			a.queueMu.Lock()
+			blocked := a.queueBlockedLocked()
+			a.queueMu.Unlock()
+			if blocked {
+				respond(w, 423, map[string]string{"error": "Finish or resolve queued actions before making this change."})
+				return
+			}
+		}
 		if r.Method != "GET" && r.Method != "HEAD" && r.URL.Path != "/api/login" && r.URL.Path != "/api/logout" && r.Context().Value(operationContext{}) != true && a.operationStatus().State == "running" {
 			respond(w, 423, map[string]string{"error": "Another change is in progress. Wait and retry."})
 			return
@@ -166,12 +182,17 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *app) getCatalog(w http.ResponseWriter, r *http.Request) error {
+	// Queue completion is sampled BEFORE the catalog read. A response can be
+	// conservatively behind, but cannot claim completion with pre-effect data.
+	r = r.WithContext(context.WithValue(r.Context(), catalogQueueSnapshot{}, a.queueStatus()))
 	c, etag, err := a.load(r.Context(), "private", "catalog.json")
 	if err != nil {
 		return err
 	}
 	return a.respondCatalog(w, r, c, etag)
 }
+
+type catalogQueueSnapshot struct{}
 
 // Synchronous clients receive the live comparison; background changes let the
 // browser refresh it separately instead of repeating remote reads in the worker.
@@ -205,6 +226,10 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 	}
 	// Republication backfills live hashes without rewriting drafts. Reuse the
 	// already-loaded manifests for Studio previews, keeping its saved ETag intact.
+	queueTokens := make(map[string]string, len(c.Photos))
+	for _, p := range c.Photos {
+		queueTokens[p.ID] = photoToken(p)
+	}
 	hashes := map[string]string{}
 	for _, release := range []catalog{live, liveProtected} {
 		for _, p := range release.Photos {
@@ -226,7 +251,11 @@ func (a *app) respondCatalog(w http.ResponseWriter, r *http.Request, c catalog, 
 		item.PasswordHash, item.AccessVersion = "", ""
 		item.LinkHash = ""
 	}
-	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "operation": a.operationStatus(), "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development, "privateAlbumsEnabled": a.config.PrivateAlbums, "galleryURL": a.config.GalleryURL})
+	queue, sampled := r.Context().Value(catalogQueueSnapshot{}).(queueView)
+	if !sampled {
+		queue = a.queueStatus()
+	} // Synchronous mutations hold mu.
+	respond(w, 200, map[string]any{"catalog": c, "etag": etag, "publishedRevision": publishedRevision, "publicationChanges": changes, "publication": a.publicationStatus(), "operation": a.operationStatus(), "queue": queue, "queueTokens": queueTokens, "publicURL": a.config.PublicURL, "authMode": a.config.AuthMode, "development": a.config.Development, "privateAlbumsEnabled": a.config.PrivateAlbums, "galleryURL": a.config.GalleryURL})
 	return nil
 }
 
@@ -957,6 +986,13 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/operation", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, 200, map[string]any{"operation": a.operationStatus()})
 	})
+	mux.HandleFunc("GET /api/queue", func(w http.ResponseWriter, r *http.Request) {
+		respond(w, 200, map[string]any{"queue": a.queueStatus()})
+	})
+	mux.HandleFunc("POST /api/queue", a.handler(a.enqueue))
+	mux.HandleFunc("POST /api/queue/uploads/{id}", a.handler(a.enqueueUpload))
+	mux.HandleFunc("POST /api/queue/recover", a.handler(a.recoverQueue))
+	mux.HandleFunc("POST /api/queue/{id}/{action}", a.handler(a.controlQueue))
 	if a.config.LocalRoot != "" {
 		mux.HandleFunc("GET /media/{key...}", func(w http.ResponseWriter, r *http.Request) {
 			key := r.PathValue("key")
@@ -1073,12 +1109,38 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 	a := &app{store: store, config: config, sessions: map[string]time.Time{}, background: ctx}
+	queuePath := os.Getenv("QUEUE_DATABASE")
+	if queuePath == "" && config.LocalRoot != "" {
+		queuePath = filepath.Join(config.LocalRoot, "queue.sqlite")
+	}
+	if queuePath == "" || (!development && !filepath.IsAbs(queuePath)) {
+		log.Fatal("Set QUEUE_DATABASE to an absolute path on a persistent volume")
+	}
+	queueStore, err := openQueueStorage(queuePath)
+	if err != nil {
+		log.Fatalf("Cannot open queue database: %v", err)
+	}
+	defer queueStore.Close()
+	a.queueStore = queueStore
+	if legacy, err := store.Read(ctx, "private", "queue.json"); err != nil || legacy != nil {
+		log.Fatal("Cannot switch queues while queue.json exists or cannot be checked; drain and retain its deduplication history before migrating")
+	}
+	// Recover SQLite before any worker can make a publication or catalog write.
+	a.queueMu.Lock()
+	err = a.loadQueueLocked(ctx)
+	a.queueMu.Unlock()
+	if err != nil {
+		log.Fatalf("Cannot recover queue: %T", err)
+	}
 	if err := a.resumeOperation(); err != nil {
 		log.Fatalf("Cannot load change state: %T", err)
 	}
 	if err := a.resumePublication(); err != nil {
 		log.Fatalf("Cannot load publication state: %T", err)
 	}
+	a.queueMu.Lock()
+	a.startQueueLocked()
+	a.queueMu.Unlock()
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

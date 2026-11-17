@@ -40,6 +40,12 @@
       <div id="error" class="error" role="alert" hidden><span></span><button id="reload">Reload library</button></div>
       <div id="publication-progress" class="publication-progress" role="status" hidden><span></span><progress aria-label="Media copied for publication"></progress></div>
       <div id="operation-progress" class="publication-progress" role="status" hidden><span></span><progress aria-label="Background change"></progress></div>
+      <details id="queue-panel" class="queue-panel" open hidden>
+        <summary id="queue-summary" aria-live="polite">Action queue</summary>
+        <p id="queue-notice"></p>
+        <div class="queue-controls"><button id="queue-recover" data-queue-control hidden>Recover queue</button><button id="queue-check" data-queue-control hidden>Check submission</button></div>
+        <ol id="queue-jobs" aria-label="Queued actions"></ol>
+      </details>
       <main id="main"></main>
       <footer><span id="status" role="status">Ready.</span><span>Media + manifests · R2</span></footer>
     </div>

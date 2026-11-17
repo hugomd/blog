@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -32,12 +33,13 @@ type object struct {
 
 type storage interface {
 	List(context.Context, string, string) ([]string, error)
+	ListPage(context.Context, string, string, string, int) ([]string, error)
 	Read(context.Context, string, string) (*object, error)
 	PreviewURL(context.Context, string, string) (string, error)
 	Size(context.Context, string, string) (int64, error)
 	Open(context.Context, string, string, int64, int64) (io.ReadCloser, error)
 	Write(context.Context, string, string, []byte, string, string, *string) error
-	WriteFile(context.Context, string, string, *os.File, string, string) error
+	WriteFile(context.Context, string, string, *os.File, string, string, *string) error
 	Copy(context.Context, string, string, string, string, string) error
 	Delete(context.Context, string, string) error
 }
@@ -114,8 +116,20 @@ func (s *r2Storage) Open(ctx context.Context, bucket, key string, offset, length
 	return result.Body, nil
 }
 
-func (s *r2Storage) WriteFile(ctx context.Context, bucket, key string, file *os.File, contentType, cache string) error {
-	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key, Body: file, ContentType: &contentType, CacheControl: &cache})
+func (s *r2Storage) WriteFile(ctx context.Context, bucket, key string, file *os.File, contentType, cache string, expected *string) error {
+	input := &s3.PutObjectInput{Bucket: aws.String(s.buckets[bucket]), Key: &key, Body: file, ContentType: &contentType, CacheControl: &cache}
+	if expected != nil {
+		if *expected == "" {
+			input.IfNoneMatch = aws.String("*")
+		} else {
+			input.IfMatch = expected
+		}
+	}
+	_, err := s.client.PutObject(ctx, input)
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) && (apiErr.ErrorCode() == "PreconditionFailed" || apiErr.ErrorCode() == "ConditionalRequestConflict") {
+		return errConflict
+	}
 	return err
 }
 
@@ -169,10 +183,37 @@ func (s *r2Storage) List(ctx context.Context, bucket, prefix string) ([]string, 
 	return keys, nil
 }
 
-// Development-only adapter. Production has no disk database or persistent volume.
+func (s *r2Storage) ListPage(ctx context.Context, bucket, prefix, after string, limit int) ([]string, error) {
+	page, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.buckets[bucket]), Prefix: &prefix, StartAfter: &after, MaxKeys: aws.Int32(int32(limit)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	keys := make([]string, 0, len(page.Contents))
+	for _, item := range page.Contents {
+		keys = append(keys, aws.ToString(item.Key))
+	}
+	return keys, nil
+}
+
+// Development-only media adapter. Production media and catalogs remain in R2.
 type localStorage struct {
 	root string
 	mu   sync.Mutex
+}
+
+func (s *localStorage) ListPage(ctx context.Context, bucket, prefix, after string, limit int) ([]string, error) {
+	keys, err := s.List(ctx, bucket, prefix)
+	if err != nil {
+		return nil, err
+	}
+	slices.Sort(keys)
+	start := 0
+	for start < len(keys) && keys[start] <= after {
+		start++
+	}
+	return keys[start:min(start+limit, len(keys))], nil
 }
 
 func (s *localStorage) List(ctx context.Context, bucket, prefix string) ([]string, error) {
@@ -257,12 +298,21 @@ func (s *localStorage) Open(ctx context.Context, bucket, key string, offset, len
 	return file, nil // The caller bounds the response to length bytes.
 }
 
-func (s *localStorage) WriteFile(ctx context.Context, bucket, key string, file *os.File, contentType, cache string) error {
+func (s *localStorage) WriteFile(ctx context.Context, bucket, key string, file *os.File, contentType, cache string, expected *string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	filename, err := s.filename(bucket, key)
 	if err != nil {
 		return err
+	}
+	if expected != nil {
+		body, err := os.ReadFile(filename)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if (err == nil && (*expected == "" || fmt.Sprintf("\"%x\"", sha256.Sum256(body)) != *expected)) || (err != nil && *expected != "") {
+			return errConflict
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(filename), 0700); err != nil {
 		return err

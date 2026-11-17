@@ -106,6 +106,39 @@ func TestR2ConditionalCatalogWrites(t *testing.T) {
 	defer server.Close()
 	store := newR2Storage(server.URL, "test-key", "test-secret", "originals", "gallery")
 	ctx := t.Context()
+	for name, files := range map[string]storage{"r2": store, "local": &localStorage{root: t.TempDir()}} {
+		t.Run("conditional file/"+name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "video.mp4")
+			put := func(body string, expected string) error {
+				t.Helper()
+				if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+					t.Fatal(err)
+				}
+				file, err := os.Open(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer file.Close()
+				return files.WriteFile(ctx, "private", "photos/id/video.mp4", file, "video/mp4", "private, no-store", &expected)
+			}
+			if err := put("first encoding", ""); err != nil {
+				t.Fatal(err)
+			}
+			if err := put("late encoding", ""); !errors.Is(err, errConflict) {
+				t.Fatalf("late file overwrote existing output: %v", err)
+			}
+			original, err := files.Read(ctx, "private", "photos/id/video.mp4")
+			if err != nil || original == nil || string(original.Body) != "first encoding" {
+				t.Fatal("conditional create changed stored bytes")
+			}
+			if err := put("replacement", original.ETag); err != nil {
+				t.Fatal(err)
+			}
+			if err := put("stale replacement", original.ETag); !errors.Is(err, errConflict) {
+				t.Fatalf("stale ETag matched: %v", err)
+			}
+		})
+	}
 	empty := ""
 	if missing, err := store.Read(ctx, "private", "catalog.json"); err != nil || missing != nil {
 		t.Fatalf("Missing catalog: %v %v", missing, err)
