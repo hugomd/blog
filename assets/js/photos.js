@@ -511,6 +511,10 @@ loadLikes();
 // springs back and a ring of tiny hearts bursts out. Letting go early shrinks
 // it back unliked.
 const heart = $('#like .like-heart');
+$('#like').addEventListener('pointerenter', () => {
+  const tilt = 3 + Math.floor(Math.random() * 8);
+  heart.style.setProperty('--like-tilt', `${Math.random() < .5 ? -tilt : tilt}deg`);
+});
 let hold, pressed = false;
 const canLike = id => likes !== null && Boolean(id) && !likedPhotos().has(id);
 function burstHearts() {
