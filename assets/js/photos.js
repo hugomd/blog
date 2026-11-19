@@ -616,12 +616,15 @@ async function close(event, updateURL = true) {
   if (zoom instanceof HTMLVideoElement) zoom.pause();
   const button = stream.children[state.index], thumb = button.querySelector('img');
   const touch = event?.pointerType === 'touch' || (event?.detail > 0 && matchMedia('(pointer: coarse)').matches);
+  // Reveal the stream behind the shrinking photo, not only after dialog.close().
+  viewer.classList.add('closing');
   // Navigation/resize can move the thumbnail: use its current position.
   try { await animatePhoto(thumb.getBoundingClientRect(), zoom.getBoundingClientRect(), true); }
   finally {
     preloadedImages.clear();
     releaseMedia();
     viewer.close(); zoom.getAnimations().forEach(a => a.cancel());
+    viewer.classList.remove('closing');
     thumb.style.visibility = ''; document.body.style.overflow = '';
     document.title = state.title;
     // Closing a dialog can restore focus automatically, so touch needs an
