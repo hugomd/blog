@@ -2,7 +2,7 @@
 title: "You’re using AI wrong"
 date: "2026-11-20T13:08:40.117Z"
 slug: "you-are-using-ai-wrong"
-description: ""
+description: "_You're holding it wrong_"
 tags: []
 toc: false
 draft: false
