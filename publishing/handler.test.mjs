@@ -113,7 +113,9 @@ test('draft pages require a verified Access signature, issuer, audience, lifetim
   }
   const forged = `${(await jwt()).split('.').slice(0, 2).join('.')}.${'a'.repeat(342)}`;
   assert.equal((await f.call(path, { headers: { 'Cf-Access-Jwt-Assertion': forged } })).status, 401);
-  assert.equal((await f.call(path, { owner: true })).status, 200);
+  const review = await f.call(path, { owner: true });
+  assert.equal(review.status, 200);
+  assert.equal(review.headers.get('Content-Security-Policy').split(';').map(value => value.trim()).find(value => value.startsWith('form-action ')), "form-action 'self'");
 });
 
 test('IndieAuth binds approval, callback and PKCE; codes are one-use and tokens are hashed', async t => {
@@ -124,6 +126,11 @@ test('IndieAuth binds approval, callback and PKCE; codes are one-use and tokens 
   const approval = new URL(pending.headers.get('Location'));
   const id = approval.searchParams.get('request');
   assert.equal((await f.call(`/admin/authorize?request=${id}`)).status, 401);
+  const consent = await f.call(`/admin/authorize?request=${id}`, { owner: true });
+  assert.equal(consent.status, 200);
+  // Browsers enforce the original form's policy across the callback redirect,
+  // not just the policy on the POST response.
+  assert.equal(consent.headers.get('Content-Security-Policy').split(';').map(value => value.trim()).find(value => value.startsWith('form-action ')), `form-action 'self' ${CALLBACK}`);
   assert.equal((await f.form('/admin/authorize', { request: id }, { headers: { Origin: 'https://evil.example' } })).status, 403);
   const allowed = await f.form('/admin/authorize', { request: id }); assert.equal(allowed.status, 303);
   assert.equal((await f.form('/admin/authorize', { request: id })).status, 400);

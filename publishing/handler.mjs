@@ -152,6 +152,9 @@ export async function onRequest({ request, env }) {
     if (!db) fail(503, 'The publishing database is not configured.');
     const html = (title, body, status = 200) => response(status, page(title, body, base), 'text/html', {
       Link: `<${base}/micropub>; rel="micropub", <${base}/auth>; rel="authorization_endpoint", <${base}/token>; rel="token_endpoint", <${base}/metadata>; rel="indieauth-metadata"`,
+      // The submitting page's form-action also governs the POST's redirect.
+      // Only app approval may leave this origin, and only for the fixed callback.
+      ...(path === '/admin/authorize' ? { 'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${CALLBACK}; base-uri 'none'; frame-ancestors 'none'` } : {}),
     });
     if (request.method === 'HEAD') {
       const result = await onRequest({ request: new Request(request.url, { headers: request.headers }), env });
