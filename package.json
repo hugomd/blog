@@ -1,0 +1,15 @@
+{
+  "name": "hugomd-blog-functions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test photo-access/*.test.mjs publishing/*.test.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.18",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "wrangler": "4.165.0"
+  }
+}

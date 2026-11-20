@@ -25,7 +25,9 @@ checksums; generated binaries are ignored by Git.
 
 Setup also adds a repository-scoped login-shell hook so Amp commands and
 supervised services receive the complete Hermit environment automatically.
-Themes are vendored; there are no Node packages or databases to install.
+Themes are vendored; static Hugo previews need no Node packages or databases.
+The publishing Functions have a separate npm toolchain and dedicated D1 database;
+see the [publishing bridge](publishing/README.md) for setup and verification.
 Repeated setup runs reuse Hermit's package cache and the Go build cache.
 Setup downloads the [photo manager](photo-manager/README.md)'s Go modules and
 warms its build cache without needing R2 credentials or starting the service.
@@ -74,6 +76,15 @@ automatic fallback to repository photos, drafts or private originals.
 
 ### Static Assets
 Hosted assets are stored in [`/content`](./content), and get served on `/`, e.g. `/about.json`.
+
+### Writing from iOS
+
+The [publishing bridge](publishing/README.md) accepts private Markdown drafts from
+iA Writer and provides a mobile-friendly browser desk to edit post details before
+explicitly publishing to GitHub. It generates the required Hugo front matter;
+capturing or saving a draft never puts its content in the public repository.
+Cloudflare Access, a separate D1 binding and a scoped GitHub secret must be
+configured before deployment. The existing reactions database is not reused.
 
 ### Photo manager
 

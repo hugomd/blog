@@ -6,3 +6,6 @@ twitter-proxy/node_modules/
 node_modules
 .amp/portals/*
 .hermit/
+.dev.vars*
+.env*
+.wrangler/

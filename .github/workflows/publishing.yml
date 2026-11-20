@@ -1,0 +1,24 @@
+name: Publishing bridge
+
+on:
+  pull_request:
+    paths: ["publishing/**", "functions/**", "static/_routes.json", "package*.json", ".github/workflows/publishing.yml"]
+  push:
+    branches: [develop]
+    paths: ["publishing/**", "functions/**", "static/_routes.json", "package*.json", ".github/workflows/publishing.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx wrangler pages functions build --outdir "$RUNNER_TEMP/blog-functions" --compatibility-date 2026-11-20 --compatibility-flags nodejs_compat

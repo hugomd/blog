@@ -702,7 +702,7 @@ test('Pages adapters separate public previews from protected access and leave bl
   const publicHandler = await import('./public.mjs');
   assert.equal(publicAdapter.onRequest, publicHandler.onRequest);
   const routes = JSON.parse(await readFile(new URL('../static/_routes.json', import.meta.url), 'utf8'));
-  assert.deepEqual(routes, { version: 1, include: ['/photos/*'], exclude: [] });
+  assert.deepEqual(routes, { version: 1, include: ['/photos/*', '/publishing', '/publishing/*'], exclude: [] });
 });
 
 function videoFixture() {
