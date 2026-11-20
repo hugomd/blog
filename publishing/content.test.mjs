@@ -99,6 +99,14 @@ test('slug and cover validation prevents paths, traversal and unsafe schemes', (
   }
 });
 
+test('Hugo index bundle filename is rejected during capture, editing and serialization', () => {
+  badRequest(() => capture('---\nslug: index\n---\nBody'), /slug/);
+  badRequest(() => capture('Body', { title: 'Index' }), /slug/);
+  badRequest(() => validateDraft({ ...base(), slug: 'index' }), /slug/);
+  badRequest(() => serializePost({ ...base(), slug: 'index' }), /slug/);
+  assert.equal(validateDraft({ ...base(), slug: 'index-notes' }).slug, 'index-notes');
+});
+
 test('type, length and UTF-8 limits are enforced without modifying Markdown', () => {
   for (const patch of [
     { title: '' }, { title: 'x'.repeat(201) }, { title: 1 }, { description: 'x'.repeat(1001) },

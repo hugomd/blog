@@ -58,10 +58,11 @@ async function fixture(t) {
       return Response.json({}, { status: 201 });
     }
     assert.equal(url.searchParams.get('ref'), 'develop');
+    if (f.readGitHub) return f.readGitHub(path);
     if (!f.files.has(path)) return Response.json({}, { status: 404 });
     return Response.json({ type: 'file', encoding: 'base64', content: f.files.get(path) });
   });
-  f.call = (path = '/', { owner = false, native = false, headers = {}, body, ...options } = {}) => onRequest({ env, request: new Request(`${BASE}${path}`, { ...options, body, headers: { ...(owner ? { 'Cf-Access-Jwt-Assertion': access } : {}), ...(native ? { Authorization: `Bearer ${TOKEN}` } : {}), ...headers } }) });
+  f.call = (path = '/', { owner = false, native = false, headers = {}, body, ...options } = {}) => onRequest({ env, request: new Request(`${BASE}${path}`, { ...options, body, headers: { 'CF-Connecting-IP': '192.0.2.1', ...(owner ? { 'Cf-Access-Jwt-Assertion': access } : {}), ...(native ? { Authorization: `Bearer ${TOKEN}` } : {}), ...headers } }) });
   f.form = (path, values, options = {}) => f.call(path, { owner: true, method: 'POST', body: new URLSearchParams(values), headers: { Origin: ORIGIN }, ...options });
   f.capture = (content = BODY) => f.call('/micropub', { native: true, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: ['h-entry'], properties: { name: ['From the train'], content: [content], 'post-status': ['draft'] } }) });
   f.row = id => sqlite.prepare('SELECT * FROM drafts WHERE id = ?').get(id);
@@ -161,6 +162,46 @@ test('legacy iA authorization works without PKCE, while expired connections and 
   assert.equal((await f.capture()).status, 401);
 });
 
+test('anonymous admission limits one IP atomically without starving another and expires cleanly', async t => {
+  const f = await fixture(t);
+  // Simulate the pre-admission schema with an existing token and draft.
+  const { id } = await f.create();
+  const existing = { ...f.row(id) };
+  f.sqlite.exec('DROP TABLE auth_admissions');
+  f.sqlite.exec(schema);
+  f.sqlite.exec(schema);
+  assert.deepEqual({ ...f.row(id) }, existing);
+  assert.equal((await f.call('/token', { native: true })).status, 200);
+  const params = new URLSearchParams({ response_type: 'code', client_id: CLIENT, redirect_uri: CALLBACK, state: 'pending', scope: 'create' });
+  const connect = headers => f.call(`/auth?${params}`, { headers });
+  const attempts = await Promise.all(Array.from({ length: 8 }, () => connect()));
+  assert.equal(attempts.filter(result => result.status === 303).length, 5);
+  assert.equal(attempts.filter(result => result.status === 429).length, 3);
+  assert.equal((await connect({ 'CF-Connecting-IP': '192.0.2.2' })).status, 303);
+  assert.equal((await connect({ 'CF-Connecting-IP': '', 'X-Forwarded-For': '192.0.2.3' })).status, 503);
+  assert.equal((await connect({ 'X-Forwarded-For': '192.0.2.4' })).status, 429);
+  const buckets = f.sqlite.prepare('SELECT * FROM auth_admissions').all();
+  assert.equal(buckets.length, 2);
+  for (const bucket of buckets) assert.match(bucket.client_hash, /^[a-f0-9]{64}$/);
+  f.sqlite.exec('UPDATE auth_admissions SET expires_at = 0; UPDATE auth_requests SET expires_at = 0');
+  assert.equal((await connect()).status, 303);
+  assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM auth_admissions').get().n, 1);
+  assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM auth_requests').get().n, 1);
+  // Reapplying the schema to an already-populated database is the migration.
+  f.sqlite.exec(schema);
+  assert.equal((await connect()).status, 303);
+});
+
+test('anonymous admission retains the global pending-request backstop', async t => {
+  const f = await fixture(t);
+  const params = new URLSearchParams({ response_type: 'code', client_id: CLIENT, redirect_uri: CALLBACK, state: 'pending', scope: 'create' });
+  for (let i = 0; i < 100; i++) {
+    assert.equal((await f.call(`/auth?${params}`, { headers: { 'CF-Connecting-IP': `192.0.2.${i + 1}` } })).status, 303);
+  }
+  assert.equal((await f.call(`/auth?${params}`, { headers: { 'CF-Connecting-IP': '198.51.100.1' } })).status, 429);
+  assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM auth_requests').get().n, 100);
+});
+
 test('capture is private, preserves Markdown, and identical retries reopen rather than duplicate', async t => {
   const f = await fixture(t);
   const { path, id } = await f.create();
@@ -174,6 +215,20 @@ test('capture is private, preserves Markdown, and identical retries reopen rathe
   const html = await (await f.call(malicious.path, { owner: true })).text();
   assert.ok(html.includes('&lt;/textarea&gt;&lt;script&gt;'));
   assert.equal(html.includes('<script>'), false);
+});
+
+test('reserved bundle slugs cannot enter through capture, browser edits or legacy stored drafts', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.capture('---\nslug: index\n---\nA bundle must not be created.')).status, 400);
+  assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM drafts').get().n, 0);
+  const { id, path } = await f.create();
+  assert.equal((await f.form(path, f.fields(id, { slug: 'index', intent: 'publish' }))).status, 400);
+  assert.equal(f.row(id).version, 1);
+  const legacy = { ...JSON.parse(f.row(id).content), slug: 'index' };
+  f.sqlite.prepare('UPDATE drafts SET content = ? WHERE id = ?').run(JSON.stringify(legacy), id);
+  assert.equal((await f.form(`${path}/publish`, { version: 1 })).status, 400);
+  assert.equal(f.row(id).status, 'draft');
+  assert.equal(f.commits, 0);
 });
 
 test('bad formats and oversized or unsupported post requests fail without writes', async t => {
@@ -256,6 +311,50 @@ test('a lost GitHub response freezes the draft and retry reconciles the existing
   assert.equal((await f.form(path, f.fields(id, { body: 'Cannot change frozen text' }))).status, 409);
   const recovery = await f.form(`${path}/publish`, { version: f.row(id).version });
   assert.equal(recovery.status, 303); assert.equal(f.row(id).status, 'published'); assert.equal(f.commits, 1);
+});
+
+test('stale publication retries cannot unlock or complete a newer frozen version', async t => {
+  for (const staleResult of ['collision', 'matching']) await t.test(staleResult, async t => {
+    const f = await fixture(t); const { id, path } = await f.create();
+    // Freeze by the public handler, retaining its real serialized GitHub content.
+    f.failAfterWrite = true;
+    assert.equal((await f.form(path, f.fields(id, { intent: 'publish' }))).status, 503);
+    f.failAfterWrite = false;
+    const originalVersion = f.row(id).version;
+    const originalFile = f.files.get('content/post/from-the-train.md');
+    f.files.clear();
+    const reads = [];
+    let started;
+    f.readGitHub = () => new Promise(resolve => { reads.push(resolve); started?.(); });
+    const start = async action => {
+      const ready = new Promise(resolve => { started = resolve; });
+      const result = action();
+      await ready;
+      return { result };
+    };
+    const a = await start(() => f.form(`${path}/publish`, { version: originalVersion }));
+    const b = await start(() => f.form(`${path}/publish`, { version: originalVersion }));
+    const collision = () => Response.json({ type: 'file', encoding: 'base64', content: Buffer.from('Different existing post').toString('base64') });
+    reads[0](collision());
+    assert.equal((await a.result).status, 409);
+    assert.equal(f.row(id).status, 'draft');
+    const c = await start(() => f.form(path, f.fields(id, { intent: 'publish', slug: 'new-slug', body: 'New private version' })));
+    const frozen = { ...f.row(id) };
+    assert.equal(frozen.status, 'publishing');
+    assert.equal(frozen.version, originalVersion + 1);
+    reads[1](staleResult === 'collision' ? collision() : Response.json({ type: 'file', encoding: 'base64', content: originalFile }));
+    const stale = await b.result;
+    assert.equal(stale.status, 409);
+    assert.match(await stale.text(), /changed in another tab/);
+    assert.deepEqual({ ...f.row(id) }, frozen);
+    assert.equal((await f.form(path, f.fields(id, { body: 'Must stay private' }))).status, 409);
+    reads[2](Response.json({}, { status: 404 }));
+    assert.equal((await c.result).status, 303);
+    assert.equal(f.row(id).status, 'published');
+    assert.equal(f.row(id).version, frozen.version);
+    assert.match(f.row(id).github_url, /new-slug\.md$/);
+    assert.match(Buffer.from(f.files.get('content/post/new-slug.md'), 'base64').toString(), /New private version/);
+  });
 });
 
 test('previews and unconfigured environments cannot publish even with a browser session', async t => {

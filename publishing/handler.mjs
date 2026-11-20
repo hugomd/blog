@@ -115,7 +115,8 @@ async function publish(row, env, db) {
     if (!result.ok) fail(502, 'GitHub could not confirm this post. Your draft is saved; retry publication.');
     const data = await result.json();
     if (data.type !== 'file' || data.encoding !== 'base64' || data.content?.replace(/\s/g, '') !== expected) {
-      await db.prepare("UPDATE drafts SET status = 'draft' WHERE id = ? AND status = 'publishing'").bind(row.id).run();
+      const unlocked = await db.prepare("UPDATE drafts SET status = 'draft' WHERE id = ? AND version = ? AND status = 'publishing' RETURNING id").bind(row.id, row.version).first();
+      if (!unlocked) fail(409, 'This draft changed in another tab. Reload to check its publication status.');
       fail(409, 'That filename already exists on GitHub with different content. Choose a different slug; no file was overwritten.');
     }
     return true;
@@ -130,7 +131,8 @@ async function publish(row, env, db) {
     }
   }
   const githubURL = `https://github.com/${repository}/blob/${encodeURIComponent(branch)}/${path}`;
-  await db.prepare("UPDATE drafts SET status = 'published', github_url = ?, updated_at = ? WHERE id = ? AND status = 'publishing'").bind(githubURL, new Date().toISOString(), row.id).run();
+  const completed = await db.prepare("UPDATE drafts SET status = 'published', github_url = ?, updated_at = ? WHERE id = ? AND version = ? AND status = 'publishing' RETURNING id").bind(githubURL, new Date().toISOString(), row.id, row.version).first();
+  if (!completed) fail(409, 'This draft changed in another tab. Reload to check its publication status.');
 }
 
 export async function onRequest({ request, env }) {
@@ -174,10 +176,23 @@ export async function onRequest({ request, env }) {
       const challenge = params.get('code_challenge') || '';
       const method = params.get('code_challenge_method') || '';
       if ((challenge && (method !== 'S256' || !/^[\w-]{43}$/.test(challenge))) || (!challenge && method)) fail(400, 'Unsupported PKCE challenge.');
+      // Cloudflare supplies this header at the edge. Never fall back to a
+      // caller-controlled forwarded address or store the raw IP in D1.
+      const ip = request.headers.get('CF-Connecting-IP');
+      if (!ip || ip.length > 45 || !/^[a-f0-9:.]+$/i.test(ip)) fail(503, 'Connection admission requires a Cloudflare client address.');
+      const now = seconds();
+      await db.prepare('DELETE FROM auth_admissions WHERE expires_at <= ?').bind(now).run();
+      const admitted = await db.prepare(`INSERT INTO auth_admissions (client_hash, attempts, expires_at) VALUES (?, 1, ?)
+        ON CONFLICT(client_hash) DO UPDATE SET
+          attempts = CASE WHEN expires_at <= ? THEN 1 ELSE attempts + 1 END,
+          expires_at = CASE WHEN expires_at <= ? THEN excluded.expires_at ELSE expires_at END
+        WHERE expires_at <= ? OR attempts < 5 RETURNING client_hash`)
+        .bind(await digest(`${CLIENT}\n${ip}`), now + 300, now, now, now).first();
+      if (!admitted) fail(429, 'Too many connection attempts from this address. Try again in five minutes.');
       const id = random();
-      await db.prepare('DELETE FROM auth_requests WHERE expires_at <= ?').bind(seconds()).run();
+      await db.prepare('DELETE FROM auth_requests WHERE expires_at <= ?').bind(now).run();
       const inserted = await db.prepare('INSERT INTO auth_requests (id, state, client_id, redirect_uri, challenge, challenge_method, expires_at) SELECT ?, ?, ?, ?, ?, ?, ? WHERE (SELECT count(*) FROM auth_requests) < 100 RETURNING id')
-        .bind(await digest(id), params.get('state'), CLIENT, CALLBACK, challenge, method, seconds() + 300).first();
+        .bind(await digest(id), params.get('state'), CLIENT, CALLBACK, challenge, method, now + 300).first();
       if (!inserted) fail(429, 'Too many pending connections. Try again in five minutes.');
       return redirect(`${base}/admin/authorize?request=${id}`);
     }

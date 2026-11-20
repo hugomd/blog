@@ -8,6 +8,12 @@ CREATE TABLE IF NOT EXISTS auth_requests (
   challenge_method TEXT NOT NULL,
   expires_at INTEGER NOT NULL
 );
+-- Independent, short-lived admission buckets; additive for existing databases.
+CREATE TABLE IF NOT EXISTS auth_admissions (
+  client_hash TEXT PRIMARY KEY,
+  attempts INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS auth_codes (
   hash TEXT PRIMARY KEY,
   client_id TEXT NOT NULL,

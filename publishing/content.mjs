@@ -81,6 +81,7 @@ function checkDraft(input, allowFuture) {
   if (typeof input.slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.slug) || input.slug.length > 100) {
     fail('slug must be 1–100 lowercase ASCII letters, digits, or single separating hyphens (no paths).');
   }
+  if (input.slug === 'index') fail('slug index is reserved by Hugo for leaf bundles. Choose a different slug.');
   const date = checkDate(input.date, allowFuture);
   const description = stringField(input.description === undefined ? '' : input.description, 'description', 1000);
   if (!Array.isArray(input.tags) || input.tags.length > 30) fail('tags must be an array with at most 30 strings.');
